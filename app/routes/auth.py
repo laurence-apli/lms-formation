@@ -65,14 +65,6 @@ def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str 
     return RedirectResponse(url="/eleve/tableau-de-bord", status_code=303)
 
 
-@router.get("/eleve/definir-mot-de-passe/{token}")
-def afficher_formulaire_definir_mdp(token: str, session: Session = Depends(obtenir_session)):
-    """Vérifie le token avant d'afficher le formulaire -- jamais d'accès à ce
-    formulaire sans un token valide et non expiré."""
-    token_obj = session.query(TokenAuthEleve).filter_by(token=token).first()
-    if token_obj is None or not token_obj.est_valide():
-        raise HTTPException(status_code=400, detail="Ce lien n'est plus valide. Demandez un nouveau lien de connexion.")
-    return {"eleve_id": token_obj.eleve_id, "token_valide": True}
 
 
 @router.post("/eleve/definir-mot-de-passe/{token}")
