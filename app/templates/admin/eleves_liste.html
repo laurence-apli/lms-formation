@@ -1,0 +1,144 @@
+{% extends "admin/base.html" %}
+{% block titre %}Élèves — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .filtre-eleves-bar { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+  .filtre-eleves-bar input[type="text"] { flex:1; max-width:320px; padding:9px 12px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .filtre-eleves-bar select { padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; }
+  .eleves-table { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:10px; border-collapse:collapse; overflow:hidden; }
+  .eleves-table th { text-align:left; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.05em; color:var(--grey); padding:12px 16px; background:#FBF7EE; border-bottom:1px solid var(--border); }
+  .eleves-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:14px; }
+  .eleves-table tr:last-child td { border-bottom:none; }
+  .statut-pill { font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
+  .statut-actif { background:#E4F0E8; color:var(--green); }
+  .statut-inactif { background:#F0ECE2; color:var(--grey); }
+</style>
+
+<div class="topbar"><div><h1>Élèves</h1></div>
+  <div style="display:flex; gap:8px;">
+    <button class="btn" onclick="exporterCsv()">⬇ Exporter en Excel</button>
+    <button class="btn btn-primary" onclick="ouvrirModalCreerEleve()">+ Nouvel élève</button>
+  </div>
+</div>
+<div class="filtre-eleves-bar">
+  <input type="text" id="filtre-texte" placeholder="Rechercher par nom, prénom ou email…" oninput="appliquerFiltre()">
+  <select id="filtre-statut" onchange="appliquerFiltre()">
+    <option value="tous">Tous les statuts</option>
+    <option value="actif">Actifs uniquement</option>
+    <option value="inactif">Inactifs uniquement</option>
+  </select>
+  <span id="compteur" style="font-size:12px; color:var(--grey); margin-left:auto;"></span>
+</div>
+<table class="eleves-table">
+  <thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Accès</th><th></th></tr></thead>
+  <tbody id="corps-table"><tr><td colspan="5" style="text-align:center; color:var(--grey); padding:30px;">Chargement…</td></tr></tbody>
+</table>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let tousLesEleves = [];
+
+async function charger() {
+  tousLesEleves = await appelApi('/admin/eleves');
+  appliquerFiltre();
+}
+
+function appliquerFiltre() {
+  const texte = document.getElementById('filtre-texte').value.trim().toLowerCase();
+  const statut = document.getElementById('filtre-statut').value;
+  const filtres = tousLesEleves.filter(e => {
+    if (statut === 'actif' && !e.actif) return false;
+    if (statut === 'inactif' && e.actif) return false;
+    if (texte) {
+      const cible = `${e.prenom} ${e.nom} ${e.email}`.toLowerCase();
+      if (!cible.includes(texte)) return false;
+    }
+    return true;
+  });
+  document.getElementById('compteur').textContent = `${filtres.length} élève(s)`;
+  const corps = document.getElementById('corps-table');
+  if (filtres.length === 0) {
+    corps.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--grey); padding:30px;">Aucun élève ne correspond à cette recherche.</td></tr>`;
+    return;
+  }
+  corps.innerHTML = filtres.map(e => `
+    <tr>
+      <td>${esc(e.prenom)} ${esc(e.nom)}</td>
+      <td>${esc(e.email)}</td>
+      <td><span class="statut-pill ${e.actif ? 'statut-actif' : 'statut-inactif'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
+      <td>${e.nb_formations} formation${e.nb_formations !== 1 ? 's' : ''}</td>
+      <td><a class="btn btn-sm" href="/admin/page/eleves/${e.id}">Voir la fiche</a></td>
+    </tr>
+  `).join('');
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+function afficherOverlay(html) {
+  document.querySelectorAll('.overlay').forEach(el => el.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = html;
+  overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
+  document.body.appendChild(overlay);
+}
+
+function ouvrirModalCreerEleve() {
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Nouvel élève</h3>
+      <div id="zone-erreur-modal"></div>
+      <label>Prénom *</label><input type="text" id="input-prenom" required>
+      <label>Nom *</label><input type="text" id="input-nom" required>
+      <label>E-mail *</label><input type="email" id="input-email" required>
+      <div class="helper-text">Un e-mail sera envoyé à l'élève pour qu'il définisse son mot de passe.</div>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="creerEleve()">Créer la fiche élève</button>
+      </div>
+    </div>`);
+}
+
+async function creerEleve() {
+  const data = new FormData();
+  data.append('nom', document.getElementById('input-nom').value);
+  data.append('prenom', document.getElementById('input-prenom').value);
+  data.append('email', document.getElementById('input-email').value);
+  try {
+    await appelApi('/admin/eleves', { method: 'POST', body: data });
+    fermerModal();
+    afficherToast('Élève créé. Un e-mail lui a été envoyé.');
+    await charger();
+  } catch (e) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+  }
+}
+
+function exporterCsv() {
+  const SEP = ';';
+  function echapper(v) {
+    const s = String(v == null ? '' : v);
+    return /["\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  const lignes = [['Nom','Prénom','Email','Statut'], ...tousLesEleves.map(e => [e.nom, e.prenom, e.email, e.actif ? 'Actif' : 'Inactif'])];
+  const csv = lignes.map(l => l.map(echapper).join(SEP)).join('\r\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `eleves_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  afficherToast(`${tousLesEleves.length} élève(s) exporté(s)`);
+}
+
+charger();
+</script>
+{% endblock %}

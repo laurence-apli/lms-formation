@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: lms-formation-laurence
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      # DATABASE_URL : à renseigner manuellement dans le tableau de bord Render,
+      # avec l'URL de connexion fournie par Neon (PostgreSQL). Jamais commitée
+      # dans ce fichier -- c'est une information sensible.
+      - key: DATABASE_URL
+        sync: false
+      # SECRET_KEY : générée automatiquement par Render, unique et sécurisée.
+      - key: SECRET_KEY
+        generateValue: true
+      # RESEND_API_KEY : à renseigner manuellement une fois le compte Resend créé.
+      # Tant qu'elle est vide, les e-mails sont simulés dans les journaux du
+      # serveur (visible dans l'onglet "Logs" de Render) -- la plateforme
+      # reste totalement utilisable pour tester en attendant.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_EXPEDITEUR
+        value: "formation@laurence-mermet-bijon.fr"
+      # URL_PLATEFORME : à mettre à jour une fois le sous-domaine définitif
+      # connecté (voir l'intégration avec le site vitrine).
+      - key: URL_PLATEFORME
+        sync: false
+      - key: MODE_DEVELOPPEMENT
+        value: "false"

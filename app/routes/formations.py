@@ -1,0 +1,342 @@
+"""
+Routes de gestion des formations, modules et chapitres -- réservées à
+l'administrateur connecté (toutes les routes dépendent de admin_connecte).
+"""
+from fastapi import APIRouter, Depends, Form, HTTPException
+from sqlalchemy.orm import Session
+
+from ..database import obtenir_session
+from ..models import (
+    Formation, Module, Chapitre, Media, JoursAccompagnementNiveau,
+    dupliquer_chapitre as dupliquer_chapitre_modele,
+    dupliquer_formation as dupliquer_formation_modele,
+    deplacer_chapitre_vers_module as deplacer_chapitre_modele,
+)
+from .auth import admin_connecte
+
+router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
+
+
+# ---------- Formations ----------
+
+@router.get("/formations")
+def lister_formations(session: Session = Depends(obtenir_session)):
+    formations = session.query(Formation).all()
+    return [
+        {
+            "id": f.id, "titre": f.titre, "couleur": f.couleur, "actif": f.actif,
+            "nb_niveaux": f.nb_niveaux, "nb_modules": len(f.modules),
+            "nb_chapitres": sum(len(m.chapitres) for m in f.modules),
+        }
+        for f in formations
+    ]
+
+
+@router.get("/formations/{formation_id}")
+def detail_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    return {
+        "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
+        "actif": formation.actif, "nb_niveaux": formation.nb_niveaux,
+        "presentation_html": formation.presentation_html or "",
+        "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
+        "modules": [
+            {
+                "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
+                "presentation_html": m.presentation_html or "",
+                "chapitres": [
+                    {
+                        "id": c.id, "titre": c.titre, "niveau_requis": c.niveau_requis,
+                        "contenu_html": c.contenu_html or "",
+                        "medias": [
+                            {"id": med.id, "type": med.type, "titre": med.titre,
+                             "url": med.url, "telechargeable": med.telechargeable}
+                            for med in c.medias
+                        ],
+                    }
+                    for c in m.chapitres
+                ],
+            }
+            for m in formation.modules
+        ],
+    }
+
+
+@router.post("/formations")
+def creer_formation(
+    titre: str = Form(...), couleur: str = Form("#B8922A"), nb_niveaux: int = Form(3),
+    presentation_html: str = Form(""), session: Session = Depends(obtenir_session),
+):
+    if nb_niveaux not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit être 1, 2 ou 3.")
+    formation = Formation(titre=titre, couleur=couleur, nb_niveaux=nb_niveaux, presentation_html=presentation_html)
+    session.add(formation)
+    session.flush()
+    for niveau in range(1, nb_niveaux + 1):
+        session.add(JoursAccompagnementNiveau(formation_id=formation.id, niveau=niveau, jours=0))
+    session.commit()
+    return {"id": formation.id, "titre": formation.titre}
+
+
+@router.put("/formations/{formation_id}")
+def modifier_formation(
+    formation_id: int, titre: str = Form(...), couleur: str = Form(...),
+    nb_niveaux: int = Form(...), presentation_html: str = Form(""),
+    session: Session = Depends(obtenir_session),
+):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    if nb_niveaux not in (1, 2, 3):
+        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit être 1, 2 ou 3.")
+
+    formation.titre = titre
+    formation.couleur = couleur
+    formation.presentation_html = presentation_html
+
+    if nb_niveaux != formation.nb_niveaux:
+        # On ajoute les lignes de jours d'accompagnement manquantes pour les
+        # nouveaux niveaux, sans jamais supprimer celles des niveaux existants
+        # (au cas où on redescend puis remonte le nombre de niveaux plus tard).
+        niveaux_existants = {j.niveau for j in formation.jours_par_niveau}
+        for niveau in range(1, nb_niveaux + 1):
+            if niveau not in niveaux_existants:
+                session.add(JoursAccompagnementNiveau(formation_id=formation.id, niveau=niveau, jours=0))
+        formation.nb_niveaux = nb_niveaux
+
+    session.commit()
+    return {"id": formation.id, "titre": formation.titre}
+
+
+@router.put("/formations/{formation_id}/jours-accompagnement")
+def definir_jours_accompagnement(formation_id: int, session: Session = Depends(obtenir_session), **kwargs):
+    """Accepte des champs dynamiques niveau_1, niveau_2, niveau_3 selon le
+    nombre de niveaux de la formation."""
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    for jpn in formation.jours_par_niveau:
+        champ = f"niveau_{jpn.niveau}"
+        if champ in kwargs:
+            jpn.jours = int(kwargs[champ])
+    session.commit()
+    return {"ok": True}
+
+
+@router.delete("/formations/{formation_id}")
+def supprimer_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    nb_eleves_concernes = len(formation.acces_eleves)
+    session.delete(formation)
+    session.commit()
+    return {"ok": True, "nb_eleves_concernes": nb_eleves_concernes}
+
+
+@router.post("/formations/{formation_id}/dupliquer")
+def dupliquer_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    copie = dupliquer_formation_modele(session, formation_id)
+    return {"id": copie.id, "titre": copie.titre}
+
+
+# ---------- Modules ----------
+
+@router.post("/formations/{formation_id}/modules")
+def creer_module(
+    formation_id: int, titre: str = Form(...), niveau_requis: int = Form(1),
+    presentation_html: str = Form(""), session: Session = Depends(obtenir_session),
+):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    dernier_ordre = session.query(Module).filter_by(formation_id=formation_id).count()
+    module = Module(
+        formation_id=formation_id, titre=titre,
+        niveau_requis=niveau_requis if formation.nb_niveaux > 1 else 1,
+        presentation_html=presentation_html, ordre=dernier_ordre + 1,
+    )
+    session.add(module)
+    session.commit()
+    return {"id": module.id, "titre": module.titre}
+
+
+@router.put("/modules/{module_id}")
+def modifier_module(
+    module_id: int, titre: str = Form(...), niveau_requis: int = Form(1),
+    presentation_html: str = Form(""), session: Session = Depends(obtenir_session),
+):
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    module.titre = titre
+    module.niveau_requis = niveau_requis if module.formation.nb_niveaux > 1 else 1
+    module.presentation_html = presentation_html
+    session.commit()
+    return {"id": module.id, "titre": module.titre}
+
+
+@router.delete("/modules/{module_id}")
+def supprimer_module(module_id: int, session: Session = Depends(obtenir_session)):
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    session.delete(module)
+    session.commit()
+    return {"ok": True}
+
+
+@router.post("/modules/{module_id}/deplacer")
+def deplacer_module(module_id: int, direction: int = Form(...), session: Session = Depends(obtenir_session)):
+    """direction : -1 pour monter, +1 pour descendre."""
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    autres = (
+        session.query(Module)
+        .filter_by(formation_id=module.formation_id)
+        .order_by(Module.ordre)
+        .all()
+    )
+    idx = next(i for i, m in enumerate(autres) if m.id == module.id)
+    nouvel_idx = idx + direction
+    if 0 <= nouvel_idx < len(autres):
+        autres[idx].ordre, autres[nouvel_idx].ordre = autres[nouvel_idx].ordre, autres[idx].ordre
+        session.commit()
+    return {"ok": True}
+
+
+# ---------- Chapitres ----------
+
+@router.post("/modules/{module_id}/chapitres")
+def creer_chapitre(
+    module_id: int, titre: str = Form(...), niveau_requis: int = Form(1),
+    session: Session = Depends(obtenir_session),
+):
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    dernier_ordre = (
+        session.query(Chapitre)
+        .join(Module)
+        .filter(Module.formation_id == module.formation_id)
+        .count()
+    )
+    chapitre = Chapitre(
+        module_id=module_id, titre=titre,
+        niveau_requis=niveau_requis if module.formation.nb_niveaux > 1 else 1,
+        ordre=dernier_ordre + 1, contenu_html="",
+    )
+    session.add(chapitre)
+    session.commit()
+    return {"id": chapitre.id, "titre": chapitre.titre}
+
+
+@router.put("/chapitres/{chapitre_id}")
+def modifier_chapitre(
+    chapitre_id: int, titre: str = Form(...), niveau_requis: int = Form(1),
+    session: Session = Depends(obtenir_session),
+):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    chapitre.titre = titre
+    chapitre.niveau_requis = niveau_requis if chapitre.module.formation.nb_niveaux > 1 else 1
+    session.commit()
+    return {"id": chapitre.id, "titre": chapitre.titre}
+
+
+@router.delete("/chapitres/{chapitre_id}")
+def supprimer_chapitre(chapitre_id: int, session: Session = Depends(obtenir_session)):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    session.delete(chapitre)
+    session.commit()
+    return {"ok": True}
+
+
+@router.post("/chapitres/{chapitre_id}/dupliquer")
+def dupliquer_chapitre(chapitre_id: int, session: Session = Depends(obtenir_session)):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    copie = dupliquer_chapitre_modele(session, chapitre_id)
+    return {"id": copie.id, "titre": copie.titre}
+
+
+@router.post("/chapitres/{chapitre_id}/deplacer-vers-module")
+def deplacer_chapitre_vers_module(
+    chapitre_id: int, nouveau_module_id: int = Form(...), session: Session = Depends(obtenir_session),
+):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    try:
+        deplacer_chapitre_modele(session, chapitre_id, nouveau_module_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True}
+
+
+@router.post("/chapitres/{chapitre_id}/deplacer")
+def deplacer_chapitre(chapitre_id: int, direction: int = Form(...), session: Session = Depends(obtenir_session)):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    freres = (
+        session.query(Chapitre)
+        .filter_by(module_id=chapitre.module_id)
+        .order_by(Chapitre.ordre)
+        .all()
+    )
+    idx = next(i for i, c in enumerate(freres) if c.id == chapitre.id)
+    nouvel_idx = idx + direction
+    if 0 <= nouvel_idx < len(freres):
+        freres[idx].ordre, freres[nouvel_idx].ordre = freres[nouvel_idx].ordre, freres[idx].ordre
+        session.commit()
+    return {"ok": True}
+
+
+# ---------- Médias ----------
+
+@router.post("/chapitres/{chapitre_id}/medias")
+def ajouter_media(
+    chapitre_id: int, type: str = Form(...), titre: str = Form(...),
+    url: str = Form(...), telechargeable: bool = Form(False),
+    session: Session = Depends(obtenir_session),
+):
+    if type not in ("pdf", "audio", "lien"):
+        raise HTTPException(status_code=400, detail="Type de média invalide.")
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    media = Media(chapitre_id=chapitre_id, type=type, titre=titre, url=url, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.put("/medias/{media_id}/telechargeable")
+def toggle_media_telechargeable(media_id: int, telechargeable: bool = Form(...), session: Session = Depends(obtenir_session)):
+    media = session.get(Media, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Média introuvable.")
+    media.telechargeable = telechargeable
+    session.commit()
+    return {"ok": True}
+
+
+@router.delete("/medias/{media_id}")
+def supprimer_media(media_id: int, session: Session = Depends(obtenir_session)):
+    media = session.get(Media, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Média introuvable.")
+    session.delete(media)
+    session.commit()
+    return {"ok": True}

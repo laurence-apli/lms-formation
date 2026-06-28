@@ -1,0 +1,487 @@
+{% extends "admin/base.html" %}
+{% block titre %}{{ formation.titre }} — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .formation-layout { display:flex; gap:24px; align-items:flex-start; }
+  .sommaire-panel { width:280px; flex-shrink:0; background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .sommaire-item-formation { padding:14px 16px; font-family:'EB Garamond',serif; font-weight:600; font-size:15px; cursor:pointer; border-bottom:1px solid var(--border); background:#FBF7EE; }
+  .sommaire-item-formation:hover { background:var(--cream); }
+  .sommaire-item-formation.actif { background:var(--ink); color:#F5EDD6; }
+  .sommaire-module { padding:10px 16px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; letter-spacing:.03em; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:6px; }
+  .sommaire-module:hover { background:var(--cream); }
+  .sommaire-module.actif { background:var(--ink); color:#F5EDD6; }
+  .sommaire-chapitre { padding:9px 16px 9px 30px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .sommaire-chapitre:hover { background:var(--cream); }
+  .sommaire-chapitre.actif { background:var(--ink); color:#F5EDD6; }
+  .sommaire-chapitre .puce { width:6px; height:6px; border-radius:50%; background:var(--grey); flex-shrink:0; }
+  .sommaire-add-chapitre { padding:8px 16px 8px 30px; font-size:12px; color:var(--gold); cursor:pointer; border-bottom:1px solid var(--border); }
+  .niveau-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; }
+  .niveau-1 { background:#EFEAE0; color:#6B6354; }
+  .niveau-2 { background:#F5E3D0; color:#95621E; }
+  .niveau-3 { background:#F5DCD3; color:#A1432A; }
+  .contenu-panel { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:24px; min-width:0; }
+  .contenu-panel h2 { font-family:'EB Garamond',serif; font-size:22px; margin:0 0 4px; }
+  .contenu-panel .sous-titre { font-size:13px; color:var(--grey); margin-bottom:18px; }
+  .presentation-display { background:#FBF7EE; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:14px; line-height:1.6; min-height:60px; margin-bottom:16px; }
+  .presentation-display.vide { color:var(--grey); font-style:italic; }
+  .import-zone { border:1.5px dashed var(--border); border-radius:8px; padding:20px; text-align:center; font-size:13px; color:var(--grey); margin-top:8px; }
+  .medias-liste { margin-top:6px; }
+  .media-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:6px; margin-bottom:6px; font-size:13px; }
+  .media-row button { border:none; background:none; cursor:pointer; color:var(--grey); }
+  .media-row button:hover { color:var(--danger); }
+  .move-select { font-size:12px; border:1px solid var(--border); border-radius:4px; padding:3px 4px; }
+</style>
+
+<div class="breadcrumb"><a href="/admin/page/formations">Formations</a> / {{ formation.titre }}</div>
+<div class="topbar"><div><h1>{{ formation.titre }}</h1></div></div>
+<div class="formation-layout">
+  <div class="sommaire-panel" id="sommaire"></div>
+  <div class="contenu-panel" id="contenu">Chargement…</div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const FORMATION_ID = {{ formation.id }};
+let donnees = null;
+let noeudActif = { type: 'formation' };
+
+async function charger() {
+  donnees = await appelApi(`/admin/formations/${FORMATION_ID}`);
+  render();
+}
+
+function render() {
+  renderSommaire();
+  renderContenu();
+}
+
+function renderSommaire() {
+  const f = donnees;
+  let html = `<div class="sommaire-item-formation ${noeudActif.type === 'formation' ? 'actif' : ''}" onclick="selectionner({type:'formation'})">${esc(f.titre)}</div>`;
+  f.modules.forEach(m => {
+    const moduleActif = noeudActif.type === 'module' && noeudActif.moduleId === m.id;
+    html += `<div class="sommaire-module ${moduleActif ? 'actif' : ''}" onclick="selectionner({type:'module', moduleId:${m.id}})">
+      <span>${esc(m.titre.toUpperCase())}</span>
+      ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
+    </div>`;
+    m.chapitres.forEach((c, ci) => {
+      const chapActif = noeudActif.type === 'chapitre' && noeudActif.chapId === c.id;
+      html += `<div class="sommaire-chapitre ${chapActif ? 'actif' : ''}" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">
+        <span class="puce"></span>${ci+1}. ${esc(c.titre)}
+      </div>`;
+    });
+    html += `<div class="sommaire-add-chapitre" onclick="ouvrirModalCreerChapitre(${m.id})">+ Ajouter un chapitre</div>`;
+  });
+  document.getElementById('sommaire').innerHTML = html;
+}
+
+function getModule(moduleId) { return donnees.modules.find(m => m.id === moduleId); }
+function getChapitre(moduleId, chapId) { return getModule(moduleId).chapitres.find(c => c.id === chapId); }
+
+function renderContenu() {
+  const f = donnees;
+  const zone = document.getElementById('contenu');
+
+  if (noeudActif.type === 'formation') {
+    zone.innerHTML = `
+      <h2>${esc(f.titre)}</h2>
+      <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
+      <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l’instant.'}</div>
+      ${zoneImport('formation', FORMATION_ID, f.titre)}
+      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
+        <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
+        <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
+        <button class="btn btn-danger-outline" onclick="demanderSuppressionFormation()">Supprimer la formation</button>
+      </div>`;
+
+  } else if (noeudActif.type === 'module') {
+    const m = getModule(noeudActif.moduleId);
+    zone.innerHTML = `
+      <h2>${esc(m.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">Niveau ${m.niveau_requis}</span>` : ''}</h2>
+      <div class="sous-titre">Présentation du module — affichée à l'élève avant ses chapitres</div>
+      <div class="presentation-display ${!m.presentation_html ? 'vide' : ''}">${m.presentation_html || 'Aucun contenu de présentation pour l’instant.'}</div>
+      ${zoneImport('module', m.id, m.titre)}
+      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
+        <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">✎ Modifier le module</button>
+        <button class="btn btn-danger-outline" onclick="supprimerModule(${m.id})">Supprimer le module</button>
+      </div>`;
+
+  } else if (noeudActif.type === 'chapitre') {
+    const m = getModule(noeudActif.moduleId);
+    const c = getChapitre(noeudActif.moduleId, noeudActif.chapId);
+    const autresModules = f.modules.filter(mm => mm.id !== m.id);
+    zone.innerHTML = `
+      <h2>${esc(c.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${c.niveau_requis}">Niveau ${c.niveau_requis}</span>` : ''}</h2>
+      <div class="sous-titre">Module : ${esc(m.titre)}</div>
+      <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l’instant.'}</div>
+      ${zoneImport('chapitre', c.id, c.titre)}
+      <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
+      <div class="medias-liste">
+        ${c.medias.map(media => `
+          <div class="media-row">
+            <span>${ {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || media.type }</span>
+            <span style="flex:1;">${esc(media.titre)}</span>
+            <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--grey);">
+              <input type="checkbox" ${media.telechargeable ? 'checked' : ''} onchange="toggleMediaTelechargeable(${media.id}, this.checked)">
+              téléchargeable
+            </label>
+            <button onclick="supprimerMedia(${media.id})">🗑</button>
+          </div>
+        `).join('') || '<div class="helper-text">Aucun média complémentaire.</div>'}
+      </div>
+      <button class="btn btn-sm" style="margin-top:6px;" onclick="ouvrirModalAjouterMedia(${c.id})">+ Ajouter un média</button>
+      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
+        <button class="btn" onclick="ouvrirModalEditerChapitre(${m.id}, ${c.id})">✎ Modifier</button>
+        <button class="btn" onclick="dupliquerChapitre(${c.id})">⧉ Dupliquer</button>
+        ${autresModules.length ? `
+          <select class="move-select" onchange="if(this.value) deplacerChapitreVersModule(${c.id}, parseInt(this.value)); this.value='';">
+            <option value="">↪ Déplacer vers…</option>
+            ${autresModules.map(am => `<option value="${am.id}">${esc(am.titre)}</option>`).join('')}
+          </select>` : ''}
+        <button class="btn btn-danger-outline" onclick="supprimerChapitre(${c.id})">Supprimer</button>
+      </div>`;
+  }
+}
+
+function zoneImport(type, id, nomActuel) {
+  const inputId = `fichier-${type}-${id}`;
+  return `
+    <div class="import-zone" id="zone-${inputId}"
+         ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
+         ondragleave="this.style.borderColor='var(--border)';"
+         ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerWord('${type}', ${id}, event.dataTransfer.files[0]);">
+      📄 Glisser un fichier Word ici, ou
+      <label for="${inputId}" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
+      <input type="file" id="${inputId}" accept=".docx" style="display:none;" onchange="importerWord('${type}', ${id}, this.files[0])">
+      <div id="recu-${inputId}" style="margin-top:8px; font-weight:600; color:var(--ink);"></div>
+    </div>`;
+}
+
+async function importerWord(type, id, fichier) {
+  if (!fichier) return;
+  const zoneRecu = document.getElementById(`recu-fichier-${type}-${id}`);
+  zoneRecu.textContent = "Import en cours…";
+  const data = new FormData();
+  data.append('fichier', fichier);
+  try {
+    const url = type === 'formation' ? `/admin/formations/${id}/importer-word`
+      : type === 'module' ? `/admin/modules/${id}/importer-word`
+      : `/admin/chapitres/${id}/importer-word`;
+    const resultat = await appelApi(url, { method: 'POST', body: data });
+    afficherToast(`Fichier "${resultat.fichier}" importé avec succès`);
+    await charger();
+  } catch (e) {
+    zoneRecu.textContent = e.message;
+    zoneRecu.style.color = 'var(--danger)';
+  }
+}
+
+function selectionner(noeud) { noeudActif = noeud; render(); }
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+function afficherOverlay(html) {
+  document.querySelectorAll('.overlay').forEach(el => el.remove());
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = html;
+  overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
+  document.body.appendChild(overlay);
+}
+
+// ---------- Formation ----------
+
+function ouvrirModalEditerFormation() {
+  const f = donnees;
+  const joursHtml = Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <span style="font-size:13px; width:70px;">Niveau ${n}</span>
+      <input type="number" min="0" id="jours-niveau-${n}" value="${f.jours_par_niveau[n] || 0}" style="width:80px;">
+      <span style="font-size:12px; color:var(--grey);">jour(s)</span>
+    </div>`).join('');
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Modifier la formation</h3>
+      <div id="zone-erreur-modal"></div>
+      <label>Titre</label><input type="text" id="input-titre" value="${esc(f.titre)}">
+      <label>Couleur</label><input type="color" id="input-couleur" value="${f.couleur}">
+      <label>Nombre de niveaux</label>
+      <select id="input-nb-niveaux" onchange="majChampsJours()">
+        <option value="1" ${f.nb_niveaux===1?'selected':''}>1 niveau</option>
+        <option value="2" ${f.nb_niveaux===2?'selected':''}>2 niveaux</option>
+        <option value="3" ${f.nb_niveaux===3?'selected':''}>3 niveaux</option>
+      </select>
+      <label>Jours d'accompagnement par niveau</label>
+      <div id="bloc-jours">${joursHtml}</div>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="enregistrerFormation()">Enregistrer</button>
+      </div>
+    </div>`);
+}
+
+function majChampsJours() {
+  const nb = parseInt(document.getElementById('input-nb-niveaux').value);
+  const bloc = document.getElementById('bloc-jours');
+  const existants = {};
+  bloc.querySelectorAll('input').forEach(inp => {
+    const n = inp.id.split('-').pop();
+    existants[n] = inp.value;
+  });
+  bloc.innerHTML = Array.from({length: nb}, (_, i) => i+1).map(n => `
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+      <span style="font-size:13px; width:70px;">Niveau ${n}</span>
+      <input type="number" min="0" id="jours-niveau-${n}" value="${existants[n] || 0}" style="width:80px;">
+      <span style="font-size:12px; color:var(--grey);">jour(s)</span>
+    </div>`).join('');
+}
+
+async function enregistrerFormation() {
+  const titre = document.getElementById('input-titre').value.trim();
+  if (!titre) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>';
+    return;
+  }
+  const nbNiveaux = parseInt(document.getElementById('input-nb-niveaux').value);
+  const data = new FormData();
+  data.append('titre', titre);
+  data.append('couleur', document.getElementById('input-couleur').value);
+  data.append('nb_niveaux', nbNiveaux);
+  try {
+    await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
+    const dataJours = new URLSearchParams();
+    for (let n = 1; n <= nbNiveaux; n++) {
+      dataJours.append(`niveau_${n}`, document.getElementById(`jours-niveau-${n}`).value || '0');
+    }
+    await appelApi(`/admin/formations/${FORMATION_ID}/jours-accompagnement`, { method: 'PUT', body: dataJours });
+    fermerModal();
+    afficherToast('Formation modifiée');
+    await charger();
+  } catch (e) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+  }
+}
+
+function demanderSuppressionFormation() {
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Supprimer "${esc(donnees.titre)}" ?</h3>
+      <p style="font-size:13px; color:var(--grey);">Cette action est définitive.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppressionFormation()">Supprimer définitivement</button>
+      </div>
+    </div>`);
+}
+
+async function confirmerSuppressionFormation() {
+  await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'DELETE' });
+  window.location.href = '/admin/page/formations';
+}
+
+// ---------- Modules ----------
+
+function ouvrirModalCreerModule() {
+  afficherOverlay(modalModuleHtml(null));
+}
+function ouvrirModalEditerModule(moduleId) {
+  afficherOverlay(modalModuleHtml(getModule(moduleId)));
+}
+
+function modalModuleHtml(m) {
+  const f = donnees;
+  const niveauOptions = f.nb_niveaux > 1 ? `
+    <label>Niveau d'accès minimum requis</label>
+    <select id="input-niveau">
+      ${Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${m && m.niveau_requis===n?'selected':''}>Niveau ${n}</option>`).join('')}
+    </select>
+    <div class="helper-text">⚠ Ce niveau verrouille tout le module.</div>` : '';
+  return `
+    <div class="modal">
+      <h3>${m ? 'Modifier le module' : 'Nouveau module'}</h3>
+      <div id="zone-erreur-modal"></div>
+      <label>Titre du module</label>
+      <input type="text" id="input-titre" value="${m ? esc(m.titre) : ''}">
+      ${niveauOptions}
+      <label>Contenu de présentation</label>
+      <textarea id="input-presentation">${m ? esc(m.presentation_html) : ''}</textarea>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="${m ? `enregistrerModule(${m.id})` : 'creerModule()'}">${m ? 'Enregistrer' : 'Créer'}</button>
+      </div>
+    </div>`;
+}
+
+async function creerModule() {
+  const titre = document.getElementById('input-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const data = new FormData();
+  data.append('titre', titre);
+  data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  data.append('presentation_html', document.getElementById('input-presentation').value);
+  const m = await appelApi(`/admin/formations/${FORMATION_ID}/modules`, { method: 'POST', body: data });
+  fermerModal();
+  afficherToast('Module créé');
+  await charger();
+  selectionner({ type: 'module', moduleId: m.id });
+}
+
+async function enregistrerModule(moduleId) {
+  const titre = document.getElementById('input-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const data = new FormData();
+  data.append('titre', titre);
+  data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  data.append('presentation_html', document.getElementById('input-presentation').value);
+  await appelApi(`/admin/modules/${moduleId}`, { method: 'PUT', body: data });
+  fermerModal();
+  afficherToast('Module modifié');
+  await charger();
+}
+
+async function supprimerModule(moduleId) {
+  await appelApi(`/admin/modules/${moduleId}`, { method: 'DELETE' });
+  afficherToast('Module supprimé');
+  if (noeudActif.type !== 'formation') selectionner({ type: 'formation' });
+  await charger();
+}
+
+// ---------- Chapitres ----------
+
+function ouvrirModalCreerChapitre(moduleId) {
+  afficherOverlay(modalChapitreHtml(moduleId, null));
+}
+function ouvrirModalEditerChapitre(moduleId, chapId) {
+  afficherOverlay(modalChapitreHtml(moduleId, getChapitre(moduleId, chapId)));
+}
+
+function modalChapitreHtml(moduleId, c) {
+  const f = donnees;
+  const niveauOptions = f.nb_niveaux > 1 ? `
+    <label>Niveau d'accès minimum requis</label>
+    <select id="input-niveau">
+      ${Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${c && c.niveau_requis===n?'selected':''}>Niveau ${n}</option>`).join('')}
+    </select>` : '';
+  return `
+    <div class="modal">
+      <h3>${c ? 'Modifier le chapitre' : 'Nouveau chapitre'}</h3>
+      <div id="zone-erreur-modal"></div>
+      <label>Titre du chapitre</label>
+      <input type="text" id="input-titre" value="${c ? esc(c.titre) : ''}">
+      ${niveauOptions}
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="${c ? `enregistrerChapitre(${moduleId}, ${c.id})` : `creerChapitre(${moduleId})`}">${c ? 'Enregistrer' : 'Créer'}</button>
+      </div>
+    </div>`;
+}
+
+async function creerChapitre(moduleId) {
+  const titre = document.getElementById('input-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const data = new FormData();
+  data.append('titre', titre);
+  data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  const c = await appelApi(`/admin/modules/${moduleId}/chapitres`, { method: 'POST', body: data });
+  fermerModal();
+  afficherToast('Chapitre créé');
+  await charger();
+  selectionner({ type: 'chapitre', moduleId: moduleId, chapId: c.id });
+}
+
+async function enregistrerChapitre(moduleId, chapId) {
+  const titre = document.getElementById('input-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const data = new FormData();
+  data.append('titre', titre);
+  data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  await appelApi(`/admin/chapitres/${chapId}`, { method: 'PUT', body: data });
+  fermerModal();
+  afficherToast('Chapitre modifié');
+  await charger();
+}
+
+async function supprimerChapitre(chapId) {
+  await appelApi(`/admin/chapitres/${chapId}`, { method: 'DELETE' });
+  afficherToast('Chapitre supprimé');
+  selectionner({ type: 'formation' });
+  await charger();
+}
+
+async function dupliquerChapitre(chapId) {
+  await appelApi(`/admin/chapitres/${chapId}/dupliquer`, { method: 'POST' });
+  afficherToast('Chapitre dupliqué');
+  await charger();
+}
+
+async function deplacerChapitreVersModule(chapId, nouveauModuleId) {
+  await appelApi(`/admin/chapitres/${chapId}/deplacer-vers-module`, {
+    method: 'POST', body: new URLSearchParams({ nouveau_module_id: nouveauModuleId }),
+  });
+  afficherToast('Chapitre déplacé');
+  await charger();
+}
+
+// ---------- Médias ----------
+
+function ouvrirModalAjouterMedia(chapId) {
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Ajouter un média</h3>
+      <div id="zone-erreur-modal"></div>
+      <label>Type</label>
+      <select id="input-media-type">
+        <option value="pdf">📄 PDF</option>
+        <option value="audio">🎧 Audio</option>
+        <option value="lien">🔗 Lien externe</option>
+      </select>
+      <label>Titre affiché à l'élève</label>
+      <input type="text" id="input-media-titre">
+      <label>URL</label>
+      <input type="text" id="input-media-url" placeholder="https://…">
+      <label style="display:flex; align-items:center; gap:8px; margin-top:14px;">
+        <input type="checkbox" id="input-media-telechargeable" style="width:auto;">
+        Téléchargeable par l'élève
+      </label>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="ajouterMedia(${chapId})">Ajouter</button>
+      </div>
+    </div>`);
+}
+
+async function ajouterMedia(chapId) {
+  const titre = document.getElementById('input-media-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const data = new FormData();
+  data.append('type', document.getElementById('input-media-type').value);
+  data.append('titre', titre);
+  data.append('url', document.getElementById('input-media-url').value || '#');
+  data.append('telechargeable', document.getElementById('input-media-telechargeable').checked);
+  await appelApi(`/admin/chapitres/${chapId}/medias`, { method: 'POST', body: data });
+  fermerModal();
+  afficherToast('Média ajouté');
+  await charger();
+}
+
+async function toggleMediaTelechargeable(mediaId, valeur) {
+  const data = new FormData();
+  data.append('telechargeable', valeur);
+  await appelApi(`/admin/medias/${mediaId}/telechargeable`, { method: 'PUT', body: data });
+  await charger();
+}
+
+async function supprimerMedia(mediaId) {
+  await appelApi(`/admin/medias/${mediaId}`, { method: 'DELETE' });
+  afficherToast('Média supprimé');
+  await charger();
+}
+
+charger();
+</script>
+{% endblock %}

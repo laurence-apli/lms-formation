@@ -1,0 +1,77 @@
+{% extends "eleve/base.html" %}
+{% block titre %}Connexion — Mon espace formation{% endblock %}
+{% block contenu %}
+<style>
+  .login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
+  .login-box { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:40px; width:380px; box-shadow:0 10px 40px rgba(0,0,0,0.06); }
+  .login-box .brand-title { font-family:'EB Garamond',serif; font-size:22px; font-weight:600; text-align:center; margin-bottom:4px; }
+  .login-box .brand-sub { font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.06em; color:var(--gold); text-align:center; margin-bottom:28px; }
+  .login-box label { font-size:12px; color:var(--grey); font-weight:600; display:block; margin:14px 0 5px; }
+  .login-box input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; font-size:14px; font-family:inherit; }
+  .login-box .btn-login { width:100%; margin-top:22px; padding:12px; background:var(--ink); color:#F5EDD6; border:none; border-radius:7px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:14px; cursor:pointer; }
+  .login-box .btn-login:hover { background:#45341a; }
+  .login-box .lien-secondaire { display:block; text-align:center; margin-top:16px; font-size:12px; color:var(--gold); cursor:pointer; text-decoration:underline; }
+  .message-erreur { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+</style>
+
+<div class="login-screen">
+  <div class="login-box">
+    <div class="brand-title">Mon espace formation</div>
+    <div class="brand-sub">ESPACE PERSONNEL</div>
+
+    <div id="zone-erreur"></div>
+
+    <form id="form-connexion">
+      <label>E-mail</label>
+      <input type="email" id="email" name="email" required>
+      <label>Mot de passe</label>
+      <input type="password" id="mot_de_passe" name="mot_de_passe" required>
+      <button type="submit" class="btn-login">Se connecter</button>
+    </form>
+    <span class="lien-secondaire" onclick="afficherFormulaireOubli()">Mot de passe oublié ?</span>
+
+    <form id="form-oubli" style="display:none;">
+      <label>Votre e-mail</label>
+      <input type="email" id="email_oubli" name="email" required>
+      <button type="submit" class="btn-login">Recevoir un lien de réinitialisation</button>
+      <span class="lien-secondaire" onclick="annulerOubli()">Retour à la connexion</span>
+    </form>
+  </div>
+</div>
+
+<script>
+function afficherErreur(message) {
+  document.getElementById('zone-erreur').innerHTML = '<div class="message-erreur">' + message + '</div>';
+}
+
+document.getElementById('form-connexion').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const data = new FormData(e.target);
+  const resp = await fetch('/eleve/connexion', { method: 'POST', body: data });
+  if (resp.redirected) {
+    window.location.href = resp.url;
+  } else if (!resp.ok) {
+    const erreur = await resp.json();
+    afficherErreur(erreur.detail || "Une erreur est survenue.");
+  }
+});
+
+function afficherFormulaireOubli() {
+  document.getElementById('form-connexion').style.display = 'none';
+  document.getElementById('form-oubli').style.display = 'block';
+  document.getElementById('zone-erreur').innerHTML = '';
+}
+function annulerOubli() {
+  document.getElementById('form-oubli').style.display = 'none';
+  document.getElementById('form-connexion').style.display = 'block';
+}
+
+document.getElementById('form-oubli').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const data = new FormData(e.target);
+  await fetch('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
+  document.getElementById('form-oubli').innerHTML =
+    '<p style="font-size:13px; text-align:center; color:var(--ink);">Si cette adresse existe dans notre système, un e-mail vient de vous être envoyé avec un lien pour réinitialiser votre mot de passe.</p>';
+});
+</script>
+{% endblock %}

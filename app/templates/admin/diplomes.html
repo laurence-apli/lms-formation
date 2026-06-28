@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% block titre %}Diplômes — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .diplome-row { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .diplome-row .infos { font-size:14px; }
+  .diplome-row .infos .nom { font-weight:600; }
+  .diplome-row .infos .formation { color:var(--grey); font-size:12px; }
+  .btn-diplome-attente { background:#F5E3D0; color:#95621E; border-color:#E8C896; font-weight:700; }
+  .btn-diplome-attente:hover { background:#EFD6B8; border-color:var(--gold); }
+</style>
+
+<div class="topbar"><div><h1>Diplômes</h1></div></div>
+<div id="liste-diplomes"><div class="empty-state">Chargement…</div></div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+async function charger() {
+  const candidats = await appelApi('/admin/diplomes');
+  const conteneur = document.getElementById('liste-diplomes');
+  if (candidats.length === 0) {
+    conteneur.innerHTML = `<div class="empty-state"><div class="big">🎓</div>Aucun élève à 100% pour l'instant.</div>`;
+    return;
+  }
+  conteneur.innerHTML = candidats.map(c => `
+    <div class="diplome-row">
+      <div class="infos">
+        <div class="nom">${esc(c.eleve_nom)}</div>
+        <div class="formation">${esc(c.formation_titre)} — 100% terminé</div>
+      </div>
+      <button class="btn btn-sm btn-diplome-attente" onclick="marquerEnvoye(${c.eleve_id}, ${c.formation_id})">🎓 Diplôme à envoyer</button>
+    </div>
+  `).join('');
+}
+
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+async function marquerEnvoye(eleveId, formationId) {
+  await appelApi(`/admin/eleves/${eleveId}/acces/${formationId}/diplome-envoye`, { method: 'POST' });
+  afficherToast('Diplôme marqué comme envoyé');
+  await charger();
+}
+
+charger();
+</script>
+{% endblock %}

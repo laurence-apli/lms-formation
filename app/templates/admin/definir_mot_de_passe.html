@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Définir votre mot de passe — Administration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap');
+  :root { --gold:#B8922A; --ink:#2E2210; --bg:#FAF7F0; --panel:#FFFFFF; --border:#E5DCC3; --grey:#9B968A; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .login-box { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:40px; width:380px; box-shadow:0 10px 40px rgba(0,0,0,0.06); }
+  .login-box .brand-title { font-family:'EB Garamond',serif; font-size:20px; font-weight:600; text-align:center; margin-bottom:24px; }
+  .login-box label { font-size:12px; color:var(--grey); font-weight:600; display:block; margin:14px 0 5px; }
+  .login-box input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; font-size:14px; font-family:inherit; }
+  .login-box .btn-login { width:100%; margin-top:22px; padding:12px; background:var(--ink); color:#F5EDD6; border:none; border-radius:7px; font-weight:600; font-size:14px; cursor:pointer; }
+  .message-erreur { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+  .helper-text { font-size:11px; color:var(--grey); margin-top:6px; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  {% if token_valide %}
+    <div class="brand-title">Créez votre mot de passe</div>
+    <div id="zone-erreur"></div>
+    <form id="form-mdp">
+      <label>Nouveau mot de passe</label>
+      <input type="password" id="nouveau_mot_de_passe" name="nouveau_mot_de_passe" required minlength="8">
+      <div class="helper-text">Au moins 8 caractères.</div>
+      <button type="submit" class="btn-login">Valider</button>
+    </form>
+    <script>
+      document.getElementById('form-mdp').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const data = new FormData(e.target);
+        const resp = await fetch(window.location.pathname, { method: 'POST', body: data });
+        if (resp.redirected) {
+          window.location.href = resp.url;
+        } else if (!resp.ok) {
+          const erreur = await resp.json();
+          document.getElementById('zone-erreur').innerHTML = '<div class="message-erreur">' + (erreur.detail || "Une erreur est survenue.") + '</div>';
+        }
+      });
+    </script>
+  {% else %}
+    <div class="brand-title">Lien expiré</div>
+    <p style="font-size:13px; text-align:center; color:var(--grey);">
+      Ce lien n'est plus valide. Il a peut-être déjà été utilisé, ou son délai de validité est dépassé.
+      Demandez un nouveau lien depuis la page de connexion.
+    </p>
+    <a href="/admin/connexion" style="display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--gold);">Retour à la connexion</a>
+  {% endif %}
+</div>
+</body>
+</html>

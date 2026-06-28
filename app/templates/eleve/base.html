@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}Mon espace formation{% endblock %}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root {
+    --gold:#B8922A; --cream:#F5EDD6; --cream-light:#FBF4E6; --rose:#C47B6E; --rose-cream:#F5EDE9;
+    --ink:#2E2210; --bg:#FAF7F0; --panel:#FFFFFF; --border:#E5DCC3; --green:#3B8C5A; --grey:#9B968A;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+
+  .topbar-eleve {
+    background:var(--ink); color:#F5EDD6; padding:14px 32px; display:grid;
+    grid-template-columns: 1fr auto 1fr; align-items:center; gap:16px;
+  }
+  .topbar-eleve .brand { font-family:'EB Garamond',serif; font-size:16px; font-weight:600; cursor:pointer; justify-self:start; display:flex; align-items:center; gap:10px; text-decoration:none; color:#F5EDD6; }
+  .topbar-eleve .topbar-bienvenue { font-family:'EB Garamond',serif; font-size:15px; font-style:italic; color:#E8DCC0; text-align:center; justify-self:center; white-space:nowrap; }
+  .topbar-eleve .user-zone { font-size:13px; display:flex; align-items:center; gap:14px; justify-self:end; }
+  .topbar-eleve .user-zone button { background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; }
+
+  .main-eleve { padding:32px 40px; max-width:1100px; margin:0 auto; }
+  h1.titre-page { font-family:'EB Garamond',serif; font-size:26px; font-weight:600; margin:0 0 22px; }
+
+  /* --- Écran d'attente pendant le réveil du serveur (plan gratuit) --- */
+  .ecran-attente {
+    position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center;
+    justify-content: center; flex-direction: column; gap: 20px; z-index: 9999;
+  }
+  .ecran-attente .spinner {
+    width: 44px; height: 44px; border: 4px solid var(--cream); border-top-color: var(--gold);
+    border-radius: 50%; animation: tourner 0.9s linear infinite;
+  }
+  @keyframes tourner { to { transform: rotate(360deg); } }
+  .ecran-attente .message { font-family:'EB Garamond',serif; font-size: 18px; color: var(--ink); text-align: center; max-width: 320px; }
+  .ecran-attente .sous-message { font-size: 13px; color: var(--grey); text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- Écran d'attente : visible par défaut, masqué dès que la page a fini de charger.
+     Utile quand le serveur gratuit se "réveille" après une période d'inactivité
+     (30 à 60 secondes) -- l'élève voit un message rassurant plutôt qu'une page blanche. -->
+<div class="ecran-attente" id="ecran-attente">
+  <div class="spinner"></div>
+  <div class="message">Merci de patienter quelques secondes, je charge ta formation…</div>
+  <div class="sous-message">Cela peut prendre jusqu'à une minute si c'est ta première visite depuis un moment.</div>
+</div>
+
+{% block contenu %}{% endblock %}
+
+<script>
+  // Dès que la page a fini de se charger côté navigateur, on masque l'écran
+  // d'attente -- s'il y avait un vrai temps de réveil du serveur, l'élève
+  // l'aura vu pendant ce délai ; sinon, ça disparaît presque instantanément.
+  window.addEventListener('load', function() {
+    var ecran = document.getElementById('ecran-attente');
+    if (ecran) ecran.style.display = 'none';
+  });
+  // Sécurité : si jamais l'événement 'load' ne se déclenche pas correctement,
+  // on masque tout de même l'écran après un délai raisonnable.
+  setTimeout(function() {
+    var ecran = document.getElementById('ecran-attente');
+    if (ecran) ecran.style.display = 'none';
+  }, 8000);
+</script>
+
+</body>
+</html>

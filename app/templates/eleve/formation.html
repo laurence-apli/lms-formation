@@ -1,0 +1,159 @@
+{% extends "eleve/base.html" %}
+{% block titre %}{{ formation.titre }}{% endblock %}
+{% block contenu %}
+<style>
+  .breadcrumb-eleve { font-size:13px; color:var(--grey); margin-bottom:18px; cursor:pointer; text-decoration:none; display:inline-block; }
+  .formation-layout-eleve { display:flex; gap:24px; align-items:flex-start; }
+  .colonne-sommaire-eleve { width:230px; flex-shrink:0; position:sticky; top:20px; }
+  .sommaire-eleve { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .titre-formation-sommaire { padding:16px; font-family:'EB Garamond',serif; font-weight:600; font-size:15px; background:#FBF7EE; border-bottom:1px solid var(--border); cursor:pointer; }
+  .titre-formation-sommaire:hover { background:var(--cream-light); }
+  .titre-formation-sommaire.actif { background:var(--ink); color:#F5EDD6; }
+  .module-sommaire-eleve { padding:11px 16px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; letter-spacing:.03em; color:var(--grey); border-bottom:1px solid var(--border); background:#FCFAF4; cursor:pointer; }
+  .module-sommaire-eleve:hover { background:var(--cream-light); }
+  .module-sommaire-eleve.actif { background:var(--ink); color:#F5EDD6; }
+  .chapitre-item-eleve { padding:11px 16px; border-bottom:1px solid var(--border); font-size:13.5px; cursor:pointer; display:flex; align-items:center; gap:10px; }
+  .chapitre-item-eleve:hover { background:var(--cream-light); }
+  .chapitre-item-eleve.actif { background:var(--ink); color:#F5EDD6; }
+  .chapitre-item-eleve.verrouille { cursor:not-allowed; color:var(--grey); }
+  .etat-icone { width:18px; height:18px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:10px; }
+  .etat-icone.verrouille { background:#EFEAE0; color:var(--grey); }
+  .etat-icone.disponible { background:var(--cream); color:var(--gold); border:1.5px solid var(--gold); }
+  .etat-icone.termine { background:var(--green); color:white; }
+  .bloc-accompagnement-eleve { margin-top:14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; text-align:center; }
+  .bloc-accompagnement-valeur { font-family:'EB Garamond',serif; font-size:32px; font-weight:600; color:var(--gold); line-height:1; }
+  .bloc-accompagnement-label { font-size:12px; color:var(--grey); margin-top:6px; line-height:1.4; }
+  .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:36px; min-width:0; }
+  .btn-valider-chapitre { margin-top:32px; padding:14px 28px; background:var(--gold); color:white; border:none; border-radius:8px; font-family:'League Spartan',sans-serif; font-weight:700; font-size:14px; cursor:pointer; letter-spacing:.02em; }
+  .btn-valider-chapitre.deja-valide { background:var(--green); cursor:default; }
+  .verrouille-message { text-align:center; padding:60px 20px; color:var(--grey); }
+  .verrouille-message .big { font-size:38px; margin-bottom:14px; }
+  .medias-eleve { margin:24px 0; display:flex; flex-direction:column; gap:8px; }
+  .media-eleve-row { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--cream-light); border:1px solid var(--border); border-radius:8px; font-size:14px; text-decoration:none; color:var(--ink); }
+  .media-eleve-row.non-telechargeable { color:var(--grey); cursor:default; }
+  .media-eleve-action { margin-left:auto; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; color:var(--gold); }
+</style>
+
+<div class="topbar-eleve">
+  <a class="brand" href="/eleve/tableau-de-bord">
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:34px;width:34px;object-fit:contain;border-radius:6px;">{% else %}<span style="font-size:20px;">🏷️</span>{% endif %}
+    <span>{{ profil.prenom }} {{ profil.nom }}</span>
+  </a>
+  <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
+  <div class="user-zone">
+    <span>{{ eleve.prenom }} {{ eleve.nom }}</span>
+    <form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
+  </div>
+</div>
+
+<div class="main-eleve">
+  <a class="breadcrumb-eleve" href="/eleve/tableau-de-bord">← Retour à mes formations</a>
+  <div class="formation-layout-eleve">
+    <div class="colonne-sommaire-eleve">
+      <div class="sommaire-eleve" id="sommaire"></div>
+      <div id="bloc-accompagnement-zone"></div>
+    </div>
+    <div class="contenu-eleve" id="contenu">Chargement…</div>
+  </div>
+</div>
+
+<script>
+const FORMATION_ID = {{ formation.id }};
+{% raw %}
+let noeudActif = { type: 'formation' };
+let donneesFormation = null;
+
+async function chargerFormation() {
+  const resp = await fetch(`/api/eleve/formations/${FORMATION_ID}`);
+  donneesFormation = await resp.json();
+  afficherSommaire();
+  afficherContenu();
+}
+
+function afficherSommaire() {
+  const f = donneesFormation;
+  let html = `<div class="titre-formation-sommaire ${noeudActif.type === 'formation' ? 'actif' : ''}" onclick="selectionnerFormation()">${f.titre}</div>`;
+  f.modules.forEach(m => {
+    const moduleActif = noeudActif.type === 'module' && noeudActif.moduleId === m.id;
+    html += `<div class="module-sommaire-eleve ${moduleActif ? 'actif' : ''}" onclick="selectionnerModule(${m.id})">${m.titre.toUpperCase()}</div>`;
+    m.chapitres.forEach(c => {
+      const actif = noeudActif.type === 'chapitre' && noeudActif.chapId === c.id;
+      let etatClasse = 'verrouille', etatContenu = '🔒';
+      if (c.valide) { etatClasse = 'termine'; etatContenu = '✓'; }
+      else if (c.accessible) { etatClasse = 'disponible'; etatContenu = ''; }
+      const clic = (c.accessible || c.valide) ? `onclick="selectionnerChapitre(${m.id}, ${c.id})"` : '';
+      html += `<div class="chapitre-item-eleve ${actif ? 'actif' : ''} ${!c.accessible && !c.valide ? 'verrouille' : ''}" ${clic}>
+        <span class="etat-icone ${etatClasse}">${etatContenu}</span>${c.titre}
+      </div>`;
+    });
+  });
+  document.getElementById('sommaire').innerHTML = html;
+
+  const zoneAccomp = document.getElementById('bloc-accompagnement-zone');
+  if (f.accompagnement) {
+    zoneAccomp.innerHTML = `<div class="bloc-accompagnement-eleve">
+      <div class="bloc-accompagnement-valeur">${f.accompagnement.restants}</div>
+      <div class="bloc-accompagnement-label">accompagnement${f.accompagnement.restants > 1 ? 's' : ''} disponible${f.accompagnement.restants > 1 ? 's' : ''}<br>sur ${f.accompagnement.total} au total</div>
+    </div>`;
+  } else {
+    zoneAccomp.innerHTML = '';
+  }
+}
+
+function selectionnerFormation() { selectionner({ type: 'formation' }); }
+function selectionnerModule(moduleId) { selectionner({ type: 'module', moduleId: moduleId }); }
+function selectionnerChapitre(moduleId, chapId) { selectionner({ type: 'chapitre', moduleId: moduleId, chapId: chapId }); }
+
+async function afficherContenu() {
+  const zone = document.getElementById('contenu');
+  if (noeudActif.type === 'formation') {
+    zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
+      (donneesFormation.presentation_html ? `<p>${donneesFormation.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
+  } else if (noeudActif.type === 'module') {
+    const resp = await fetch(`/api/eleve/modules/${noeudActif.moduleId}`);
+    if (!resp.ok) { zone.innerHTML = `<div class="verrouille-message">Ce module n'est pas accessible.</div>`; return; }
+    const m = await resp.json();
+    zone.innerHTML = `<h1 class="titre-page">${m.titre}</h1>` +
+      (m.presentation_html ? `<p>${m.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
+  } else if (noeudActif.type === 'chapitre') {
+    const resp = await fetch(`/api/eleve/chapitres/${noeudActif.chapId}`);
+    if (!resp.ok) {
+      const erreur = await resp.json();
+      zone.innerHTML = `<div class="verrouille-message"><div class="big">🔒</div>${erreur.detail || "Ce contenu n'est pas encore accessible."}</div>`;
+      return;
+    }
+    const c = await resp.json();
+    let mediasHtml = '';
+    if (c.medias && c.medias.length) {
+      mediasHtml = '<div class="medias-eleve">' + c.medias.map(media => {
+        const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
+        return media.telechargeable
+          ? `<a class="media-eleve-row" href="${media.url}" download target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
+          : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
+      }).join('') + '</div>';
+    }
+    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n’a pas encore été importé.</p>'}${mediasHtml}` +
+      (c.valide
+        ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
+        : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
+  }
+}
+
+function selectionner(noeud) {
+  noeudActif = noeud;
+  afficherSommaire();
+  afficherContenu();
+}
+
+async function validerChapitre(chapId) {
+  const resp = await fetch(`/api/eleve/chapitres/${chapId}/valider`, { method: 'POST' });
+  if (resp.ok) {
+    await chargerFormation();  // recharge tout (sommaire + progression à jour)
+    selectionner({ type: 'chapitre', moduleId: noeudActif.moduleId, chapId: chapId });
+  }
+}
+
+chargerFormation();
+{% endraw %}
+</script>
+{% endblock %}

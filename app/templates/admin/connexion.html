@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Connexion — Administration</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --panel:#FFFFFF; --border:#E5DCC3; --grey:#9B968A; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); display:flex; align-items:center; justify-content:center; min-height:100vh; }
+  .login-box { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:40px; width:380px; box-shadow:0 10px 40px rgba(0,0,0,0.06); }
+  .login-box .brand-title { font-family:'EB Garamond',serif; font-size:20px; font-weight:600; text-align:center; margin-bottom:4px; }
+  .login-box .brand-sub { font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.06em; color:var(--gold); text-align:center; margin-bottom:28px; }
+  .login-box label { font-size:12px; color:var(--grey); font-weight:600; display:block; margin:14px 0 5px; }
+  .login-box input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; font-size:14px; font-family:inherit; }
+  .login-box .btn-login { width:100%; margin-top:22px; padding:12px; background:var(--ink); color:#F5EDD6; border:none; border-radius:7px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:14px; cursor:pointer; }
+  .message-erreur { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+  .lien-secondaire { display:block; text-align:center; margin-top:16px; font-size:12px; color:var(--gold); cursor:pointer; text-decoration:underline; }
+</style>
+</head>
+<body>
+<div class="login-box">
+  <div class="brand-title">Administration</div>
+  <div class="brand-sub">FORMATIONS</div>
+  <div id="zone-erreur"></div>
+  <form id="form-connexion">
+    <label>E-mail</label>
+    <input type="email" id="email" name="email" required>
+    <label>Mot de passe</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe" required>
+    <button type="submit" class="btn-login">Se connecter</button>
+  </form>
+  <span class="lien-secondaire" onclick="afficherFormulaireOubli()">Mot de passe oublié ?</span>
+  <form id="form-oubli" style="display:none;">
+    <label>Votre e-mail</label>
+    <input type="email" id="email_oubli" name="email" required>
+    <button type="submit" class="btn-login">Recevoir un lien de réinitialisation</button>
+    <span class="lien-secondaire" onclick="annulerOubli()">Retour à la connexion</span>
+  </form>
+</div>
+<script>
+document.getElementById('form-connexion').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const data = new FormData(e.target);
+  const resp = await fetch('/admin/connexion', { method: 'POST', body: data });
+  if (resp.redirected) {
+    window.location.href = resp.url;
+  } else if (!resp.ok) {
+    const erreur = await resp.json();
+    document.getElementById('zone-erreur').innerHTML = '<div class="message-erreur">' + (erreur.detail || "Une erreur est survenue.") + '</div>';
+  }
+});
+function afficherFormulaireOubli() {
+  document.getElementById('form-connexion').style.display = 'none';
+  document.getElementById('form-oubli').style.display = 'block';
+}
+function annulerOubli() {
+  document.getElementById('form-oubli').style.display = 'none';
+  document.getElementById('form-connexion').style.display = 'block';
+}
+document.getElementById('form-oubli').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const data = new FormData(e.target);
+  await fetch('/admin/mot-de-passe-oublie', { method: 'POST', body: data });
+  document.getElementById('form-oubli').innerHTML = '<p style="font-size:13px;text-align:center;">Si cette adresse existe, un e-mail vient de vous être envoyé.</p>';
+});
+</script>
+</body>
+</html>

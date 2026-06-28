@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titre %}Administration{% endblock %}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root {
+    --gold:#B8922A; --cream:#F5EDD6; --rose:#C47B6E; --ink:#2E2210; --bg:#FAF7F0;
+    --panel:#FFFFFF; --border:#E5DCC3; --green:#3B8C5A; --grey:#9B968A; --danger:#B3503D;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); display:flex; min-height:100vh; }
+
+  .sidebar { width:240px; background:var(--ink); color:#F5EDD6; flex-shrink:0; display:flex; flex-direction:column; padding:24px 0; }
+  .sidebar .brand { font-family:'EB Garamond',serif; font-size:18px; font-weight:600; padding:0 20px 24px; border-bottom:1px solid rgba(245,237,214,0.15); margin-bottom:16px; }
+  .sidebar .brand small { display:block; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.06em; color:#B8922A; margin-top:4px; }
+  .nav-item { padding:10px 20px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; color:#D8CBA0; border-left:3px solid transparent; text-decoration:none; }
+  .nav-item.active { background:rgba(184,146,42,0.15); color:#F5EDD6; border-left-color:var(--gold); }
+  .nav-item:hover:not(.active) { background:rgba(255,255,255,0.04); }
+
+  .main { flex:1; padding:32px 40px; overflow-y:auto; }
+  .topbar { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:28px; }
+  h1 { font-family:'EB Garamond',serif; font-size:26px; font-weight:600; margin:0; }
+  .breadcrumb { font-size:13px; color:var(--grey); margin-bottom:4px; }
+  .breadcrumb span, .breadcrumb a { cursor:pointer; color:var(--grey); text-decoration:none; }
+  .breadcrumb span:hover, .breadcrumb a:hover { color:var(--gold); text-decoration:underline; }
+
+  .btn { font-family:'League Spartan',sans-serif; font-weight:600; font-size:13px; padding:9px 16px; border-radius:6px; cursor:pointer; border:1px solid var(--border); background:var(--panel); color:var(--ink); display:inline-flex; align-items:center; gap:6px; text-decoration:none; }
+  .btn:hover { border-color:var(--gold); }
+  .btn-primary { background:var(--ink); color:#F5EDD6; border-color:var(--ink); }
+  .btn-primary:hover { background:#45341a; }
+  .btn-sm { padding:5px 10px; font-size:12px; }
+  .btn-danger-outline { color:var(--danger); border-color:#e3c4ba; }
+  .btn-danger-outline:hover { border-color:var(--danger); background:#FBEAF0; }
+
+  .toast { position:fixed; bottom:24px; right:24px; background:var(--ink); color:#F5EDD6; padding:12px 20px; border-radius:8px; font-size:13px; z-index:60; box-shadow:0 4px 16px rgba(0,0,0,0.2); }
+  .message-erreur { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+
+  .overlay { position:fixed; inset:0; background:rgba(46,34,16,0.45); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal { background:var(--panel); border-radius:10px; padding:24px; width:440px; max-width:100%; box-shadow:0 10px 40px rgba(0,0,0,0.2); max-height:88vh; overflow-y:auto; }
+  .modal h3 { font-family:'EB Garamond',serif; margin:0 0 16px; font-size:18px; }
+  .modal label { font-size:12px; color:var(--grey); display:block; margin:14px 0 4px; font-weight:600; }
+  .modal input, .modal select, .modal textarea { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:14px; font-family:inherit; }
+  .modal textarea { resize:vertical; min-height:70px; }
+  .modal-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:20px; }
+  .helper-text { font-size:11px; color:var(--grey); margin-top:4px; }
+  .alert-box { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:12px 16px; font-size:13px; margin-bottom:16px; }
+
+  .empty-state { text-align:center; padding:60px 20px; color:var(--grey); font-size:14px; }
+  .empty-state .big { font-size:32px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="brand">{{ profil.prenom }} {{ profil.nom }}<small>ADMINISTRATION FORMATIONS</small></div>
+  <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">📚 Formations</a>
+  <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">👤 Élèves</a>
+  <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes</a>
+  <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">🪪 Mon profil</a>
+</div>
+
+<div class="main">{% block contenu %}{% endblock %}</div>
+
+<script>
+function afficherToast(message) {
+  document.querySelectorAll('.toast').forEach(el => el.remove());
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = message;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+function fermerModal() {
+  document.querySelectorAll('.overlay').forEach(el => el.remove());
+}
+
+async function appelApi(url, options = {}) {
+  const resp = await fetch(url, options);
+  if (!resp.ok) {
+    let detail = "Une erreur est survenue.";
+    try { detail = (await resp.json()).detail || detail; } catch (e) {}
+    throw new Error(detail);
+  }
+  try { return await resp.json(); } catch (e) { return {}; }
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
