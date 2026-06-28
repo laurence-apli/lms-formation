@@ -11,6 +11,7 @@ from .database import initialiser_base
 from .routes import auth, formations, import_word, eleves, espace_eleve, profil
 from . import pages
 from . import pages_admin
+from . import setup_temporaire
 
 # Configuration du logging : sans ceci, les messages (notamment la simulation
 # des e-mails tant que RESEND_API_KEY n'est pas configurée) ne s'afficheraient
@@ -31,7 +32,7 @@ app.include_router(espace_eleve.router)
 app.include_router(profil.router)
 app.include_router(pages.router)
 app.include_router(pages_admin.router)
-
+app.include_router(setup_temporaire.router)
 
 @app.on_event("startup")
 def au_demarrage():
