@@ -24,6 +24,29 @@
   .bloc-accompagnement-valeur { font-family:'EB Garamond',serif; font-size:32px; font-weight:600; color:var(--gold); line-height:1; }
   .bloc-accompagnement-label { font-size:12px; color:var(--grey); margin-top:6px; line-height:1.4; }
   .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:36px; min-width:0; }
+
+  /* --- Styles du contenu importé depuis Word (word_to_web.py), identiques à l'admin --- */
+  .contenu-eleve .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
+  .contenu-eleve .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
+  .contenu-eleve .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
+  .contenu-eleve .gold-rule-thin { border:none; border-top:1.5px solid var(--gold); margin:20px 0; }
+  .contenu-eleve .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
+  .contenu-eleve .standard-list { padding-left:22px; margin:12px 0; }
+  .contenu-eleve .standard-list li { margin-bottom:6px; }
+
+  .contenu-eleve .pull-quote {
+    background: linear-gradient(135deg, #FBF0DA, #F5E6C8); border:1px solid #E3C988; border-radius:10px;
+    padding:20px 24px; margin:20px 0; text-align:center;
+  }
+  .contenu-eleve .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
+  .contenu-eleve .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
+
+  .contenu-eleve .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+  .contenu-eleve .compare-col { border-radius:10px; padding:16px 18px; }
+  .contenu-eleve .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
+  .contenu-eleve .compare-col.after { background:#EAF2EC; border:1px solid #C3DECB; }
+  .contenu-eleve .compare-col .ct-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.04em; margin-bottom:8px; }
+  .contenu-eleve .compare-col ul { margin:0; padding-left:18px; }
   .btn-valider-chapitre { margin-top:32px; padding:14px 28px; background:var(--gold); color:white; border:none; border-radius:8px; font-family:'League Spartan',sans-serif; font-weight:700; font-size:14px; cursor:pointer; letter-spacing:.02em; }
   .btn-valider-chapitre.deja-valide { background:var(--green); cursor:default; }
   .verrouille-message { text-align:center; padding:60px 20px; color:var(--grey); }
@@ -36,8 +59,8 @@
 
 <div class="topbar-eleve">
   <a class="brand" href="/eleve/tableau-de-bord">
-    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:34px;width:34px;object-fit:contain;border-radius:6px;">{% else %}<span style="font-size:20px;">🏷️</span>{% endif %}
-    <span>{{ profil.prenom }} {{ profil.nom }}</span>
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🏷️</span>{% endif %}
+    <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
   </a>
   <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
   <div class="user-zone">

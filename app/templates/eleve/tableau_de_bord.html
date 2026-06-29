@@ -26,8 +26,8 @@
 
 <div class="topbar-eleve">
   <a class="brand" href="/eleve/tableau-de-bord">
-    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:34px;width:34px;object-fit:contain;border-radius:6px;">{% else %}<span style="font-size:20px;">🏷️</span>{% endif %}
-    <span>{{ profil.prenom }} {{ profil.nom }}</span>
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🏷️</span>{% endif %}
+    <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
   </a>
   <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
   <div class="user-zone">

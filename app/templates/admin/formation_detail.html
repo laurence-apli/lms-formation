@@ -24,6 +24,31 @@
   .contenu-panel .sous-titre { font-size:13px; color:var(--grey); margin-bottom:18px; }
   .presentation-display { background:#FBF7EE; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:14px; line-height:1.6; min-height:60px; margin-bottom:16px; }
   .presentation-display.vide { color:var(--grey); font-style:italic; }
+
+  /* --- Styles du contenu importé depuis Word (word_to_web.py) --- */
+  .presentation-display .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
+  .presentation-display .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
+  .presentation-display .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
+  .presentation-display .gold-rule-thin { border:none; border-top:1.5px solid var(--gold); margin:20px 0; }
+  .presentation-display .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
+  .presentation-display .standard-list { padding-left:22px; margin:12px 0; }
+  .presentation-display .standard-list li { margin-bottom:6px; }
+
+  /* Encadré doré (tableau 1 colonne gras+italique dans le Word) */
+  .presentation-display .pull-quote {
+    background: linear-gradient(135deg, #FBF0DA, #F5E6C8); border:1px solid #E3C988; border-radius:10px;
+    padding:20px 24px; margin:20px 0; text-align:center;
+  }
+  .presentation-display .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
+  .presentation-display .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
+
+  /* Comparatif 2 colonnes (tableau 2 colonnes dans le Word) */
+  .presentation-display .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+  .presentation-display .compare-col { border-radius:10px; padding:16px 18px; }
+  .presentation-display .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
+  .presentation-display .compare-col.after { background:#EAF2EC; border:1px solid #C3DECB; }
+  .presentation-display .compare-col .ct-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.04em; margin-bottom:8px; }
+  .presentation-display .compare-col ul { margin:0; padding-left:18px; }
   .import-zone { border:1.5px dashed var(--border); border-radius:8px; padding:20px; text-align:center; font-size:13px; color:var(--grey); margin-top:8px; }
   .medias-liste { margin-top:6px; }
   .media-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:6px; margin-bottom:6px; font-size:13px; }
@@ -85,13 +110,15 @@ function renderContenu() {
 
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `
-      <h2>${esc(f.titre)}</h2>
+      <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span></h2>
       <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
+      ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l’ont déjà ne peuvent plus y accéder.</div>' : ''}
       <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l’instant.'}</div>
       ${zoneImport('formation', FORMATION_ID, f.titre)}
-      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
+      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
         <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
         <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
+        <button class="btn" onclick="toggleActifFormation()">${f.actif ? 'Désactiver' : 'Activer'} la formation</button>
         <button class="btn btn-danger-outline" onclick="demanderSuppressionFormation()">Supprimer la formation</button>
       </div>`;
 
@@ -284,6 +311,12 @@ async function confirmerSuppressionFormation() {
   window.location.href = '/admin/page/formations';
 }
 
+async function toggleActifFormation() {
+  await appelApi(`/admin/formations/${FORMATION_ID}/toggle-actif`, { method: 'POST' });
+  afficherToast('Statut mis à jour');
+  await charger();
+}
+
 // ---------- Modules ----------
 
 function ouvrirModalCreerModule() {
@@ -435,38 +468,96 @@ function ouvrirModalAjouterMedia(chapId) {
       <h3>Ajouter un média</h3>
       <div id="zone-erreur-modal"></div>
       <label>Type</label>
-      <select id="input-media-type">
+      <select id="input-media-type" onchange="majFormulaireMedia()">
         <option value="pdf">📄 PDF</option>
         <option value="audio">🎧 Audio</option>
         <option value="lien">🔗 Lien externe</option>
       </select>
       <label>Titre affiché à l'élève</label>
       <input type="text" id="input-media-titre">
-      <label>URL</label>
-      <input type="text" id="input-media-url" placeholder="https://…">
+      <div id="zone-source-media"></div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:14px;">
         <input type="checkbox" id="input-media-telechargeable" style="width:auto;">
         Téléchargeable par l'élève
       </label>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="ajouterMedia(${chapId})">Ajouter</button>
+        <button class="btn btn-primary" id="btn-ajouter-media" onclick="ajouterMedia(${chapId})">Ajouter</button>
       </div>
     </div>`);
+  majFormulaireMedia();
+}
+
+function majFormulaireMedia() {
+  const type = document.getElementById('input-media-type').value;
+  const zone = document.getElementById('zone-source-media');
+  if (type === 'lien') {
+    zone.innerHTML = `
+      <label>URL</label>
+      <input type="text" id="input-media-url" placeholder="https://…">`;
+  } else {
+    const accept = type === 'pdf' ? '.pdf' : '.mp3,.wav,.m4a,.ogg';
+    zone.innerHTML = `
+      <label>Fichier</label>
+      <div class="import-zone" id="zone-fichier-media"
+           ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
+           ondragleave="this.style.borderColor='var(--border)';"
+           ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; recevoirFichierMedia(event.dataTransfer.files[0]);">
+        📎 Glisser le fichier ici, ou
+        <label for="input-fichier-media" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
+        <input type="file" id="input-fichier-media" accept="${accept}" style="display:none;" onchange="recevoirFichierMedia(this.files[0])">
+        <div id="nom-fichier-media" style="margin-top:8px; font-weight:600; color:var(--ink);"></div>
+      </div>`;
+  }
+}
+
+let fichierMediaEnCours = null;
+
+function recevoirFichierMedia(fichier) {
+  if (!fichier) return;
+  fichierMediaEnCours = fichier;
+  document.getElementById('nom-fichier-media').textContent = `✓ ${fichier.name}`;
+  const champTitre = document.getElementById('input-media-titre');
+  if (champTitre && !champTitre.value.trim()) {
+    champTitre.value = fichier.name.replace(/\.[^.]+$/, "");
+  }
 }
 
 async function ajouterMedia(chapId) {
   const titre = document.getElementById('input-media-titre').value.trim();
   if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
-  const data = new FormData();
-  data.append('type', document.getElementById('input-media-type').value);
-  data.append('titre', titre);
-  data.append('url', document.getElementById('input-media-url').value || '#');
-  data.append('telechargeable', document.getElementById('input-media-telechargeable').checked);
-  await appelApi(`/admin/chapitres/${chapId}/medias`, { method: 'POST', body: data });
-  fermerModal();
-  afficherToast('Média ajouté');
-  await charger();
+  const type = document.getElementById('input-media-type').value;
+  const telechargeable = document.getElementById('input-media-telechargeable').checked;
+
+  try {
+    if (type === 'lien') {
+      const data = new FormData();
+      data.append('type', type);
+      data.append('titre', titre);
+      data.append('url', document.getElementById('input-media-url').value || '#');
+      data.append('telechargeable', telechargeable);
+      await appelApi(`/admin/chapitres/${chapId}/medias`, { method: 'POST', body: data });
+    } else {
+      if (!fichierMediaEnCours) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Merci de déposer un fichier.</div>'; return; }
+      const data = new FormData();
+      data.append('type', type);
+      data.append('titre', titre);
+      data.append('telechargeable', telechargeable);
+      data.append('fichier', fichierMediaEnCours);
+      const bouton = document.getElementById('btn-ajouter-media');
+      bouton.textContent = 'Envoi en cours…';
+      bouton.disabled = true;
+      await appelApi(`/admin/chapitres/${chapId}/medias/upload`, { method: 'POST', body: data });
+    }
+    fichierMediaEnCours = null;
+    fermerModal();
+    afficherToast('Média ajouté');
+    await charger();
+  } catch (e) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+    const bouton = document.getElementById('btn-ajouter-media');
+    if (bouton) { bouton.textContent = 'Ajouter'; bouton.disabled = false; }
+  }
 }
 
 async function toggleMediaTelechargeable(mediaId, valeur) {

@@ -2,7 +2,8 @@
 Routes de gestion des formations, modules et chapitres -- réservées à
 l'administrateur connecté (toutes les routes dépendent de admin_connecte).
 """
-from fastapi import APIRouter, Depends, Form, HTTPException
+import base64
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
@@ -134,6 +135,16 @@ def supprimer_formation(formation_id: int, session: Session = Depends(obtenir_se
     session.delete(formation)
     session.commit()
     return {"ok": True, "nb_eleves_concernes": nb_eleves_concernes}
+
+
+@router.post("/formations/{formation_id}/toggle-actif")
+def toggle_actif_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    formation.actif = not formation.actif
+    session.commit()
+    return {"id": formation.id, "actif": formation.actif}
 
 
 @router.post("/formations/{formation_id}/dupliquer")
@@ -317,6 +328,56 @@ def ajouter_media(
     if chapitre is None:
         raise HTTPException(status_code=404, detail="Chapitre introuvable.")
     media = Media(chapitre_id=chapitre_id, type=type, titre=titre, url=url, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+TAILLE_MAX_MEDIA_OCTETS = 8 * 1024 * 1024  # 8 Mo -- un PDF de quelques pages reste largement sous ce seuil ;
+# au-delà, le risque de consommation mémoire excessive sur le plan gratuit Render devient réel (même
+# logique que pour l'import Word, voir TAILLE_MAX_OCTETS dans import_word.py)
+
+EXTENSIONS_AUTORISEES = {
+    "pdf": {".pdf"},
+    "audio": {".mp3", ".wav", ".m4a", ".ogg"},
+}
+MIME_PAR_EXTENSION = {
+    ".pdf": "application/pdf", ".mp3": "audio/mpeg", ".wav": "audio/wav",
+    ".m4a": "audio/mp4", ".ogg": "audio/ogg",
+}
+
+
+@router.post("/chapitres/{chapitre_id}/medias/upload")
+async def uploader_media_fichier(
+    chapitre_id: int, type: str = Form(...), titre: str = Form(...),
+    telechargeable: bool = Form(False), fichier: UploadFile = File(...),
+    session: Session = Depends(obtenir_session),
+):
+    """Reçoit un vrai fichier (PDF ou audio) déposé par glisser-déposer, et le
+    stocke encodé en base64 directement dans la base de données -- le plan
+    gratuit de Render ne garantit PAS la persistance des fichiers écrits sur
+    le disque du serveur (perdus à chaque redéploiement/redémarrage), alors
+    que PostgreSQL (Neon) est bien persistant. Même logique déjà appliquée
+    aux images extraites des documents Word importés."""
+    if type not in ("pdf", "audio"):
+        raise HTTPException(status_code=400, detail="Ce type de média ne s'importe pas par fichier.")
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+
+    extension = "." + fichier.filename.rsplit(".", 1)[-1].lower() if "." in fichier.filename else ""
+    if extension not in EXTENSIONS_AUTORISEES.get(type, set()):
+        attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
+        raise HTTPException(status_code=400, detail=f"Format de fichier non reconnu pour ce type (attendu : {attendu}).")
+
+    contenu = await fichier.read()
+    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
+        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (8 Mo maximum).")
+
+    mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
+    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+
+    media = Media(chapitre_id=chapitre_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
     session.add(media)
     session.commit()
     return {"id": media.id}

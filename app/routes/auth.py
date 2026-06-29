@@ -28,9 +28,11 @@ router = APIRouter()
 
 # ---------- Création de tokens (appelée par l'admin quand elle crée un élève) ----------
 
-def creer_et_envoyer_token_premiere_connexion(session: Session, eleve: Eleve) -> bool:
+def creer_et_envoyer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
     """Crée un token de première connexion pour un élève et lui envoie l'e-mail
-    correspondant. Appelée juste après la création d'une fiche élève par l'admin."""
+    correspondant. Appelée juste après la création d'une fiche élève par l'admin.
+    Renvoie le lien généré (utile pour construire un mailto: côté interface,
+    en plus de l'envoi -- simulé ou réel -- déjà effectué par e-mail)."""
     token_str = generer_token_reinitialisation()
     token = TokenAuthEleve(
         eleve_id=eleve.id,
@@ -42,7 +44,8 @@ def creer_et_envoyer_token_premiere_connexion(session: Session, eleve: Eleve) ->
     session.commit()
 
     lien = f"{URL_PLATEFORME}/eleve/definir-mot-de-passe/{token_str}"
-    return email_premiere_connexion(eleve.email, eleve.prenom, lien)
+    email_premiere_connexion(eleve.email, eleve.prenom, lien)
+    return lien
 
 
 # ---------- Connexion élève ----------
@@ -63,8 +66,6 @@ def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str 
 
     request.session["eleve_id"] = eleve.id
     return RedirectResponse(url="/eleve/tableau-de-bord", status_code=303)
-
-
 
 
 @router.post("/eleve/definir-mot-de-passe/{token}")

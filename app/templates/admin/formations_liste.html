@@ -92,10 +92,10 @@ async function creerFormation() {
   data.append('couleur', document.getElementById('input-couleur').value);
   data.append('nb_niveaux', document.getElementById('input-nb-niveaux').value);
   try {
-    await appelApi('/admin/formations', { method: 'POST', body: data });
+    const formation = await appelApi('/admin/formations', { method: 'POST', body: data });
     fermerModal();
     afficherToast('Formation créée');
-    chargerFormations();
+    window.location.href = `/admin/page/formations/${formation.id}`;
   } catch (e) {
     document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
   }

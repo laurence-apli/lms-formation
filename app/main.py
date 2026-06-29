@@ -34,6 +34,7 @@ app.include_router(pages.router)
 app.include_router(pages_admin.router)
 app.include_router(setup_temporaire.router)
 
+
 @app.on_event("startup")
 def au_demarrage():
     initialiser_base()

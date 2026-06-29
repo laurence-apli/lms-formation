@@ -70,6 +70,14 @@ def page_diplomes(request: Request, admin: Administrateur = Depends(admin_connec
     )
 
 
+@router.get("/statistiques", response_class=HTMLResponse)
+def page_statistiques(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return templates.TemplateResponse(
+        request, "admin/statistiques.html",
+        {"profil": _profil_admin(admin), "page_active": "statistiques"},
+    )
+
+
 @router.get("/profil", response_class=HTMLResponse)
 def page_profil(request: Request, admin: Administrateur = Depends(admin_connecte)):
     return templates.TemplateResponse(

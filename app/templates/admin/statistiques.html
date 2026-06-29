@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% block titre %}Statistiques — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; }
+  .stat-card .stat-value { font-family:'EB Garamond',serif; font-size:30px; font-weight:600; color:var(--gold); }
+  .stat-card .stat-label { font-size:12px; color:var(--grey); margin-top:4px; }
+  .stats-table { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:10px; border-collapse:collapse; overflow:hidden; }
+  .stats-table th { text-align:left; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.05em; color:var(--grey); padding:12px 16px; background:#FBF7EE; border-bottom:1px solid var(--border); }
+  .stats-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:14px; }
+  .stats-table tr:last-child td { border-bottom:none; }
+</style>
+
+<div class="topbar"><div><h1>Statistiques</h1></div></div>
+<div class="stats-grid" id="cartes-stats"></div>
+<table class="stats-table">
+  <thead><tr><th>Formation</th><th>Élèves inscrits</th><th>Progression moyenne</th></tr></thead>
+  <tbody id="corps-table-stats"><tr><td colspan="3" style="text-align:center; color:var(--grey); padding:30px;">Chargement…</td></tr></tbody>
+</table>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function esc(s) {
+  const div = document.createElement('div');
+  div.textContent = s == null ? '' : String(s);
+  return div.innerHTML;
+}
+
+async function charger() {
+  const stats = await appelApi('/admin/statistiques');
+  document.getElementById('cartes-stats').innerHTML = `
+    <div class="stat-card"><div class="stat-value">${stats.total_eleves}</div><div class="stat-label">Élèves au total</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.total_formations}</div><div class="stat-label">Formations</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.moyenne_globale}%</div><div class="stat-label">Progression moyenne</div></div>
+    <div class="stat-card"><div class="stat-value">${stats.nb_parcours_termines}</div><div class="stat-label">Parcours terminés (100%)</div></div>
+  `;
+  const corps = document.getElementById('corps-table-stats');
+  if (stats.par_formation.length === 0) {
+    corps.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--grey); padding:30px;">Aucune formation pour l'instant.</td></tr>`;
+    return;
+  }
+  corps.innerHTML = stats.par_formation.map(f => `
+    <tr><td>${esc(f.titre)}</td><td>${f.nb_eleves}</td><td>${f.moyenne}%</td></tr>
+  `).join('');
+}
+
+charger();
+</script>
+{% endblock %}

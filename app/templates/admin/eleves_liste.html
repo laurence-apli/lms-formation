@@ -110,13 +110,30 @@ async function creerEleve() {
   data.append('prenom', document.getElementById('input-prenom').value);
   data.append('email', document.getElementById('input-email').value);
   try {
-    await appelApi('/admin/eleves', { method: 'POST', body: data });
+    const eleve = await appelApi('/admin/eleves', { method: 'POST', body: data });
     fermerModal();
     afficherToast('Élève créé. Un e-mail lui a été envoyé.');
     await charger();
+    ouvrirMailBienvenue(eleve);
   } catch (e) {
     document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
   }
+}
+
+function ouvrirMailBienvenue(eleve) {
+  // Construit un brouillon d'e-mail dans le client de messagerie par défaut
+  // de l'administratrice (mailto:), en plus de l'e-mail automatique déjà
+  // envoyé par la plateforme -- pratique si elle souhaite ajouter un mot
+  // personnel avant de l'envoyer elle-même.
+  const sujet = `Bienvenue dans ton espace formation`;
+  const corps =
+    `Bonjour ${eleve.prenom} ${eleve.nom},\n\n` +
+    `Bienvenue dans ton espace de formation !\n\n` +
+    `Pour accéder à ta formation, clique sur ce lien et crée ton mot de passe :\n` +
+    `${eleve.lien_premiere_connexion}\n\n` +
+    `À très bientôt,`;
+  const lien = `mailto:${eleve.email}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+  window.location.href = lien;
 }
 
 function exporterCsv() {

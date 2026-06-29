@@ -69,3 +69,16 @@ Une fois la plateforme en ligne et son adresse définitive connue, ajouter un so
 ## Limite connue (plan gratuit Render)
 
 Si le service n'a reçu aucune visite depuis 15 minutes, il se met en veille. La visite suivante prend 30 à 60 secondes à charger avant de répondre normalement. C'est un compromis accepté pour rester gratuit — un écran d'attente sera affiché côté élève pendant ce délai.
+
+## Limite de taille pour l'import Word (4 Mo par fichier)
+
+Le plan gratuit de Render ne dispose que de 512 Mo de RAM au total pour tout
+le serveur. Le traitement d'un fichier Word (extraction du texte, des images,
+mise en forme) peut consommer, mesuré en conditions réelles, jusqu'à environ
+50 fois la taille du fichier en mémoire pendant l'import. Au-delà de 4 Mo,
+le risque de faire planter le service entier (pas seulement l'import en
+cours) devient réel. Si Laurence a besoin d'importer un document plus long,
+la bonne pratique est de le découper en plusieurs chapitres -- ce qui est
+de toute façon une meilleure organisation pédagogique. Si ce besoin devient
+fréquent, augmenter cette limite supposera de passer à un plan Render payant
+avec plus de RAM (voir `app/routes/import_word.py`, variable `TAILLE_MAX_OCTETS`).

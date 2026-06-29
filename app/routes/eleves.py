@@ -63,10 +63,15 @@ def creer_eleve(
     session.commit()
 
     # Envoi immédiat de l'e-mail de première connexion -- l'élève reçoit
-    # tout de suite son lien pour définir son mot de passe.
-    creer_et_envoyer_token_premiere_connexion(session, eleve)
+    # tout de suite son lien pour définir son mot de passe. Le lien est aussi
+    # renvoyé ici pour que l'admin puisse, en plus, ouvrir un brouillon dans
+    # son propre client e-mail si elle le souhaite.
+    lien_premiere_connexion = creer_et_envoyer_token_premiere_connexion(session, eleve)
 
-    return {"id": eleve.id, "nom": eleve.nom, "prenom": eleve.prenom}
+    return {
+        "id": eleve.id, "nom": eleve.nom, "prenom": eleve.prenom, "email": eleve.email,
+        "lien_premiere_connexion": lien_premiere_connexion,
+    }
 
 
 @router.put("/eleves/{eleve_id}")
@@ -143,6 +148,8 @@ def donner_acces_formation(
     formation = session.get(Formation, formation_id)
     if eleve is None or formation is None:
         raise HTTPException(status_code=404, detail="Élève ou formation introuvable.")
+    if not formation.actif:
+        raise HTTPException(status_code=400, detail="Cette formation est désactivée, elle ne peut pas être attribuée à un élève.")
 
     niveau_final = niveau if formation.nb_niveaux > 1 else 1
     if niveau_final not in range(1, formation.nb_niveaux + 1):
@@ -225,3 +232,37 @@ def marquer_diplome_envoye(eleve_id: int, formation_id: int, session: Session = 
     acces.diplome_envoye = True
     session.commit()
     return {"ok": True}
+
+
+@router.get("/statistiques")
+def lire_statistiques(session: Session = Depends(obtenir_session)):
+    total_eleves = session.query(Eleve).count()
+    total_formations = session.query(Formation).count()
+
+    toutes_progressions = []
+    for acces in session.query(AccesFormation).all():
+        toutes_progressions.append(progression_pourcentage(session, acces.eleve_id, acces.formation))
+
+    moyenne_globale = round(sum(toutes_progressions) / len(toutes_progressions), 0) if toutes_progressions else 0
+    nb_parcours_termines = sum(1 for p in toutes_progressions if p == 100.0)
+
+    lignes_par_formation = []
+    for formation in session.query(Formation).all():
+        progressions_f = [
+            progression_pourcentage(session, a.eleve_id, formation)
+            for a in formation.acces_eleves
+        ]
+        moyenne_f = round(sum(progressions_f) / len(progressions_f), 0) if progressions_f else 0
+        lignes_par_formation.append({
+            "titre": formation.titre,
+            "nb_eleves": len(progressions_f),
+            "moyenne": moyenne_f,
+        })
+
+    return {
+        "total_eleves": total_eleves,
+        "total_formations": total_formations,
+        "moyenne_globale": moyenne_globale,
+        "nb_parcours_termines": nb_parcours_termines,
+        "par_formation": lignes_par_formation,
+    }

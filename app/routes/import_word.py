@@ -18,7 +18,12 @@ from .auth import admin_connecte
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
-TAILLE_MAX_OCTETS = 15 * 1024 * 1024  # 15 Mo -- une formation avec quelques images reste largement sous ce seuil
+TAILLE_MAX_OCTETS = 4 * 1024 * 1024  # 4 Mo -- volontairement prudent : le traitement d'un
+# fichier Word peut consommer jusqu'à ~50 fois sa taille en mémoire pendant l'import (mesuré),
+# et le plan gratuit de Render ne dispose que de 512 Mo de RAM au total pour tout le serveur.
+# Largement suffisant pour un chapitre avec quelques images de bonne qualité (quelques Mo en
+# tout) -- si Laurence a besoin d'importer un document vraiment plus lourd, mieux vaut le
+# découper en plusieurs chapitres (ce qui est de toute façon la bonne pratique pédagogique).
 
 
 def _verifier_fichier_word(fichier: UploadFile) -> None:
@@ -30,7 +35,7 @@ async def _lire_et_importer(fichier: UploadFile) -> str:
     _verifier_fichier_word(fichier)
     contenu = await fichier.read()
     if len(contenu) > TAILLE_MAX_OCTETS:
-        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (15 Mo maximum).")
+        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (4 Mo maximum). Pour un document plus long, pense à le découper en plusieurs chapitres.")
     try:
         return importer_word_depuis_bytes(contenu)
     except Exception as e:

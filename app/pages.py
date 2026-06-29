@@ -65,6 +65,8 @@ def page_tableau_de_bord(
     formations_acquises = []
     for acces in eleve.acces_formations:
         formation = acces.formation
+        if not formation.actif:
+            continue
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "nb_niveaux": formation.nb_niveaux, "niveau": acces.niveau,
@@ -102,6 +104,8 @@ def page_formation(
     )
     if acces is None:
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
+    if not formation.actif:
+        raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
     return templates.TemplateResponse(
         request, "eleve/formation.html",
         {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session)},

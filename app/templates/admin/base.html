@@ -59,6 +59,7 @@
   <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">📚 Formations</a>
   <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">👤 Élèves</a>
   <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes</a>
+  <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">📊 Statistiques</a>
   <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">🪪 Mon profil</a>
 </div>
 
@@ -82,7 +83,19 @@ async function appelApi(url, options = {}) {
   const resp = await fetch(url, options);
   if (!resp.ok) {
     let detail = "Une erreur est survenue.";
-    try { detail = (await resp.json()).detail || detail; } catch (e) {}
+    try {
+      const corps = await resp.json();
+      if (typeof corps.detail === "string") {
+        // Erreur "normale", levée volontairement par nos propres routes (ex: HTTPException)
+        detail = corps.detail;
+      } else if (Array.isArray(corps.detail)) {
+        // Erreur de validation automatique de FastAPI : une liste de champs en
+        // erreur, chacun avec son propre message -- jamais un texte simple.
+        // Sans ce cas, l'erreur s'affichait comme "[object Object]" (bug trouvé
+        // et corrigé : on reconstruit un message lisible à partir de la liste).
+        detail = corps.detail.map(d => d.msg || JSON.stringify(d)).join(" — ");
+      }
+    } catch (e) {}
     throw new Error(detail);
   }
   try { return await resp.json(); } catch (e) { return {}; }
