@@ -14,20 +14,25 @@ from sqlalchemy.orm import Session
 from .database import obtenir_session
 from .models import Eleve, Formation, Administrateur, TokenAuthEleve, TokenAuthAdmin, AccesFormation, progression_pourcentage
 from .routes.auth import eleve_connecte
+from .config import URL_SITE_VITRINE
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
 def _profil_pour_affichage(session: Session) -> dict:
-    """Le profil de l'administratrice, affiché dans la topbar élève (logo, nom).
-    S'il n'existe pas encore de compte admin (cas impossible en pratique
-    puisqu'il faut un admin pour créer des élèves, mais on reste défensif),
-    on renvoie des valeurs neutres plutôt que de planter la page."""
+    """Le profil de l'administratrice, affiché dans la topbar élève (logo, nom)
+    et dans la colonne de gauche de l'écran de formation (photo). S'il n'existe
+    pas encore de compte admin (cas impossible en pratique puisqu'il faut un
+    admin pour créer des élèves, mais on reste défensif), on renvoie des
+    valeurs neutres plutôt que de planter la page."""
     admin = session.query(Administrateur).first()
     if admin is None:
-        return {"nom": "", "prenom": "", "email": "", "logo_url": None}
-    return {"nom": admin.nom, "prenom": admin.prenom, "email": admin.email, "logo_url": admin.logo_url}
+        return {"nom": "", "prenom": "", "email": "", "logo_url": None, "photo_url": None}
+    return {
+        "nom": admin.nom, "prenom": admin.prenom, "email": admin.email,
+        "logo_url": admin.logo_url, "photo_url": admin.photo_url,
+    }
 
 
 @router.get("/eleve/connexion", response_class=HTMLResponse)
@@ -85,6 +90,7 @@ def page_tableau_de_bord(
             "formations_acquises": formations_acquises,
             "formations_disponibles": formations_disponibles,
             "profil": _profil_pour_affichage(session),
+            "url_site_vitrine": URL_SITE_VITRINE,
         },
     )
 
@@ -108,5 +114,5 @@ def page_formation(
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
     return templates.TemplateResponse(
         request, "eleve/formation.html",
-        {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session)},
+        {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session), "url_site_vitrine": URL_SITE_VITRINE},
     )

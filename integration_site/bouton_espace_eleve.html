@@ -1,0 +1,63 @@
+<!--
+  BOUTON VISIBLE POUR LES ÉLÈVES : ACCÉDER À MA FORMATION
+  =========================================================
+  Contrairement au lien admin (discret, presque invisible), celui-ci doit
+  être VISIBLE et VALORISÉ -- c'est la porte d'entrée des élèves qui ont
+  déjà payé pour accéder à leur formation. Pensé pour être placé soit dans
+  le menu principal du site (à côté de "Accueil", "Mes pratiques", etc.),
+  soit comme un bouton bien visible sur la page d'accueil ou sur la page
+  d'une formation spécifique.
+
+  Adresse déjà prête, pointant vers le vrai serveur en ligne.
+-->
+
+<style>
+  .bouton-espace-eleve {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #2E2210;
+    color: #F5EDD6;
+    padding: 12px 26px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-family: 'League Spartan', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    transition: background 0.15s;
+  }
+  .bouton-espace-eleve:hover {
+    background: #45341a;
+  }
+
+  /* Variante plus discrète, pour une intégration dans un menu de navigation
+     plutôt qu'un bouton autonome -- même destination, présentation différente. */
+  .lien-espace-eleve-menu {
+    color: #2E2210;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .lien-espace-eleve-menu:hover {
+    color: #B8922A;
+  }
+</style>
+
+<!--
+  OPTION A -- Bouton autonome (page d'accueil, page d'une formation, etc.)
+-->
+<a href="https://lms-formation.onrender.com/eleve/connexion" class="bouton-espace-eleve">
+  Accéder à ma formation
+</a>
+
+<!--
+  OPTION B -- Lien dans le menu de navigation principal, à côté des autres
+  entrées (Accueil, Ménopause, Mes pratiques, Qui je suis, Initiations,
+  Contact). Décommenter et utiliser à la place du bouton ci-dessus si
+  préféré dans le menu plutôt qu'en bouton autonome :
+
+  <a href="https://lms-formation.onrender.com/eleve/connexion" class="lien-espace-eleve-menu">
+    Mon espace formation
+  </a>
+-->

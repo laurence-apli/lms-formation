@@ -31,10 +31,25 @@
   <input type="tel" id="profil-telephone" style="display:block; width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:14px;">
 
   <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
-    <label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🔗 Lien vers le dépôt technique (GitHub)</label>
-    <div style="display:flex; gap:8px;">
+    <div style="font-size:13px; color:var(--ink); font-weight:600; margin-bottom:14px;">🔧 Liens techniques</div>
+    <div class="helper-text" style="margin-bottom:14px;">Ces liens mènent aux pages de connexion de chaque service. Tu te connectes toi-même avec ton propre mot de passe (jamais stocké ici).</div>
+
+    <label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🔗 Dépôt du code (GitHub)</label>
+    <div style="display:flex; gap:8px; margin-bottom:14px;">
       <input type="text" id="profil-lien-github" placeholder="https://github.com/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
       <a class="btn btn-sm" id="lien-ouvrir-github" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
+    </div>
+
+    <label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🌐 Hébergement du serveur (Render)</label>
+    <div style="display:flex; gap:8px; margin-bottom:14px;">
+      <input type="text" id="profil-lien-render" placeholder="https://dashboard.render.com/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+      <a class="btn btn-sm" id="lien-ouvrir-render" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
+    </div>
+
+    <label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🗄️ Base de données (Neon)</label>
+    <div style="display:flex; gap:8px;">
+      <input type="text" id="profil-lien-neon" placeholder="https://console.neon.tech/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
+      <a class="btn btn-sm" id="lien-ouvrir-neon" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
     </div>
   </div>
 
@@ -52,12 +67,19 @@ async function charger() {
   document.getElementById('profil-nom').value = p.nom || '';
   document.getElementById('profil-email').value = p.email || '';
   document.getElementById('profil-telephone').value = p.telephone || '';
-  document.getElementById('profil-lien-github').value = p.lien_github || '';
-  if (p.lien_github) {
-    const lien = document.getElementById('lien-ouvrir-github');
-    lien.href = p.lien_github;
-    lien.style.display = 'inline-flex';
+
+  for (const service of ['github', 'render', 'neon']) {
+    const valeur = p[`lien_${service}`] || '';
+    document.getElementById(`profil-lien-${service}`).value = valeur;
+    const lien = document.getElementById(`lien-ouvrir-${service}`);
+    if (valeur) {
+      lien.href = valeur;
+      lien.style.display = 'inline-flex';
+    } else {
+      lien.style.display = 'none';
+    }
   }
+
   if (p.photo_url) document.getElementById('zone-photo').innerHTML = `<img src="${p.photo_url}" style="width:100%;height:100%;object-fit:cover;">`;
   if (p.logo_url) document.getElementById('zone-logo').innerHTML = `<img src="${p.logo_url}" style="width:100%;height:100%;object-fit:contain;">`;
 }
@@ -86,6 +108,8 @@ async function enregistrer() {
   data.append('email', document.getElementById('profil-email').value);
   data.append('telephone', document.getElementById('profil-telephone').value);
   data.append('lien_github', document.getElementById('profil-lien-github').value);
+  data.append('lien_render', document.getElementById('profil-lien-render').value);
+  data.append('lien_neon', document.getElementById('profil-lien-neon').value);
   try {
     await appelApi('/admin/profil', { method: 'PUT', body: data });
     afficherToast('Profil enregistré');

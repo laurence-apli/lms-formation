@@ -34,6 +34,7 @@ Serveur de la plateforme de formation en ligne, reliée au site vitrine.
 | `SECRET_KEY` | générée automatiquement par Render, rien à faire |
 | `RESEND_API_KEY` | laisser vide pour l'instant (les e-mails seront simulés dans les journaux) |
 | `URL_PLATEFORME` | l'adresse définitive de la plateforme, une fois connue (ex: `https://formation.laurence-mermet-bijon.fr`) |
+| `URL_SITE_VITRINE` | (facultatif) l'adresse du site vitrine, pour afficher un lien "← Retour au site" automatique. Sans cette variable, le lien reste simplement invisible. |
 
 ⚠️ **Important** : `URL_PLATEFORME` doit être configurée correctement dès le
 départ (même avec l'adresse provisoire fournie par Render si le sous-domaine
@@ -56,9 +57,20 @@ Suivre les instructions (nom, prénom, e-mail, mot de passe). Ce script ne peut 
 ### 5. Activer l'envoi réel d'e-mails (quand prêt)
 
 1. Créer un compte sur [resend.com](https://resend.com) (gratuit)
-2. Récupérer la clé API
-3. La renseigner dans la variable `RESEND_API_KEY` sur Render
-4. Redéployer le service (Render le fait automatiquement après un changement de variable)
+2. **Vérifier un domaine** -- étape obligatoire chez Resend, impossible de
+   l'ignorer : il faut prouver qu'on possède le domaine d'où partiront les
+   e-mails (`laurence-mermet-bijon.fr`), en ajoutant quelques enregistrements
+   DNS fournis par Resend (du même type que pour le sous-domaine de la
+   plateforme, voir section 6 ci-dessous -- même démarche, chez le même
+   hébergeur de domaine). Resend affiche les enregistrements exacts à copier
+   une fois le domaine ajouté dans son tableau de bord. La vérification peut
+   prendre jusqu'à 24h après l'ajout des enregistrements, généralement
+   beaucoup plus vite.
+3. Récupérer la clé API
+4. La renseigner dans la variable `RESEND_API_KEY` sur Render
+5. Vérifier que `EMAIL_EXPEDITEUR` correspond bien au domaine vérifié à
+   l'étape 2 (par défaut : `formation@laurence-mermet-bijon.fr`)
+6. Redéployer le service (Render le fait automatiquement après un changement de variable)
 
 Avant cette étape, tous les e-mails (première connexion, réinitialisation de mot de passe) sont visibles dans l'onglet "Logs" de Render au lieu d'être réellement envoyés — la plateforme reste pleinement utilisable pour tester.
 

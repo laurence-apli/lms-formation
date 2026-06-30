@@ -13,7 +13,7 @@ from ..models import (
     Eleve, Formation, AccesFormation, SeanceAccompagnement,
     progression_pourcentage,
 )
-from .auth import admin_connecte, creer_et_envoyer_token_premiere_connexion
+from .auth import admin_connecte, creer_token_premiere_connexion
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -62,11 +62,10 @@ def creer_eleve(
     session.add(eleve)
     session.commit()
 
-    # Envoi immédiat de l'e-mail de première connexion -- l'élève reçoit
-    # tout de suite son lien pour définir son mot de passe. Le lien est aussi
-    # renvoyé ici pour que l'admin puisse, en plus, ouvrir un brouillon dans
-    # son propre client e-mail si elle le souhaite.
-    lien_premiere_connexion = creer_et_envoyer_token_premiere_connexion(session, eleve)
+    # Crée le lien de première connexion, SANS envoi automatique -- Laurence
+    # garde la maîtrise complète : c'est elle qui ouvre et valide le mailto
+    # généré côté interface avant que quoi que ce soit ne soit envoyé.
+    lien_premiere_connexion = creer_token_premiere_connexion(session, eleve)
 
     return {
         "id": eleve.id, "nom": eleve.nom, "prenom": eleve.prenom, "email": eleve.email,

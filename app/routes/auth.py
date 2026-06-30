@@ -20,7 +20,7 @@ from ..models import (
     Eleve, Administrateur, TokenAuthEleve, TokenAuthAdmin,
     generer_token_reinitialisation,
 )
-from ..emails import email_premiere_connexion, email_reinitialisation_mot_de_passe
+from ..emails import email_reinitialisation_mot_de_passe
 from ..config import URL_PLATEFORME, DUREE_VALIDITE_TOKEN_HEURES
 
 router = APIRouter()
@@ -28,11 +28,14 @@ router = APIRouter()
 
 # ---------- Création de tokens (appelée par l'admin quand elle crée un élève) ----------
 
-def creer_et_envoyer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
-    """Crée un token de première connexion pour un élève et lui envoie l'e-mail
-    correspondant. Appelée juste après la création d'une fiche élève par l'admin.
-    Renvoie le lien généré (utile pour construire un mailto: côté interface,
-    en plus de l'envoi -- simulé ou réel -- déjà effectué par e-mail)."""
+def creer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
+    """Crée un token de première connexion pour un élève et renvoie le lien
+    généré. N'envoie AUCUN e-mail automatique -- décision explicite de
+    Laurence : pour la création d'élève, elle veut garder la maîtrise
+    complète de l'envoi (via le mailto: ouvert côté admin, qu'elle valide
+    et personnalise elle-même avant d'envoyer). Différent du mot de passe
+    oublié, où l'envoi automatique (simulé pour l'instant) reste pertinent
+    puisque c'est l'élève lui-même qui en fait la demande."""
     token_str = generer_token_reinitialisation()
     token = TokenAuthEleve(
         eleve_id=eleve.id,
@@ -44,7 +47,6 @@ def creer_et_envoyer_token_premiere_connexion(session: Session, eleve: Eleve) ->
     session.commit()
 
     lien = f"{URL_PLATEFORME}/eleve/definir-mot-de-passe/{token_str}"
-    email_premiere_connexion(eleve.email, eleve.prenom, lien)
     return lien
 
 

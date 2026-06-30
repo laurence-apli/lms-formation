@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from .database import obtenir_session
 from .models import Administrateur, Formation
 from .routes.auth import admin_connecte
+from .config import URL_SITE_VITRINE
 
 router = APIRouter(prefix="/admin/page")
 templates = Jinja2Templates(directory="app/templates")
@@ -24,9 +25,17 @@ def _profil_admin(admin: Administrateur) -> dict:
     }
 
 
+def _rendre(request: Request, nom_template: str, contexte: dict):
+    """Petite fonction centrale qui ajoute automatiquement url_site_vitrine
+    à toutes les pages admin -- évite d'avoir à le répéter (et risquer de
+    l'oublier) sur chacune des routes ci-dessous."""
+    contexte = {**contexte, "url_site_vitrine": URL_SITE_VITRINE}
+    return templates.TemplateResponse(request, nom_template, contexte)
+
+
 @router.get("/formations", response_class=HTMLResponse)
 def page_liste_formations(request: Request, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/formations_liste.html",
         {"profil": _profil_admin(admin), "page_active": "formations"},
     )
@@ -40,7 +49,7 @@ def page_detail_formation(
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/formation_detail.html",
         {"profil": _profil_admin(admin), "page_active": "formations", "formation": formation},
     )
@@ -48,7 +57,7 @@ def page_detail_formation(
 
 @router.get("/eleves", response_class=HTMLResponse)
 def page_liste_eleves(request: Request, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/eleves_liste.html",
         {"profil": _profil_admin(admin), "page_active": "eleves"},
     )
@@ -56,7 +65,7 @@ def page_liste_eleves(request: Request, admin: Administrateur = Depends(admin_co
 
 @router.get("/eleves/{eleve_id}", response_class=HTMLResponse)
 def page_fiche_eleve(request: Request, eleve_id: int, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/eleve_fiche.html",
         {"profil": _profil_admin(admin), "page_active": "eleves", "eleve_id": eleve_id},
     )
@@ -64,7 +73,7 @@ def page_fiche_eleve(request: Request, eleve_id: int, admin: Administrateur = De
 
 @router.get("/diplomes", response_class=HTMLResponse)
 def page_diplomes(request: Request, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/diplomes.html",
         {"profil": _profil_admin(admin), "page_active": "diplomes"},
     )
@@ -72,7 +81,7 @@ def page_diplomes(request: Request, admin: Administrateur = Depends(admin_connec
 
 @router.get("/statistiques", response_class=HTMLResponse)
 def page_statistiques(request: Request, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/statistiques.html",
         {"profil": _profil_admin(admin), "page_active": "statistiques"},
     )
@@ -80,7 +89,7 @@ def page_statistiques(request: Request, admin: Administrateur = Depends(admin_co
 
 @router.get("/profil", response_class=HTMLResponse)
 def page_profil(request: Request, admin: Administrateur = Depends(admin_connecte)):
-    return templates.TemplateResponse(
+    return _rendre(
         request, "admin/profil.html",
         {"profil": _profil_admin(admin), "page_active": "profil"},
     )

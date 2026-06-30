@@ -23,6 +23,9 @@
   .bloc-accompagnement-eleve { margin-top:14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; text-align:center; }
   .bloc-accompagnement-valeur { font-family:'EB Garamond',serif; font-size:32px; font-weight:600; color:var(--gold); line-height:1; }
   .bloc-accompagnement-label { font-size:12px; color:var(--grey); margin-top:6px; line-height:1.4; }
+  .bloc-photo-formatrice { margin-top:14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; text-align:center; }
+  .bloc-photo-formatrice img { width:84px; height:84px; border-radius:50%; object-fit:cover; margin-bottom:10px; }
+  .bloc-photo-formatrice .bloc-photo-nom { font-family:'EB Garamond',serif; font-size:14px; font-weight:600; color:var(--ink); }
   .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:36px; min-width:0; }
 
   /* --- Styles du contenu importé depuis Word (word_to_web.py), identiques à l'admin --- */
@@ -75,6 +78,12 @@
     <div class="colonne-sommaire-eleve">
       <div class="sommaire-eleve" id="sommaire"></div>
       <div id="bloc-accompagnement-zone"></div>
+      {% if profil.photo_url %}
+      <div class="bloc-photo-formatrice">
+        <img src="{{ profil.photo_url }}" alt="{{ profil.prenom }} {{ profil.nom }}">
+        <div class="bloc-photo-nom">{{ profil.prenom }} {{ profil.nom }}</div>
+      </div>
+      {% endif %}
     </div>
     <div class="contenu-eleve" id="contenu">Chargement…</div>
   </div>

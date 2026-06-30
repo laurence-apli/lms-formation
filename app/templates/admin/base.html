@@ -58,9 +58,12 @@
   <div class="brand">{{ profil.prenom }} {{ profil.nom }}<small>ADMINISTRATION FORMATIONS</small></div>
   <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">📚 Formations</a>
   <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">👤 Élèves</a>
-  <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes</a>
+  <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes <span id="badge-diplomes" style="display:none; background:#B8922A; color:#2E2210; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
   <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">📊 Statistiques</a>
   <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">🪪 Mon profil</a>
+  {% if url_site_vitrine %}
+  <a class="nav-item" href="{{ url_site_vitrine }}" target="_blank" rel="noopener" style="margin-top:auto; border-top:1px solid rgba(245,237,214,0.15); padding-top:14px;">← Retour au site</a>
+  {% endif %}
 </div>
 
 <div class="main">{% block contenu %}{% endblock %}</div>
@@ -100,6 +103,24 @@ async function appelApi(url, options = {}) {
   }
   try { return await resp.json(); } catch (e) { return {}; }
 }
+
+// Badge de notification sur "Diplômes" : affiche le nombre d'élèves ayant
+// atteint 100% sans diplôme encore marqué envoyé. Présent sur TOUTES les
+// pages admin (ce script vit dans le template de base, partagé partout),
+// pour que Laurence le voie où qu'elle se trouve dans l'administration.
+(async function chargerBadgeDiplomes() {
+  try {
+    const diplomesEnAttente = await appelApi('/admin/diplomes');
+    const badge = document.getElementById('badge-diplomes');
+    if (badge && diplomesEnAttente.length > 0) {
+      badge.textContent = diplomesEnAttente.length;
+      badge.style.display = 'inline-block';
+    }
+  } catch (e) {
+    // Échec silencieux : un badge de notification qui ne s'affiche pas
+    // n'est jamais grave au point de perturber le reste de la page.
+  }
+})();
 </script>
 {% block scripts %}{% endblock %}
 </body>

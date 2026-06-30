@@ -1,28 +1,57 @@
 # Intégration avec le site vitrine
 
 Ce dossier explique comment relier le site vitrine (hébergé sur Netlify,
-statique) à la plateforme de formation (ce serveur, hébergé sur Render).
+statique) à la plateforme de formation, **déjà en ligne** à l'adresse :
 
-## Ce qui est prêt dès maintenant
+```
+https://lms-formation.onrender.com
+```
 
-Le fichier `lien_administration.html` contient le code à coller dans le site,
-près des mentions légales -- un lien discret vers la connexion administrateur.
+## Ce qui est prêt, avec la vraie adresse déjà intégrée
 
-**Pourquoi c'est aussi simple** : un lien `<a href="...">` classique qui mène
-vers un autre site ne demande aucune configuration technique particulière --
-contrairement à des échanges de données en arrière-plan entre deux domaines
-(API, formulaires AJAX), un simple clic qui change de page n'a pas besoin
-d'autorisation spéciale (pas de "CORS" à configurer pour ce cas précis).
+### 1. Lien discret vers l'administration (`lien_administration.html`)
 
-## Étape à faire une fois le serveur en ligne : le sous-domaine
+À coller près des mentions légales du site, comme convenu au départ -- un
+simple point "·" cliquable, sans texte explicite. Personne d'autre que
+Laurence n'a de raison d'y prêter attention.
 
-Une fois Render et Neon configurés (voir le README principal du projet) et
-le serveur accessible à une adresse comme `https://lms-formation-laurence.onrender.com`,
-deux options pour donner une adresse plus mémorable et professionnelle :
+### 2. Bouton visible pour les élèves (`bouton_espace_eleve.html`)
 
-### Option A — Sous-domaine personnalisé (recommandé)
+Contrairement au lien admin, celui-ci doit être visible -- c'est la porte
+d'entrée des élèves qui ont déjà payé. Deux présentations possibles dans le
+même fichier : un bouton autonome (page d'accueil, page d'une formation) ou
+un lien simple à glisser dans le menu de navigation principal.
 
-Exemple : `formation.laurence-mermet-bijon.fr`
+### 3. Page d'explication "Mes formations" (`page_mes_formations.html`)
+
+Optionnelle, mais recommandée : plutôt qu'un lien sec, un court texte qui
+explique le concept avant le bouton de connexion. Peut devenir une vraie
+page du site (`mes-formations.html`) si souhaité.
+
+### 4. Lien retour, déjà construit côté plateforme
+
+Une fois la variable d'environnement `URL_SITE_VITRINE` configurée sur
+Render (voir ci-dessous), un lien "← Retour au site" apparaît automatiquement
+en pied de page côté élève, et en bas de la barre latérale côté admin --
+aucune modification du site nécessaire pour ce sens-là, c'est déjà actif
+dans le code de la plateforme.
+
+**Important** : tant que cette variable n'est pas configurée, ce lien reste
+simplement invisible, sans rien casser -- testé et confirmé. Pas d'urgence
+à la configurer.
+
+## Pourquoi c'est aussi simple, techniquement
+
+Un lien `<a href="...">` classique qui mène vers un autre site ne demande
+aucune configuration technique particulière -- contrairement à des échanges
+de données en arrière-plan entre deux domaines (API, formulaires AJAX), un
+simple clic qui change de page n'a pas besoin d'autorisation spéciale (pas
+de "CORS" à configurer pour ce cas précis).
+
+## Étape facultative : un sous-domaine personnalisé
+
+Pour remplacer `lms-formation.onrender.com` par une adresse plus mémorable,
+par exemple `formation.laurence-mermet-bijon.fr` :
 
 1. Dans le tableau de bord Render, page du service, section "Custom Domains",
    ajouter `formation.laurence-mermet-bijon.fr`
@@ -31,21 +60,20 @@ Exemple : `formation.laurence-mermet-bijon.fr`
 3. Aller chez l'hébergeur du nom de domaine (là où `laurence-mermet-bijon.fr`
    a été acheté), dans les réglages DNS, et ajouter cet enregistrement CNAME
 4. Attendre la propagation (de quelques minutes à quelques heures)
-5. Mettre à jour la variable d'environnement `URL_PLATEFORME` sur Render avec
-   cette nouvelle adresse
-6. Mettre à jour le lien dans `lien_administration.html` (et le coller dans
-   le site) avec cette même adresse
+5. Mettre à jour la variable d'environnement `URL_PLATEFORME` sur Render
+   avec cette nouvelle adresse
+6. Mettre à jour les 3 fichiers de ce dossier avec cette même adresse, à la
+   place de `https://lms-formation.onrender.com`
 
-### Option B — Garder l'adresse fournie par Render
+Aucune urgence : l'adresse actuelle fonctionne déjà parfaitement, le
+sous-domaine n'est qu'une question d'image, pas de fonctionnement.
 
-Plus rapide à mettre en place (rien à configurer côté DNS), mais moins
-mémorable (`https://lms-formation-laurence.onrender.com`). Suffisant pour
-commencer à tester en conditions réelles, le sous-domaine pouvant être ajouté
-plus tard sans rien casser.
+## Pour activer le lien retour (étape 4 ci-dessus)
 
-## Lien retour : de la plateforme vers le site
+Sur Render, dans Environment Variables, ajouter :
 
-Si on veut aussi un chemin inverse (un bouton "Retour au site" depuis la
-plateforme), il suffit d'ajouter un lien vers le site dans la topbar de
-l'admin ou de l'élève -- pas de configuration technique nécessaire non plus,
-pour la même raison (simple navigation par clic).
+| Variable | Valeur |
+|---|---|
+| `URL_SITE_VITRINE` | `https://laurence-mermet-bijon.fr` (ou l'adresse réelle du site) |
+
+C'est tout -- le lien apparaît automatiquement, sans toucher au site.

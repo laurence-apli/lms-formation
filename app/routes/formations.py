@@ -3,7 +3,7 @@ Routes de gestion des formations, modules et chapitres -- réservées à
 l'administrateur connecté (toutes les routes dépendent de admin_connecte).
 """
 import base64
-from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
@@ -112,16 +112,20 @@ def modifier_formation(
 
 
 @router.put("/formations/{formation_id}/jours-accompagnement")
-def definir_jours_accompagnement(formation_id: int, session: Session = Depends(obtenir_session), **kwargs):
+async def definir_jours_accompagnement(formation_id: int, request: Request, session: Session = Depends(obtenir_session)):
     """Accepte des champs dynamiques niveau_1, niveau_2, niveau_3 selon le
-    nombre de niveaux de la formation."""
+    nombre de niveaux de la formation. **kwargs ne fonctionne pas avec
+    FastAPI pour les données de formulaire (bug trouvé et corrigé : FastAPI
+    cherchait littéralement un champ nommé "kwargs", d'où l'erreur "Field
+    required" rencontrée) -- on lit donc la requête brute à la place."""
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
+    donnees = await request.form()
     for jpn in formation.jours_par_niveau:
         champ = f"niveau_{jpn.niveau}"
-        if champ in kwargs:
-            jpn.jours = int(kwargs[champ])
+        if champ in donnees:
+            jpn.jours = int(donnees[champ])
     session.commit()
     return {"ok": True}
 

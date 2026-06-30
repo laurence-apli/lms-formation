@@ -1,6 +1,12 @@
 """
 Route de gestion du profil de l'administratrice -- nom, contact, photo, logo,
-lien vers le dépôt technique (GitHub). Réservée à l'administrateur connecté.
+liens vers les outils techniques (GitHub, Render, Neon). Réservée à
+l'administrateur connecté.
+
+Important, pour rester cohérent avec les règles de sécurité déjà établies :
+cette page ne stocke JAMAIS de mot de passe, uniquement des liens vers les
+pages de connexion de chaque service -- Laurence se connecte elle-même à
+chacun avec son propre gestionnaire de mots de passe.
 """
 from fastapi import APIRouter, Depends, Form
 from sqlalchemy.orm import Session
@@ -18,6 +24,7 @@ def lire_profil(admin: Administrateur = Depends(admin_connecte)):
         "nom": admin.nom, "prenom": admin.prenom, "email": admin.email,
         "telephone": admin.telephone, "photo_url": admin.photo_url,
         "logo_url": admin.logo_url, "lien_github": admin.lien_github,
+        "lien_render": admin.lien_render, "lien_neon": admin.lien_neon,
     }
 
 
@@ -25,6 +32,7 @@ def lire_profil(admin: Administrateur = Depends(admin_connecte)):
 def modifier_profil(
     nom: str = Form(...), prenom: str = Form(...), email: str = Form(""),
     telephone: str = Form(""), lien_github: str = Form(""),
+    lien_render: str = Form(""), lien_neon: str = Form(""),
     admin: Administrateur = Depends(admin_connecte), session: Session = Depends(obtenir_session),
 ):
     admin.nom = nom.strip()
@@ -32,6 +40,8 @@ def modifier_profil(
     admin.email = email.strip().lower() or admin.email
     admin.telephone = telephone.strip()
     admin.lien_github = lien_github.strip()
+    admin.lien_render = lien_render.strip()
+    admin.lien_neon = lien_neon.strip()
     session.commit()
     return {"ok": True}
 

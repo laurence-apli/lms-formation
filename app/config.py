@@ -31,6 +31,13 @@ EMAIL_EXPEDITEUR = os.environ.get("EMAIL_EXPEDITEUR", "formation@laurence-mermet
 # --- Adresse publique de la plateforme (pour construire les liens dans les e-mails) ---
 URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "http://localhost:8000")
 
+# Adresse du site vitrine (laurence-mermet-bijon.fr), utilisée pour le lien
+# "Retour au site" affiché en pied de page côté élève et admin. Valeur de
+# repli vide tant que cette variable n'est pas configurée sur Render --
+# dans ce cas, le lien retour reste simplement masqué plutôt que de pointer
+# vers une adresse incorrecte.
+URL_SITE_VITRINE = os.environ.get("URL_SITE_VITRINE", "")
+
 # --- Durée de validité des liens envoyés par e-mail ---
 DUREE_VALIDITE_TOKEN_HEURES = 48
 

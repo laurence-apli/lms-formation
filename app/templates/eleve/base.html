@@ -52,6 +52,12 @@
 
 {% block contenu %}{% endblock %}
 
+{% if url_site_vitrine %}
+<footer style="text-align:center; padding:24px 0; font-size:12px; color:var(--grey);">
+  <a href="{{ url_site_vitrine }}" style="color:var(--grey); text-decoration:none;">← Retour au site</a>
+</footer>
+{% endif %}
+
 <script>
   // Dès que la page a fini de se charger côté navigateur, on masque l'écran
   // d'attente -- s'il y avait un vrai temps de réveil du serveur, l'élève

@@ -123,7 +123,9 @@ class Media(Base):
     chapitre_id = Column(Integer, ForeignKey("chapitres.id"), nullable=False)
     type = Column(String(20), nullable=False)
     titre = Column(String(200))
-    url = Column(String(500), nullable=False)
+    url = Column(Text, nullable=False)  # corrigé : String(500) cassait silencieusement le stockage des
+    # PDF/audio encodés en base64 (souvent plus de 100 000 caractères) -- bug confirmé en conditions
+    # réelles avec PostgreSQL, qui applique strictement cette limite (contrairement à SQLite en local)
     telechargeable = Column(Boolean, default=False)
 
     chapitre = relationship("Chapitre", back_populates="medias")
@@ -178,9 +180,12 @@ class Administrateur(Base):
     email = Column(String(200), nullable=False, unique=True)
     telephone = Column(String(50))
     mot_de_passe_hash = Column(String(255))
-    photo_url = Column(String(500))
-    logo_url = Column(String(500))
+    photo_url = Column(Text)  # peut contenir une vraie URL ou une image encodée en base64
+    logo_url = Column(Text)   # (corrigé : String(500) était bien trop court pour une image en base64,
+    # qui peut facilement dépasser 50 000 caractères -- bug confirmé en conditions réelles avec PostgreSQL)
     lien_github = Column(String(500))
+    lien_render = Column(String(500))
+    lien_neon = Column(String(500))
     cree_le = Column(DateTime, default=datetime.utcnow)
 
     tokens = relationship("TokenAuthAdmin", back_populates="administrateur", cascade="all, delete-orphan")
