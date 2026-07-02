@@ -29,13 +29,6 @@ router = APIRouter()
 # ---------- Création de tokens (appelée par l'admin quand elle crée un élève) ----------
 
 def creer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
-    """Crée un token de première connexion pour un élève et renvoie le lien
-    généré. N'envoie AUCUN e-mail automatique -- décision explicite de
-    Laurence : pour la création d'élève, elle veut garder la maîtrise
-    complète de l'envoi (via le mailto: ouvert côté admin, qu'elle valide
-    et personnalise elle-même avant d'envoyer). Différent du mot de passe
-    oublié, où l'envoi automatique (simulé pour l'instant) reste pertinent
-    puisque c'est l'élève lui-même qui en fait la demande."""
     token_str = generer_token_reinitialisation()
     token = TokenAuthEleve(
         eleve_id=eleve.id,
@@ -56,8 +49,6 @@ def creer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
 def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str = Form(...),
                      session: Session = Depends(obtenir_session)):
     eleve = session.query(Eleve).filter_by(email=email.strip().lower()).first()
-    # Message d'erreur volontairement identique, peu importe si l'e-mail existe
-    # ou si le mot de passe est faux -- on ne révèle jamais quel élément est erroné.
     erreur_generique = "E-mail ou mot de passe incorrect."
 
     if eleve is None or not eleve.verifier_mot_de_passe(mot_de_passe):
@@ -65,6 +56,11 @@ def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str 
 
     if not eleve.actif:
         raise HTTPException(status_code=403, detail="Votre compte est actuellement inactif. Merci de contacter votre formatrice.")
+
+    # NOUVEAU : mise à jour des statistiques de connexion
+    eleve.derniere_connexion = datetime.utcnow()
+    eleve.nb_connexions = (eleve.nb_connexions or 0) + 1
+    session.commit()
 
     request.session["eleve_id"] = eleve.id
     return RedirectResponse(url="/eleve/tableau-de-bord", status_code=303)
@@ -82,7 +78,7 @@ def definir_mot_de_passe(token: str, nouveau_mot_de_passe: str = Form(...),
 
     eleve = session.get(Eleve, token_obj.eleve_id)
     eleve.definir_mot_de_passe(nouveau_mot_de_passe)
-    token_obj.utilise_le = datetime.utcnow()  # token à usage unique : invalidé immédiatement après usage
+    token_obj.utilise_le = datetime.utcnow()
     session.commit()
     return RedirectResponse(url="/eleve/connexion", status_code=303)
 
@@ -90,9 +86,6 @@ def definir_mot_de_passe(token: str, nouveau_mot_de_passe: str = Form(...),
 @router.post("/eleve/mot-de-passe-oublie")
 def demander_reinitialisation_eleve(email: str = Form(...), session: Session = Depends(obtenir_session)):
     eleve = session.query(Eleve).filter_by(email=email.strip().lower()).first()
-    # Toujours la même réponse, que l'e-mail existe ou non -- sinon on
-    # permettrait de vérifier qui est élève chez Laurence juste en testant des
-    # adresses e-mail sur ce formulaire.
     if eleve is not None:
         token_str = generer_token_reinitialisation()
         token = TokenAuthEleve(
@@ -114,9 +107,6 @@ def deconnexion_eleve(request: Request):
 
 
 def eleve_connecte(request: Request, session: Session = Depends(obtenir_session)) -> Eleve:
-    """Dépendance FastAPI : à utiliser sur toute route qui nécessite un élève
-    connecté. Lève une erreur 401 sinon -- jamais de page élève accessible
-    sans une vraie session valide."""
     eleve_id = request.session.get("eleve_id")
     if eleve_id is None:
         raise HTTPException(status_code=401, detail="Connexion requise.")
@@ -127,7 +117,7 @@ def eleve_connecte(request: Request, session: Session = Depends(obtenir_session)
     return eleve
 
 
-# ---------- Connexion administrateur (même mécanique, table séparée) ----------
+# ---------- Connexion administrateur ----------
 
 @router.post("/admin/connexion")
 def connexion_admin(request: Request, email: str = Form(...), mot_de_passe: str = Form(...),
