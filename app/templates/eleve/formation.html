@@ -4,7 +4,7 @@
 <style>
   .breadcrumb-eleve { font-size:13px; color:var(--grey); margin-bottom:18px; cursor:pointer; text-decoration:none; display:inline-block; }
   .formation-layout-eleve { display:flex; gap:24px; align-items:flex-start; }
-  .colonne-sommaire-eleve { width:230px; flex-shrink:0; position:sticky; top:20px; }
+  .colonne-sommaire-eleve { width:260px; flex-shrink:0; position:sticky; top:20px; }
   .sommaire-eleve { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
   .titre-formation-sommaire { padding:16px; font-family:'EB Garamond',serif; font-weight:600; font-size:15px; background:#FBF7EE; border-bottom:1px solid var(--border); cursor:pointer; }
   .titre-formation-sommaire:hover { background:var(--cream-light); }
@@ -26,9 +26,19 @@
   .bloc-photo-formatrice { margin-top:14px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; text-align:center; }
   .bloc-photo-formatrice img { width:84px; height:84px; border-radius:50%; object-fit:cover; margin-bottom:10px; }
   .bloc-photo-formatrice .bloc-photo-nom { font-family:'EB Garamond',serif; font-size:14px; font-weight:600; color:var(--ink); }
-  .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:36px; min-width:0; }
 
-  /* --- Styles du contenu importé depuis Word (word_to_web.py), identiques à l'admin --- */
+  /* CORRECTION : zone de lecture élargie, padding augmenté */
+  .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:48px 56px; min-width:0; max-width:900px; }
+
+  /* CORRECTION : barre de progression élève */
+  .progression-container { background:#FDFAF5; border:1px solid #DDD0AE; border-radius:8px; padding:14px 18px; margin-bottom:28px; }
+  .progression-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .progression-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:1px; }
+  .progression-pct { font-size:15px; font-weight:700; color:var(--gold); }
+  .progression-bar-bg { width:100%; height:10px; background:#EDE4D4; border-radius:5px; overflow:hidden; }
+  .progression-bar-fill { height:10px; background:linear-gradient(90deg, #B8922A, #C47B6E); border-radius:5px; transition:width 0.6s ease; }
+
+  /* --- Styles du contenu importé depuis Word (word_to_web.py) --- */
   .contenu-eleve .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
   .contenu-eleve .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
   .contenu-eleve .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
@@ -36,14 +46,9 @@
   .contenu-eleve .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
   .contenu-eleve .standard-list { padding-left:22px; margin:12px 0; }
   .contenu-eleve .standard-list li { margin-bottom:6px; }
-
-  .contenu-eleve .pull-quote {
-    background: linear-gradient(135deg, #FBF0DA, #F5E6C8); border:1px solid #E3C988; border-radius:10px;
-    padding:20px 24px; margin:20px 0; text-align:center;
-  }
+  .contenu-eleve .pull-quote { background:linear-gradient(135deg,#FBF0DA,#F5E6C8); border:1px solid #E3C988; border-radius:10px; padding:20px 24px; margin:20px 0; text-align:center; }
   .contenu-eleve .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
   .contenu-eleve .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
-
   .contenu-eleve .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
   .contenu-eleve .compare-col { border-radius:10px; padding:16px 18px; }
   .contenu-eleve .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
@@ -58,6 +63,14 @@
   .media-eleve-row { display:flex; align-items:center; gap:10px; padding:12px 16px; background:var(--cream-light); border:1px solid var(--border); border-radius:8px; font-size:14px; text-decoration:none; color:var(--ink); }
   .media-eleve-row.non-telechargeable { color:var(--grey); cursor:default; }
   .media-eleve-action { margin-left:auto; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; color:var(--gold); }
+
+  /* CORRECTION : protection copier-coller */
+  .contenu-eleve {
+    -webkit-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+  }
 </style>
 
 <div class="topbar-eleve">
@@ -74,6 +87,18 @@
 
 <div class="main-eleve">
   <a class="breadcrumb-eleve" href="/eleve/tableau-de-bord">← Retour à mes formations</a>
+
+  <!-- CORRECTION : barre de progression visible par l'élève -->
+  <div class="progression-container">
+    <div class="progression-header">
+      <span class="progression-label">Ta progression</span>
+      <span class="progression-pct" id="progression-pct">0%</span>
+    </div>
+    <div class="progression-bar-bg">
+      <div class="progression-bar-fill" id="progression-bar" style="width:0%"></div>
+    </div>
+  </div>
+
   <div class="formation-layout-eleve">
     <div class="colonne-sommaire-eleve">
       <div class="sommaire-eleve" id="sommaire"></div>
@@ -98,8 +123,17 @@ let donneesFormation = null;
 async function chargerFormation() {
   const resp = await fetch(`/api/eleve/formations/${FORMATION_ID}`);
   donneesFormation = await resp.json();
+  mettreAJourProgression(donneesFormation.progression || 0);
   afficherSommaire();
   afficherContenu();
+}
+
+// CORRECTION : mise à jour barre de progression
+function mettreAJourProgression(pct) {
+  const bar = document.getElementById('progression-bar');
+  const label = document.getElementById('progression-pct');
+  if (bar) bar.style.width = pct + '%';
+  if (label) label.textContent = pct + '%';
 }
 
 function afficherSommaire() {
@@ -138,6 +172,10 @@ function selectionnerChapitre(moduleId, chapId) { selectionner({ type: 'chapitre
 
 async function afficherContenu() {
   const zone = document.getElementById('contenu');
+
+  // CORRECTION : scroll en haut à chaque changement de contenu
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
       (donneesFormation.presentation_html ? `<p>${donneesFormation.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
@@ -164,7 +202,7 @@ async function afficherContenu() {
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
     }
-    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n’a pas encore été importé.</p>'}${mediasHtml}` +
+    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n\'a pas encore été importé.</p>'}${mediasHtml}` +
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
@@ -180,12 +218,41 @@ function selectionner(noeud) {
 async function validerChapitre(chapId) {
   const resp = await fetch(`/api/eleve/chapitres/${chapId}/valider`, { method: 'POST' });
   if (resp.ok) {
-    await chargerFormation();  // recharge tout (sommaire + progression à jour)
+    const data = await resp.json();
+    // CORRECTION : mise à jour de la barre de progression après validation
+    if (data.progression !== undefined) {
+      mettreAJourProgression(data.progression);
+    }
+    await chargerFormation();
     selectionner({ type: 'chapitre', moduleId: noeudActif.moduleId, chapId: chapId });
   }
 }
 
 chargerFormation();
+
+// CORRECTION : blocage copier-coller et clic droit
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  return false;
+});
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    switch(e.key.toLowerCase()) {
+      case 'c': case 'a': case 'x': case 'u': case 's': case 'p':
+        e.preventDefault();
+        return false;
+    }
+  }
+});
+document.addEventListener('selectstart', function(e) {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+  e.preventDefault();
+  return false;
+});
+document.addEventListener('dragstart', function(e) {
+  e.preventDefault();
+  return false;
+});
 {% endraw %}
 </script>
 {% endblock %}
