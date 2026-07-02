@@ -1,49 +1,176 @@
 {% extends "admin/base.html" %}
-{% block titre %}Statistiques — Administration{% endblock %}
+{% block titre %}Statistiques — Tableau de bord{% endblock %}
 {% block contenu %}
 <style>
-  .stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:16px; margin-bottom:24px; }
-  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; }
-  .stat-card .stat-value { font-family:'EB Garamond',serif; font-size:30px; font-weight:600; color:var(--gold); }
-  .stat-card .stat-label { font-size:12px; color:var(--grey); margin-top:4px; }
-  .stats-table { width:100%; background:var(--panel); border:1px solid var(--border); border-radius:10px; border-collapse:collapse; overflow:hidden; }
-  .stats-table th { text-align:left; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.05em; color:var(--grey); padding:12px 16px; background:#FBF7EE; border-bottom:1px solid var(--border); }
-  .stats-table td { padding:12px 16px; border-bottom:1px solid var(--border); font-size:14px; }
-  .stats-table tr:last-child td { border-bottom:none; }
+  .stats-header { margin-bottom:28px; }
+  .stats-header h1 { font-family:'EB Garamond',serif; font-size:26px; font-weight:600; color:var(--ink); margin:0 0 4px; }
+  .stats-header p { font-size:13px; color:var(--grey); margin:0; }
+
+  /* Cartes résumé */
+  .stats-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:32px; }
+  .stat-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px 22px; text-align:center; }
+  .stat-card .val { font-family:'EB Garamond',serif; font-size:38px; font-weight:600; color:var(--gold); line-height:1; }
+  .stat-card .lbl { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--grey); text-transform:uppercase; margin-top:6px; }
+
+  /* Graphique connexions par jour */
+  .chart-section { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:24px 28px; margin-bottom:28px; }
+  .chart-section h2 { font-family:'League Spartan',sans-serif; font-size:13px; font-weight:700; letter-spacing:.05em; color:var(--ink); text-transform:uppercase; margin:0 0 20px; }
+  .chart-wrap { position:relative; height:180px; }
+  .chart-bars { display:flex; align-items:flex-end; gap:6px; height:160px; padding-bottom:0; }
+  .chart-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end; }
+  .chart-bar { width:100%; background:linear-gradient(180deg,#B8922A,#C47B6E); border-radius:4px 4px 0 0; min-height:2px; transition:height .4s ease; cursor:pointer; position:relative; }
+  .chart-bar:hover::after { content:attr(data-val); position:absolute; top:-22px; left:50%; transform:translateX(-50%); background:var(--ink); color:white; font-size:10px; padding:2px 6px; border-radius:4px; white-space:nowrap; }
+  .chart-label { font-size:10px; color:var(--grey); text-align:center; margin-top:4px; white-space:nowrap; }
+
+  /* Tableau élèves */
+  .table-section { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .table-section h2 { font-family:'League Spartan',sans-serif; font-size:13px; font-weight:700; letter-spacing:.05em; color:var(--ink); text-transform:uppercase; margin:0; padding:18px 24px; border-bottom:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; }
+  th { padding:10px 16px; font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.04em; color:var(--grey); text-transform:uppercase; text-align:left; border-bottom:1px solid var(--border); background:#FCFAF4; }
+  td { padding:12px 16px; font-size:13.5px; border-bottom:1px solid var(--border); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--cream-light); }
+  .badge-actif { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-actif.oui { background:#E6F4EA; color:#2D7A3A; }
+  .badge-actif.non { background:#FEE8E8; color:#C0392B; }
+  .barre-prog { width:100%; height:6px; background:#EDE4D4; border-radius:3px; overflow:hidden; margin-top:4px; }
+  .barre-prog-fill { height:6px; background:linear-gradient(90deg,#B8922A,#C47B6E); border-radius:3px; }
+  .connexions-badge { display:inline-flex; align-items:center; gap:5px; font-weight:700; color:var(--gold); }
+  .derniere-co { font-size:12px; color:var(--grey); margin-top:2px; }
+  .loading { text-align:center; padding:60px; color:var(--grey); font-style:italic; }
 </style>
 
-<div class="topbar"><div><h1>Statistiques</h1></div></div>
-<div class="stats-grid" id="cartes-stats"></div>
-<table class="stats-table">
-  <thead><tr><th>Formation</th><th>Élèves inscrits</th><th>Progression moyenne</th></tr></thead>
-  <tbody id="corps-table-stats"><tr><td colspan="3" style="text-align:center; color:var(--grey); padding:30px;">Chargement…</td></tr></tbody>
-</table>
+<div class="stats-header">
+  <h1>Tableau de bord — Activité élèves</h1>
+  <p>Mis à jour en temps réel à chaque chargement de la page.</p>
+</div>
 
-{% endblock %}
-{% block scripts %}
+<!-- Cartes résumé -->
+<div class="stats-cards" id="stats-cards">
+  <div class="stat-card"><div class="val" id="card-eleves">…</div><div class="lbl">Élèves actifs</div></div>
+  <div class="stat-card"><div class="val" id="card-connexions">…</div><div class="lbl">Connexions totales</div></div>
+  <div class="stat-card"><div class="val" id="card-actif-recents">…</div><div class="lbl">Connectés ce mois</div></div>
+  <div class="stat-card"><div class="val" id="card-progression">…</div><div class="lbl">Progression moyenne</div></div>
+</div>
+
+<!-- Graphique connexions par jour (7 derniers jours) -->
+<div class="chart-section">
+  <h2>Connexions — 7 derniers jours</h2>
+  <div class="chart-wrap">
+    <div class="chart-bars" id="chart-bars"><div class="loading">Chargement…</div></div>
+  </div>
+</div>
+
+<!-- Tableau détaillé par élève -->
+<div class="table-section">
+  <h2>Détail par élève</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Élève</th>
+        <th>Statut</th>
+        <th>Connexions</th>
+        <th>Dernière connexion</th>
+        <th>Formations & Progression</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-eleves"><tr><td colspan="5" class="loading">Chargement…</td></tr></tbody>
+  </table>
+</div>
+
 <script>
-function esc(s) {
-  const div = document.createElement('div');
-  div.textContent = s == null ? '' : String(s);
-  return div.innerHTML;
+function formatDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+    ' à ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function formatDateCourte(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' });
 }
 
 async function charger() {
-  const stats = await appelApi('/admin/statistiques');
-  document.getElementById('cartes-stats').innerHTML = `
-    <div class="stat-card"><div class="stat-value">${stats.total_eleves}</div><div class="stat-label">Élèves au total</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.total_formations}</div><div class="stat-label">Formations</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.moyenne_globale}%</div><div class="stat-label">Progression moyenne</div></div>
-    <div class="stat-card"><div class="stat-value">${stats.nb_parcours_termines}</div><div class="stat-label">Parcours terminés (100%)</div></div>
-  `;
-  const corps = document.getElementById('corps-table-stats');
-  if (stats.par_formation.length === 0) {
-    corps.innerHTML = `<tr><td colspan="3" style="text-align:center; color:var(--grey); padding:30px;">Aucune formation pour l'instant.</td></tr>`;
+  const resp = await fetch('/admin/statistiques/connexions');
+  if (!resp.ok) { console.error('Erreur chargement stats'); return; }
+  const eleves = await resp.json();
+
+  // --- Cartes résumé ---
+  const actifs = eleves.filter(e => e.actif);
+  const totalConnexions = eleves.reduce((s, e) => s + e.nb_connexions, 0);
+
+  const maintenant = new Date();
+  const debutMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+  const recentsMois = eleves.filter(e => e.derniere_connexion && new Date(e.derniere_connexion) >= debutMois).length;
+
+  // Progression moyenne toutes formations
+  let toutesProgs = [];
+  eleves.forEach(e => e.formations.forEach(f => toutesProgs.push(f.progression)));
+  const progMoyenne = toutesProgs.length ? Math.round(toutesProgs.reduce((a,b) => a+b, 0) / toutesProgs.length) : 0;
+
+  document.getElementById('card-eleves').textContent = actifs.length;
+  document.getElementById('card-connexions').textContent = totalConnexions;
+  document.getElementById('card-actif-recents').textContent = recentsMois;
+  document.getElementById('card-progression').textContent = progMoyenne + '%';
+
+  // --- Graphique 7 derniers jours ---
+  // On reconstitue les connexions par jour à partir de derniere_connexion
+  // (approximation — pour un vrai historique il faudrait une table de logs)
+  const jours = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    d.setHours(0,0,0,0);
+    jours.push({ date: d, label: d.toLocaleDateString('fr-FR', {weekday:'short', day:'2-digit'}), count: 0 });
+  }
+  // Compter les élèves dont la dernière connexion tombe dans chaque jour
+  eleves.forEach(e => {
+    if (!e.derniere_connexion) return;
+    const dc = new Date(e.derniere_connexion);
+    dc.setHours(0,0,0,0);
+    const j = jours.find(j => j.date.getTime() === dc.getTime());
+    if (j) j.count++;
+  });
+
+  const maxCount = Math.max(...jours.map(j => j.count), 1);
+  const chartEl = document.getElementById('chart-bars');
+  chartEl.innerHTML = jours.map(j => {
+    const h = Math.round((j.count / maxCount) * 140);
+    return `<div class="chart-bar-col">
+      <div class="chart-bar" style="height:${Math.max(h,2)}px" data-val="${j.count} connexion${j.count > 1 ? 's' : ''}"></div>
+      <div class="chart-label">${j.label}<br><strong>${j.count}</strong></div>
+    </div>`;
+  }).join('');
+
+  // --- Tableau élèves ---
+  const tbody = document.getElementById('tbody-eleves');
+  if (!eleves.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">Aucun élève.</td></tr>';
     return;
   }
-  corps.innerHTML = stats.par_formation.map(f => `
-    <tr><td>${esc(f.titre)}</td><td>${f.nb_eleves}</td><td>${f.moyenne}%</td></tr>
-  `).join('');
+  tbody.innerHTML = eleves.map(e => {
+    const formations = e.formations.map(f => `
+      <div style="margin-bottom:6px">
+        <div style="font-size:12px;color:var(--ink);font-weight:600">${f.formation_titre}</div>
+        <div class="barre-prog"><div class="barre-prog-fill" style="width:${f.progression}%"></div></div>
+        <div style="font-size:11px;color:var(--grey);margin-top:2px">${f.progression}%</div>
+      </div>`).join('') || '<span style="color:var(--grey);font-size:12px">Aucune formation</span>';
+
+    return `<tr>
+      <td>
+        <strong>${e.prenom} ${e.nom}</strong><br>
+        <span style="font-size:12px;color:var(--grey)">${e.email}</span>
+      </td>
+      <td><span class="badge-actif ${e.actif ? 'oui' : 'non'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
+      <td><span class="connexions-badge">⟳ ${e.nb_connexions}</span></td>
+      <td>
+        <div>${formatDate(e.derniere_connexion)}</div>
+      </td>
+      <td>${formations}</td>
+    </tr>`;
+  }).join('');
 }
 
 charger();
