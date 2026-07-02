@@ -265,3 +265,28 @@ def lire_statistiques(session: Session = Depends(obtenir_session)):
         "nb_parcours_termines": nb_parcours_termines,
         "par_formation": lignes_par_formation,
     }
+
+# ---------- NOUVEAU : statistiques de connexion ----------
+
+@router.get("/statistiques/connexions")
+def statistiques_connexions(session: Session = Depends(obtenir_session)):
+    from ..models import AccesFormation, progression_pourcentage
+    eleves = session.query(Eleve).all()
+    resultats = []
+    for e in eleves:
+        acces_detail = []
+        for acces in e.acces_formations:
+            if acces.formation.actif:
+                acces_detail.append({
+                    "formation_titre": acces.formation.titre,
+                    "progression": progression_pourcentage(session, e.id, acces.formation),
+                })
+        resultats.append({
+            "id": e.id, "nom": e.nom, "prenom": e.prenom,
+            "email": e.email, "actif": e.actif,
+            "nb_connexions": e.nb_connexions or 0,
+            "derniere_connexion": e.derniere_connexion.isoformat() if e.derniere_connexion else None,
+            "formations": acces_detail,
+        })
+    resultats.sort(key=lambda x: x["nb_connexions"], reverse=True)
+    return resultats
