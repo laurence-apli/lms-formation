@@ -1,19 +1,6 @@
 """
 Modèle de données de la plateforme LMS -- version serveur, à jour avec toutes
 les décisions validées au fil des sessions de maquette (admin + élève).
-
-Reprend fidèlement :
-- Structure Formation -> Module -> Chapitre
-- Nombre de niveaux PAR FORMATION (1, 2 ou 3) -- si 1 seul niveau, le concept
-  de niveau requis est ignoré pour cette formation
-- Séquence pédagogique strictement linéaire, en SAUTANT automatiquement les
-  chapitres hors niveau de l'élève (invisibles, mais ne bloquent jamais la suite)
-- Progression : chapitres VISIBLES validés / total VISIBLE (bug corrigé)
-- Jours d'accompagnement par niveau de formation, décomptés avec historique daté
-- Médias complémentaires par chapitre, protégés par défaut sauf marquage explicite
-- Comptes élèves ET administrateur avec vrais mots de passe (hash), tokens de
-  réinitialisation de mot de passe à durée limitée
-- Profil de l'administratrice (nom, photo, logo, lien technique)
 """
 import secrets
 from datetime import datetime
@@ -28,8 +15,6 @@ Base = declarative_base()
 
 
 def hacher_mot_de_passe(mot_de_passe_clair: str) -> str:
-    # bcrypt utilisé directement (pas via passlib, dont une incompatibilité de
-    # version avec bcrypt>=4 a été détectée à l'usage -- testé et confirmé).
     sel = bcrypt.gensalt()
     return bcrypt.hashpw(mot_de_passe_clair.encode("utf-8"), sel).decode("utf-8")
 
@@ -123,9 +108,7 @@ class Media(Base):
     chapitre_id = Column(Integer, ForeignKey("chapitres.id"), nullable=False)
     type = Column(String(20), nullable=False)
     titre = Column(String(200))
-    url = Column(Text, nullable=False)  # corrigé : String(500) cassait silencieusement le stockage des
-    # PDF/audio encodés en base64 (souvent plus de 100 000 caractères) -- bug confirmé en conditions
-    # réelles avec PostgreSQL, qui applique strictement cette limite (contrairement à SQLite en local)
+    url = Column(Text, nullable=False)
     telechargeable = Column(Boolean, default=False)
 
     chapitre = relationship("Chapitre", back_populates="medias")
@@ -141,6 +124,9 @@ class Eleve(Base):
     mot_de_passe_hash = Column(String(255))
     actif = Column(Boolean, default=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
+    # Statistiques de connexion (colonnes ajoutées via migration Neon)
+    nb_connexions = Column(Integer, default=0)
+    derniere_connexion = Column(DateTime, nullable=True)
 
     acces_formations = relationship("AccesFormation", back_populates="eleve",
                                      cascade="all, delete-orphan")
@@ -180,9 +166,8 @@ class Administrateur(Base):
     email = Column(String(200), nullable=False, unique=True)
     telephone = Column(String(50))
     mot_de_passe_hash = Column(String(255))
-    photo_url = Column(Text)  # peut contenir une vraie URL ou une image encodée en base64
-    logo_url = Column(Text)   # (corrigé : String(500) était bien trop court pour une image en base64,
-    # qui peut facilement dépasser 50 000 caractères -- bug confirmé en conditions réelles avec PostgreSQL)
+    photo_url = Column(Text)
+    logo_url = Column(Text)
     lien_github = Column(String(500))
     lien_render = Column(String(500))
     lien_neon = Column(String(500))
@@ -278,7 +263,6 @@ def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -
 
 def chapitre_est_accessible(session: Session, eleve_id: int, chapitre) -> tuple:
     formation = chapitre.module.formation
-
     acces = (
         session.query(AccesFormation)
         .filter_by(eleve_id=eleve_id, formation_id=formation.id)
@@ -286,15 +270,12 @@ def chapitre_est_accessible(session: Session, eleve_id: int, chapitre) -> tuple:
     )
     if acces is None:
         return False, "aucun_acces"
-
     if formation.nb_niveaux > 1 and acces.niveau < chapitre.module.niveau_requis:
         return False, "niveau_module_insuffisant"
     if formation.nb_niveaux > 1 and acces.niveau < chapitre.niveau_requis:
         return False, "niveau_chapitre_insuffisant"
-
     seq = sequence_chapitres(formation)
     idx = next(i for i, c in enumerate(seq) if c.id == chapitre.id)
-
     for i in range(idx - 1, -1, -1):
         precedent = seq[i]
         if not chapitre_dans_le_niveau(formation, acces.niveau, precedent):
@@ -307,7 +288,6 @@ def chapitre_est_accessible(session: Session, eleve_id: int, chapitre) -> tuple:
         if deja_valide is None:
             return False, "chapitre_precedent_non_valide"
         break
-
     return True, ""
 
 
@@ -319,12 +299,10 @@ def progression_pourcentage(session: Session, eleve_id: int, formation: Formatio
     )
     if acces is None:
         return 0.0
-
     seq_visible = [c for c in sequence_chapitres(formation)
                    if chapitre_dans_le_niveau(formation, acces.niveau, c)]
     if not seq_visible:
         return 0.0
-
     ids_visibles = [c.id for c in seq_visible]
     valides = (
         session.query(ValidationChapitre)
@@ -414,10 +392,8 @@ def dupliquer_formation(session: Session, formation_id: int) -> Formation:
     )
     session.add(copie)
     session.flush()
-
     for jpn in original.jours_par_niveau:
         session.add(JoursAccompagnementNiveau(formation_id=copie.id, niveau=jpn.niveau, jours=jpn.jours))
-
     for module in original.modules:
         module_copie = Module(
             formation_id=copie.id, titre=module.titre,
