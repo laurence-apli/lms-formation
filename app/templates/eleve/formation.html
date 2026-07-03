@@ -202,7 +202,7 @@ async function afficherContenu() {
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
     }
-    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n\'a pas encore été importé.</p>'}${mediasHtml}` +
+    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>'}${mediasHtml}` +
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
