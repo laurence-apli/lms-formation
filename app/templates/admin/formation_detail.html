@@ -33,16 +33,9 @@
   .presentation-display .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
   .presentation-display .standard-list { padding-left:22px; margin:12px 0; }
   .presentation-display .standard-list li { margin-bottom:6px; }
-
-  /* Encadré doré (tableau 1 colonne gras+italique dans le Word) */
-  .presentation-display .pull-quote {
-    background: linear-gradient(135deg, #FBF0DA, #F5E6C8); border:1px solid #E3C988; border-radius:10px;
-    padding:20px 24px; margin:20px 0; text-align:center;
-  }
+  .presentation-display .pull-quote { background:linear-gradient(135deg,#FBF0DA,#F5E6C8); border:1px solid #E3C988; border-radius:10px; padding:20px 24px; margin:20px 0; text-align:center; }
   .presentation-display .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
   .presentation-display .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
-
-  /* Comparatif 2 colonnes (tableau 2 colonnes dans le Word) */
   .presentation-display .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
   .presentation-display .compare-col { border-radius:10px; padding:16px 18px; }
   .presentation-display .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
@@ -55,6 +48,15 @@
   .media-row button { border:none; background:none; cursor:pointer; color:var(--grey); }
   .media-row button:hover { color:var(--danger); }
   .move-select { font-size:12px; border:1px solid var(--border); border-radius:4px; padding:3px 4px; }
+
+  /* CORRECTION : boutons de déplacement ▲▼ */
+  .btns-ordre { display:flex; flex-direction:column; gap:1px; margin-right:2px; }
+  .btn-ordre { background:none; border:1px solid var(--border); color:var(--grey); border-radius:3px; padding:0 4px; cursor:pointer; font-size:10px; line-height:16px; }
+  .btn-ordre:hover { border-color:var(--gold); color:var(--gold); background:#FBF7EE; }
+  .sommaire-module.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
+  .sommaire-module.actif .btn-ordre:hover { border-color:white; color:white; }
+  .sommaire-chapitre.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
+  .sommaire-chapitre.actif .btn-ordre:hover { border-color:white; color:white; }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/formations">Formations</a> / {{ formation.titre }}</div>
@@ -84,21 +86,56 @@ function render() {
 function renderSommaire() {
   const f = donnees;
   let html = `<div class="sommaire-item-formation ${noeudActif.type === 'formation' ? 'actif' : ''}" onclick="selectionner({type:'formation'})">${esc(f.titre)}</div>`;
-  f.modules.forEach(m => {
+
+  f.modules.forEach((m, mi) => {
     const moduleActif = noeudActif.type === 'module' && noeudActif.moduleId === m.id;
-    html += `<div class="sommaire-module ${moduleActif ? 'actif' : ''}" onclick="selectionner({type:'module', moduleId:${m.id}})">
-      <span>${esc(m.titre.toUpperCase())}</span>
+    const estPremier = mi === 0;
+    const estDernier = mi === f.modules.length - 1;
+
+    html += `<div class="sommaire-module ${moduleActif ? 'actif' : ''}">
+      <div class="btns-ordre">
+        ${!estPremier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, -1)" title="Monter">▲</button>` : '<span style="height:17px;display:block;"></span>'}
+        ${!estDernier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, 1)" title="Descendre">▼</button>` : '<span style="height:17px;display:block;"></span>'}
+      </div>
+      <span style="flex:1;" onclick="selectionner({type:'module', moduleId:${m.id}})">${esc(m.titre.toUpperCase())}</span>
       ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
     </div>`;
+
     m.chapitres.forEach((c, ci) => {
       const chapActif = noeudActif.type === 'chapitre' && noeudActif.chapId === c.id;
-      html += `<div class="sommaire-chapitre ${chapActif ? 'actif' : ''}" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">
-        <span class="puce"></span>${ci+1}. ${esc(c.titre)}
+      const estPremierChap = ci === 0;
+      const estDernierChap = ci === m.chapitres.length - 1;
+
+      html += `<div class="sommaire-chapitre ${chapActif ? 'actif' : ''}">
+        <div class="btns-ordre">
+          ${!estPremierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, -1)" title="Monter">▲</button>` : '<span style="height:17px;display:block;"></span>'}
+          ${!estDernierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, 1)" title="Descendre">▼</button>` : '<span style="height:17px;display:block;"></span>'}
+        </div>
+        <span class="puce"></span>
+        <span style="flex:1;" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">${ci+1}. ${esc(c.titre)}</span>
       </div>`;
     });
+
     html += `<div class="sommaire-add-chapitre" onclick="ouvrirModalCreerChapitre(${m.id})">+ Ajouter un chapitre</div>`;
   });
+
   document.getElementById('sommaire').innerHTML = html;
+}
+
+// CORRECTION : déplacement module via route existante /admin/modules/{id}/deplacer
+async function deplacerModule(moduleId, direction) {
+  const data = new FormData();
+  data.append('direction', direction);
+  await appelApi(`/admin/modules/${moduleId}/deplacer`, { method: 'POST', body: data });
+  await charger();
+}
+
+// CORRECTION : déplacement chapitre via route existante /admin/chapitres/{id}/deplacer
+async function deplacerChapitre(chapId, direction) {
+  const data = new FormData();
+  data.append('direction', direction);
+  await appelApi(`/admin/chapitres/${chapId}/deplacer`, { method: 'POST', body: data });
+  await charger();
 }
 
 function getModule(moduleId) { return donnees.modules.find(m => m.id === moduleId); }
@@ -112,8 +149,8 @@ function renderContenu() {
     zone.innerHTML = `
       <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span></h2>
       <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
-      ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l’ont déjà ne peuvent plus y accéder.</div>' : ''}
-      <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l’instant.'}</div>
+      ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l\'ont déjà ne peuvent plus y accéder.</div>' : ''}
+      <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
       ${zoneImport('formation', FORMATION_ID, f.titre)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
         <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
@@ -127,7 +164,7 @@ function renderContenu() {
     zone.innerHTML = `
       <h2>${esc(m.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">Niveau ${m.niveau_requis}</span>` : ''}</h2>
       <div class="sous-titre">Présentation du module — affichée à l'élève avant ses chapitres</div>
-      <div class="presentation-display ${!m.presentation_html ? 'vide' : ''}">${m.presentation_html || 'Aucun contenu de présentation pour l’instant.'}</div>
+      <div class="presentation-display ${!m.presentation_html ? 'vide' : ''}">${m.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
       ${zoneImport('module', m.id, m.titre)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
         <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">✎ Modifier le module</button>
@@ -141,7 +178,7 @@ function renderContenu() {
     zone.innerHTML = `
       <h2>${esc(c.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${c.niveau_requis}">Niveau ${c.niveau_requis}</span>` : ''}</h2>
       <div class="sous-titre">Module : ${esc(m.titre)}</div>
-      <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l’instant.'}</div>
+      <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l\'instant.'}</div>
       ${zoneImport('chapitre', c.id, c.titre)}
       <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
       <div class="medias-liste">
@@ -319,12 +356,8 @@ async function toggleActifFormation() {
 
 // ---------- Modules ----------
 
-function ouvrirModalCreerModule() {
-  afficherOverlay(modalModuleHtml(null));
-}
-function ouvrirModalEditerModule(moduleId) {
-  afficherOverlay(modalModuleHtml(getModule(moduleId)));
-}
+function ouvrirModalCreerModule() { afficherOverlay(modalModuleHtml(null)); }
+function ouvrirModalEditerModule(moduleId) { afficherOverlay(modalModuleHtml(getModule(moduleId))); }
 
 function modalModuleHtml(m) {
   const f = donnees;
@@ -386,12 +419,8 @@ async function supprimerModule(moduleId) {
 
 // ---------- Chapitres ----------
 
-function ouvrirModalCreerChapitre(moduleId) {
-  afficherOverlay(modalChapitreHtml(moduleId, null));
-}
-function ouvrirModalEditerChapitre(moduleId, chapId) {
-  afficherOverlay(modalChapitreHtml(moduleId, getChapitre(moduleId, chapId)));
-}
+function ouvrirModalCreerChapitre(moduleId) { afficherOverlay(modalChapitreHtml(moduleId, null)); }
+function ouvrirModalEditerChapitre(moduleId, chapId) { afficherOverlay(modalChapitreHtml(moduleId, getChapitre(moduleId, chapId))); }
 
 function modalChapitreHtml(moduleId, c) {
   const f = donnees;
@@ -492,9 +521,7 @@ function majFormulaireMedia() {
   const type = document.getElementById('input-media-type').value;
   const zone = document.getElementById('zone-source-media');
   if (type === 'lien') {
-    zone.innerHTML = `
-      <label>URL</label>
-      <input type="text" id="input-media-url" placeholder="https://…">`;
+    zone.innerHTML = `<label>URL</label><input type="text" id="input-media-url" placeholder="https://…">`;
   } else {
     const accept = type === 'pdf' ? '.pdf' : '.mp3,.wav,.m4a,.ogg';
     zone.innerHTML = `
@@ -528,31 +555,25 @@ async function ajouterMedia(chapId) {
   if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
   const type = document.getElementById('input-media-type').value;
   const telechargeable = document.getElementById('input-media-telechargeable').checked;
-
   try {
     if (type === 'lien') {
       const data = new FormData();
-      data.append('type', type);
-      data.append('titre', titre);
+      data.append('type', type); data.append('titre', titre);
       data.append('url', document.getElementById('input-media-url').value || '#');
       data.append('telechargeable', telechargeable);
       await appelApi(`/admin/chapitres/${chapId}/medias`, { method: 'POST', body: data });
     } else {
       if (!fichierMediaEnCours) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Merci de déposer un fichier.</div>'; return; }
       const data = new FormData();
-      data.append('type', type);
-      data.append('titre', titre);
+      data.append('type', type); data.append('titre', titre);
       data.append('telechargeable', telechargeable);
       data.append('fichier', fichierMediaEnCours);
       const bouton = document.getElementById('btn-ajouter-media');
-      bouton.textContent = 'Envoi en cours…';
-      bouton.disabled = true;
+      bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
       await appelApi(`/admin/chapitres/${chapId}/medias/upload`, { method: 'POST', body: data });
     }
     fichierMediaEnCours = null;
-    fermerModal();
-    afficherToast('Média ajouté');
-    await charger();
+    fermerModal(); afficherToast('Média ajouté'); await charger();
   } catch (e) {
     document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
     const bouton = document.getElementById('btn-ajouter-media');
@@ -569,8 +590,7 @@ async function toggleMediaTelechargeable(mediaId, valeur) {
 
 async function supprimerMedia(mediaId) {
   await appelApi(`/admin/medias/${mediaId}`, { method: 'DELETE' });
-  afficherToast('Média supprimé');
-  await charger();
+  afficherToast('Média supprimé'); await charger();
 }
 
 charger();
