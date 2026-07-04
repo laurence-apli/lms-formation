@@ -1,49 +1,119 @@
 {% extends "eleve/base.html" %}
-{% block titre %}Définir votre mot de passe{% endblock %}
+{% block titre %}Nouveau mot de passe — Mon espace formation{% endblock %}
 {% block contenu %}
 <style>
   .login-screen { display:flex; align-items:center; justify-content:center; min-height:100vh; padding:20px; }
   .login-box { background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:40px; width:380px; box-shadow:0 10px 40px rgba(0,0,0,0.06); }
-  .login-box .brand-title { font-family:'EB Garamond',serif; font-size:20px; font-weight:600; text-align:center; margin-bottom:24px; }
+  .login-box .brand-title { font-family:'EB Garamond',serif; font-size:22px; font-weight:600; text-align:center; margin-bottom:4px; }
+  .login-box .brand-sub { font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.06em; color:var(--gold); text-align:center; margin-bottom:28px; }
   .login-box label { font-size:12px; color:var(--grey); font-weight:600; display:block; margin:14px 0 5px; }
-  .login-box input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; font-size:14px; font-family:inherit; }
-  .login-box .btn-login { width:100%; margin-top:22px; padding:12px; background:var(--ink); color:#F5EDD6; border:none; border-radius:7px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:14px; cursor:pointer; }
+  .login-box input { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:7px; font-size:14px; font-family:inherit; box-sizing:border-box; }
+  .login-box input:focus { outline:none; border-color:var(--gold); }
+  .btn-login { width:100%; margin-top:22px; padding:12px; background:var(--ink); color:#F5EDD6; border:none; border-radius:7px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:background .2s, opacity .2s; }
+  .btn-login:hover:not(:disabled) { background:#45341a; }
+  .btn-login:disabled { opacity:0.7; cursor:not-allowed; }
+  .spinner { width:16px; height:16px; border:2px solid rgba(245,237,214,0.3); border-top-color:#F5EDD6; border-radius:50%; animation:spin .7s linear infinite; display:none; }
+  @keyframes spin { to { transform:rotate(360deg); } }
   .message-erreur { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
-  .helper-text { font-size:11px; color:var(--grey); margin-top:6px; }
+  .message-succes { background:#EAF2EC; border:1px solid #C3DECB; color:#2D6A4F; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px; }
+  .helper-text { font-size:11px; color:var(--grey); margin-top:4px; }
+  .token-invalide { text-align:center; padding:20px 0; }
+  .token-invalide .icone { font-size:40px; margin-bottom:14px; }
+  .token-invalide p { font-size:14px; color:var(--grey); line-height:1.6; }
+  .token-invalide a { color:var(--gold); text-decoration:underline; }
 </style>
 
 <div class="login-screen">
   <div class="login-box">
+    <div class="brand-title">Mon espace formation</div>
+    <div class="brand-sub">NOUVEAU MOT DE PASSE</div>
+
     {% if token_valide %}
-      <div class="brand-title">Créez votre mot de passe</div>
-      <div id="zone-erreur"></div>
-      <form id="form-mdp">
-        <label>Nouveau mot de passe</label>
-        <input type="password" id="nouveau_mot_de_passe" name="nouveau_mot_de_passe" required minlength="8">
-        <div class="helper-text">Au moins 8 caractères.</div>
-        <button type="submit" class="btn-login">Valider</button>
-      </form>
-      <script>
-        document.getElementById('form-mdp').addEventListener('submit', async function(e) {
-          e.preventDefault();
-          const data = new FormData(e.target);
-          const resp = await fetch(window.location.pathname, { method: 'POST', body: data });
-          if (resp.redirected) {
-            window.location.href = resp.url;
-          } else if (!resp.ok) {
-            const erreur = await resp.json();
-            document.getElementById('zone-erreur').innerHTML = '<div class="message-erreur">' + (erreur.detail || "Une erreur est survenue.") + '</div>';
-          }
-        });
-      </script>
+    <div id="zone-message"></div>
+    <form id="form-mdp">
+      <label>Nouveau mot de passe</label>
+      <input type="password" id="mot_de_passe" name="mot_de_passe" required minlength="8" autocomplete="new-password">
+      <div class="helper-text">Au moins 8 caractères</div>
+
+      <label>Confirmer le mot de passe</label>
+      <input type="password" id="mot_de_passe_confirm" name="mot_de_passe_confirm" required minlength="8" autocomplete="new-password">
+
+      <button type="submit" class="btn-login" id="btn-valider">
+        <span class="spinner" id="spinner"></span>
+        <span id="btn-texte">Enregistrer mon mot de passe</span>
+      </button>
+    </form>
     {% else %}
-      <div class="brand-title">Lien expiré</div>
-      <p style="font-size:13px; text-align:center; color:var(--grey);">
-        Ce lien n'est plus valide. Il a peut-être déjà été utilisé, ou son délai de validité est dépassé.
-        Demandez un nouveau lien depuis la page de connexion.
+    <div class="token-invalide">
+      <div class="icone">⏱</div>
+      <p>Ce lien de réinitialisation est <strong>expiré ou invalide</strong>.</p>
+      <p style="margin-top:12px;">
+        <a href="/eleve/connexion">Retourner à la connexion</a> et cliquez sur
+        "Mot de passe oublié" pour recevoir un nouveau lien.
       </p>
-      <a href="/eleve/connexion" style="display:block; text-align:center; margin-top:16px; font-size:13px; color:var(--gold);">Retour à la connexion</a>
+    </div>
     {% endif %}
   </div>
 </div>
+
+{% if token_valide %}
+<script>
+const TOKEN = "{{ token }}";
+
+function afficherMessage(message, type) {
+  const zone = document.getElementById('zone-message');
+  zone.innerHTML = `<div class="message-${type}">${message}</div>`;
+}
+
+function setBouton(actif) {
+  const btn = document.getElementById('btn-valider');
+  const spinner = document.getElementById('spinner');
+  const texte = document.getElementById('btn-texte');
+  btn.disabled = !actif;
+  spinner.style.display = actif ? 'none' : 'block';
+  texte.textContent = actif ? 'Enregistrer mon mot de passe' : 'Enregistrement…';
+}
+
+document.getElementById('form-mdp').addEventListener('submit', async function(e) {
+  e.preventDefault();
+
+  const mdp = document.getElementById('mot_de_passe').value;
+  const confirm = document.getElementById('mot_de_passe_confirm').value;
+
+  if (mdp.length < 8) {
+    afficherMessage('Le mot de passe doit contenir au moins 8 caractères.', 'erreur');
+    return;
+  }
+  if (mdp !== confirm) {
+    afficherMessage('Les deux mots de passe ne correspondent pas.', 'erreur');
+    return;
+  }
+
+  setBouton(false);
+  document.getElementById('zone-message').innerHTML = '';
+
+  try {
+    const data = new FormData();
+    data.append('mot_de_passe', mdp);
+    const resp = await fetch(`/eleve/definir-mot-de-passe/${TOKEN}`, {
+      method: 'POST',
+      body: data,
+    });
+
+    if (resp.ok) {
+      document.getElementById('form-mdp').style.display = 'none';
+      afficherMessage('Mot de passe enregistré ! Vous allez être redirigé vers la connexion…', 'succes');
+      setTimeout(() => { window.location.href = '/eleve/connexion'; }, 2500);
+    } else {
+      const erreur = await resp.json().catch(() => ({}));
+      afficherMessage(erreur.detail || 'Une erreur est survenue. Veuillez réessayer.', 'erreur');
+      setBouton(true);
+    }
+  } catch (err) {
+    afficherMessage('Impossible de contacter le serveur. Veuillez réessayer.', 'erreur');
+    setBouton(true);
+  }
+});
+</script>
+{% endif %}
 {% endblock %}
