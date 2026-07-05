@@ -18,6 +18,8 @@
   .statut-pill { font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
   .statut-actif { background:#E4F0E8; color:var(--green); }
   .statut-inactif { background:#F0ECE2; color:var(--grey); }
+  .statut-mdp-ok { background:#E4F0E8; color:var(--green); }
+  .statut-mdp-attente { background:#FEF3E2; color:#A05C00; }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
@@ -26,6 +28,7 @@
   <div style="display:flex; gap:8px;">
     <button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
     <button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
+    <button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">🔑 Réinitialiser le mot de passe</button>
     <button class="btn btn-danger-outline" onclick="demanderSuppression()">Supprimer</button>
   </div>
 </div>
@@ -69,9 +72,18 @@ function render() {
   document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve.nom}`;
   document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
   document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
+
+  const statutMdp = eleve.mot_de_passe_actif
+    ? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
+    : `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
+
   document.getElementById('header-eleve').innerHTML = `
     <h2>${esc(eleve.prenom)} ${esc(eleve.nom)}</h2>
-    <div class="email">${esc(eleve.email)} · <span class="statut-pill ${eleve.actif ? 'statut-actif' : 'statut-inactif'}">${eleve.actif ? 'Actif' : 'Inactif'}</span></div>
+    <div class="email" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
+      ${esc(eleve.email)}
+      <span class="statut-pill ${eleve.actif ? 'statut-actif' : 'statut-inactif'}">${eleve.actif ? 'Actif' : 'Inactif'}</span>
+      ${statutMdp}
+    </div>
   `;
 
   const idsAcquis = eleve.acces.map(a => a.formation_id);
@@ -146,6 +158,31 @@ async function toggleActif() {
   await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-actif`, { method: 'POST' });
   afficherToast('Statut mis à jour');
   await charger();
+}
+
+async function reinitialiserMotDePasse() {
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Réinitialiser le mot de passe</h3>
+      <p style="font-size:13px; color:var(--grey);">Un email avec un lien de création de mot de passe sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" onclick="confirmerReinit()">Envoyer le lien</button>
+      </div>
+    </div>`);
+}
+
+async function confirmerReinit() {
+  try {
+    const data = new FormData();
+    data.append('email', eleve.email);
+    await appelApi('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
+    fermerModal();
+    afficherToast('Lien de réinitialisation envoyé à ' + eleve.email);
+  } catch (e) {
+    fermerModal();
+    afficherToast('Lien envoyé (ou compte inexistant)');
+  }
 }
 
 function demanderSuppression() {
