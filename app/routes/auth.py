@@ -80,8 +80,7 @@ def definir_mot_de_passe(token: str, nouveau_mot_de_passe: str = Form(...),
     eleve.definir_mot_de_passe(nouveau_mot_de_passe)
     token_obj.utilise_le = datetime.utcnow()
     session.commit()
-    return RedirectResponse(url="/eleve/connexion", status_code=303)
-
+    return {"ok": True}
 
 @router.post("/eleve/mot-de-passe-oublie")
 def demander_reinitialisation_eleve(email: str = Form(...), session: Session = Depends(obtenir_session)):
