@@ -130,9 +130,11 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
             "jours_accompagnement_total": acces.formation.jours_pour_niveau(acces.niveau),
             "historique_seances": [s.date_seance.isoformat() for s in acces.seances_accompagnement],
         })
-    return {
+   return {
         "id": eleve.id, "nom": eleve.nom, "prenom": eleve.prenom,
-        "email": eleve.email, "actif": eleve.actif, "acces": acces_detail,
+        "email": eleve.email, "actif": eleve.actif,
+        "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
+        "acces": acces_detail,
     }
 
 
