@@ -21,6 +21,9 @@
   .token-invalide .icone { font-size:40px; margin-bottom:14px; }
   .token-invalide p { font-size:14px; color:var(--grey); line-height:1.6; }
   .token-invalide a { color:var(--gold); text-decoration:underline; }
+  .bloc-bienvenue { background:#F5EDD6; border-radius:8px; padding:12px 16px; margin-bottom:20px; font-size:13px; line-height:1.5; }
+  .bloc-bienvenue strong { color:var(--ink); }
+  .bloc-bienvenue span { color:var(--grey); font-size:12px; display:block; margin-top:2px; }
 </style>
 
 <div class="login-screen">
@@ -29,6 +32,10 @@
     <div class="brand-sub">NOUVEAU MOT DE PASSE</div>
 
     {% if token_valide %}
+    <div class="bloc-bienvenue">
+      Bonjour <strong>{{ eleve_prenom }}</strong> 👋
+      <span>{{ eleve_email }}</span>
+    </div>
     <div id="zone-message"></div>
     <form id="form-mdp">
       <label>Nouveau mot de passe</label>
@@ -93,8 +100,8 @@ document.getElementById('form-mdp').addEventListener('submit', async function(e)
   document.getElementById('zone-message').innerHTML = '';
 
   try {
-   const data = new FormData();
-data.append('nouveau_mot_de_passe', mdp);
+    const data = new FormData();
+    data.append('nouveau_mot_de_passe', mdp);
     const resp = await fetch(`/eleve/definir-mot-de-passe/${TOKEN}`, {
       method: 'POST',
       body: data,
@@ -105,8 +112,12 @@ data.append('nouveau_mot_de_passe', mdp);
       afficherMessage('Mot de passe enregistré ! Vous allez être redirigé vers la connexion…', 'succes');
       setTimeout(() => { window.location.href = '/eleve/connexion'; }, 2500);
     } else {
-      const erreur = await resp.json().catch(() => ({}));
-      afficherMessage(erreur.detail || 'Une erreur est survenue. Veuillez réessayer.', 'erreur');
+      let detail = 'Une erreur est survenue. Veuillez réessayer.';
+      try {
+        const erreur = await resp.json();
+        if (erreur && erreur.detail) detail = erreur.detail;
+      } catch(e) {}
+      afficherMessage(detail, 'erreur');
       setBouton(true);
     }
   } catch (err) {
