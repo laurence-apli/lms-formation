@@ -58,8 +58,17 @@ def page_definir_mot_de_passe_admin(request: Request, token: str, session: Sessi
 def page_definir_mot_de_passe(request: Request, token: str, session: Session = Depends(obtenir_session)):
     token_obj = session.query(TokenAuthEleve).filter_by(token=token).first()
     token_valide = token_obj is not None and token_obj.est_valide()
+    eleve_prenom = ""
+    eleve_email = ""
+    if token_valide:
+        eleve = session.get(Eleve, token_obj.eleve_id)
+        if eleve:
+            eleve_prenom = eleve.prenom
+            eleve_email = eleve.email
     return templates.TemplateResponse(
-        request, "eleve/definir_mot_de_passe.html", {"token_valide": token_valide, "token": token},
+        request, "eleve/definir_mot_de_passe.html",
+        {"token_valide": token_valide, "token": token,
+         "eleve_prenom": eleve_prenom, "eleve_email": eleve_email},
     )
 
 
