@@ -93,8 +93,8 @@ document.getElementById('form-mdp').addEventListener('submit', async function(e)
   document.getElementById('zone-message').innerHTML = '';
 
   try {
-    const data = new FormData();
-    data.append('mot_de_passe', mdp);
+   const data = new FormData();
+data.append('nouveau_mot_de_passe', mdp);
     const resp = await fetch(`/eleve/definir-mot-de-passe/${TOKEN}`, {
       method: 'POST',
       body: data,
