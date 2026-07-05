@@ -132,7 +132,9 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         })
    return {
         "id": eleve.id, "nom": eleve.nom, "prenom": eleve.prenom,
-        "email": eleve.email, "actif": eleve.actif,
+       "email": eleve.email, "actif": eleve.actif,
+            "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
+            "acces": acces_detail,
         "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
         "acces": acces_detail,
     }
