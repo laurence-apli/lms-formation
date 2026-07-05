@@ -59,7 +59,7 @@ def page_definir_mot_de_passe(request: Request, token: str, session: Session = D
     token_obj = session.query(TokenAuthEleve).filter_by(token=token).first()
     token_valide = token_obj is not None and token_obj.est_valide()
     return templates.TemplateResponse(
-        request, "eleve/definir_mot_de_passe.html", {"token_valide": token_valide},
+        request, "eleve/definir_mot_de_passe.html", {"token_valide": token_valide, "token": token},
     )
 
 
