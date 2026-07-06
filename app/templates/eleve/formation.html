@@ -71,6 +71,32 @@
     -ms-user-select:none;
     user-select:none;
   }
+
+  /* CORRECTION CROSS-BROWSER (Safari/Mac + tactile) :
+     Le user-select:none ci-dessus, sur trackpad Mac (Safari en particulier),
+     empêche l'événement "click" de se déclencher sur les éléments interactifs
+     à cause du micro-mouvement du doigt pendant le clic (bug WebKit connu).
+     On réactive explicitement la sélection/interaction sur les éléments
+     cliquables, sans affaiblir la protection du texte du contenu. */
+  .contenu-eleve .btn-valider-chapitre,
+  .contenu-eleve a.media-eleve-row {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
+
+  /* CORRECTION CROSS-BROWSER : fiabilise le tactile (mobile/tablette, tous OS)
+     et supprime le halo bleu au tap sur Chrome Android / Safari iOS */
+  .btn-valider-chapitre,
+  .chapitre-item-eleve,
+  .module-sommaire-eleve,
+  .titre-formation-sommaire,
+  .media-eleve-row {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
 </style>
 
 <div class="topbar-eleve">
@@ -245,7 +271,12 @@ document.addEventListener('keydown', function(e) {
   }
 });
 document.addEventListener('selectstart', function(e) {
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return true;
+  // CORRECTION CROSS-BROWSER : ne jamais bloquer la sélection/interaction
+  // sur les éléments interactifs (bouton, liens) - nécessaire pour que
+  // Safari sur trackpad Mac déclenche correctement le clic
+  const cible = e.target;
+  if (cible.tagName === 'INPUT' || cible.tagName === 'TEXTAREA' || cible.tagName === 'BUTTON' || cible.tagName === 'A') return true;
+  if (cible.closest && cible.closest('button, a')) return true;
   e.preventDefault();
   return false;
 });
