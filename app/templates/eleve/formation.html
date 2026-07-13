@@ -1,3 +1,4 @@
+
 {% extends "eleve/base.html" %}
 {% block titre %}{{ formation.titre }}{% endblock %}
 {% block contenu %}
@@ -27,10 +28,8 @@
   .bloc-photo-formatrice img { width:84px; height:84px; border-radius:50%; object-fit:cover; margin-bottom:10px; }
   .bloc-photo-formatrice .bloc-photo-nom { font-family:'EB Garamond',serif; font-size:14px; font-weight:600; color:var(--ink); }
 
-  /* CORRECTION : zone de lecture élargie, padding augmenté */
   .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:48px 56px; min-width:0; max-width:900px; }
 
-  /* CORRECTION : barre de progression élève */
   .progression-container { background:#FDFAF5; border:1px solid #DDD0AE; border-radius:8px; padding:14px 18px; margin-bottom:28px; }
   .progression-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   .progression-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:1px; }
@@ -38,7 +37,6 @@
   .progression-bar-bg { width:100%; height:10px; background:#EDE4D4; border-radius:5px; overflow:hidden; }
   .progression-bar-fill { height:10px; background:linear-gradient(90deg, #B8922A, #C47B6E); border-radius:5px; transition:width 0.6s ease; }
 
-  /* --- Styles du contenu importé depuis Word (word_to_web.py) --- */
   .contenu-eleve .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
   .contenu-eleve .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
   .contenu-eleve .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
@@ -64,7 +62,6 @@
   .media-eleve-row.non-telechargeable { color:var(--grey); cursor:default; }
   .media-eleve-action { margin-left:auto; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; color:var(--gold); }
 
-  /* CORRECTION : protection copier-coller */
   .contenu-eleve {
     -webkit-user-select:none;
     -moz-user-select:none;
@@ -72,12 +69,6 @@
     user-select:none;
   }
 
-  /* CORRECTION CROSS-BROWSER (Safari/Mac + tactile) :
-     Le user-select:none ci-dessus, sur trackpad Mac (Safari en particulier),
-     empêche l'événement "click" de se déclencher sur les éléments interactifs
-     à cause du micro-mouvement du doigt pendant le clic (bug WebKit connu).
-     On réactive explicitement la sélection/interaction sur les éléments
-     cliquables, sans affaiblir la protection du texte du contenu. */
   .contenu-eleve .btn-valider-chapitre,
   .contenu-eleve a.media-eleve-row {
     -webkit-user-select: text;
@@ -87,8 +78,6 @@
     -webkit-touch-callout: default;
   }
 
-  /* CORRECTION CROSS-BROWSER : fiabilise le tactile (mobile/tablette, tous OS)
-     et supprime le halo bleu au tap sur Chrome Android / Safari iOS */
   .btn-valider-chapitre,
   .chapitre-item-eleve,
   .module-sommaire-eleve,
@@ -114,7 +103,6 @@
 <div class="main-eleve">
   <a class="breadcrumb-eleve" href="/eleve/tableau-de-bord">← Retour à mes formations</a>
 
-  <!-- CORRECTION : barre de progression visible par l'élève -->
   <div class="progression-container">
     <div class="progression-header">
       <span class="progression-label">Ta progression</span>
@@ -154,12 +142,28 @@ async function chargerFormation() {
   afficherContenu();
 }
 
-// CORRECTION : mise à jour barre de progression
 function mettreAJourProgression(pct) {
   const bar = document.getElementById('progression-bar');
   const label = document.getElementById('progression-pct');
   if (bar) bar.style.width = pct + '%';
   if (label) label.textContent = pct + '%';
+}
+
+// CORRECTION PERFORMANCE : met à jour l'état déjà chargé en mémoire (donneesFormation)
+// sans repasser par le serveur. Plus besoin de tout recharger après une validation --
+// on connaît déjà tout le contenu, on sait juste qu'un chapitre de plus est validé,
+// et que le chapitre suivant devient donc accessible.
+function marquerChapitreValideLocalement(chapId) {
+  if (!donneesFormation) return;
+  const tousChapitres = [];
+  donneesFormation.modules.forEach(m => m.chapitres.forEach(c => tousChapitres.push(c)));
+  const idx = tousChapitres.findIndex(c => c.id === chapId);
+  if (idx === -1) return;
+  tousChapitres[idx].valide = true;
+  tousChapitres[idx].accessible = true;
+  if (tousChapitres[idx + 1]) {
+    tousChapitres[idx + 1].accessible = true;
+  }
 }
 
 function afficherSommaire() {
@@ -199,7 +203,6 @@ function selectionnerChapitre(moduleId, chapId) { selectionner({ type: 'chapitre
 async function afficherContenu() {
   const zone = document.getElementById('contenu');
 
-  // CORRECTION : scroll en haut à chaque changement de contenu
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (noeudActif.type === 'formation') {
@@ -223,8 +226,10 @@ async function afficherContenu() {
     if (c.medias && c.medias.length) {
       mediasHtml = '<div class="medias-eleve">' + c.medias.map(media => {
         const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
+        const extensions = { pdf: '.pdf', audio: '.mp3' };
+        const nomFichier = (media.titre || 'fichier') + (extensions[media.type] || '');
         return media.telechargeable
-          ? `<a class="media-eleve-row" href="${media.url}" download target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
+          ? `<a class="media-eleve-row" href="${media.url}" download="${nomFichier}" target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
     }
@@ -241,22 +246,33 @@ function selectionner(noeud) {
   afficherContenu();
 }
 
+// CORRECTION PERFORMANCE : on ne recharge plus TOUTE la formation après
+// validation (await chargerFormation() supprimé) -- on met juste à jour
+// l'état déjà en mémoire, ce qui est instantané. Un seul appel réseau au
+// lieu de deux, et plus aucune requête pour retélécharger tout le contenu
+// des chapitres déjà chargés.
 async function validerChapitre(chapId) {
   const resp = await fetch(`/api/eleve/chapitres/${chapId}/valider`, { method: 'POST' });
   if (resp.ok) {
     const data = await resp.json();
-    // CORRECTION : mise à jour de la barre de progression après validation
     if (data.progression !== undefined) {
       mettreAJourProgression(data.progression);
     }
-    await chargerFormation();
+    marquerChapitreValideLocalement(chapId);
     selectionner({ type: 'chapitre', moduleId: noeudActif.moduleId, chapId: chapId });
   }
 }
 
 chargerFormation();
 
-// CORRECTION : blocage copier-coller et clic droit
+// CORRECTION : signal envoyé toutes les 4 minutes pour empêcher Render de
+// mettre le service en veille pendant qu'un élève reste longtemps sur une
+// page de formation sans cliquer nulle part (le plan gratuit s'endort après
+// ~15 minutes sans aucune requête reçue -- ce signal reste bien en dessous).
+setInterval(() => {
+  fetch('/ping', { method: 'GET', cache: 'no-store' }).catch(() => {});
+}, 4 * 60 * 1000);
+
 document.addEventListener('contextmenu', function(e) {
   e.preventDefault();
   return false;
@@ -271,9 +287,6 @@ document.addEventListener('keydown', function(e) {
   }
 });
 document.addEventListener('selectstart', function(e) {
-  // CORRECTION CROSS-BROWSER : ne jamais bloquer la sélection/interaction
-  // sur les éléments interactifs (bouton, liens) - nécessaire pour que
-  // Safari sur trackpad Mac déclenche correctement le clic
   const cible = e.target;
   if (cible.tagName === 'INPUT' || cible.tagName === 'TEXTAREA' || cible.tagName === 'BUTTON' || cible.tagName === 'A') return true;
   if (cible.closest && cible.closest('button, a')) return true;
