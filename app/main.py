@@ -61,27 +61,10 @@ def ping():
     return {"ok": True}
 
 
-# Vérifie aussi que CORS autorise bien laurence-mermet-bijon.fr à appeler
-# /public/cercle-femmes -- si un middleware CORSMiddleware existe déjà
-# (probablement le cas puisque le site appelle déjà l'API ailleurs),
-# rien à faire de plus. Sinon, ajoute :
-#
-# from fastapi.middleware.cors import CORSMiddleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["https://laurence-mermet-bijon.fr"],
-#     allow_methods=["GET"],
-# )
+from fastapi.middleware.cors import CORSMiddleware
 
-
-# Vérifie aussi que CORS autorise bien laurence-mermet-bijon.fr à appeler
-# /public/cercle-femmes -- si un middleware CORSMiddleware existe déjà
-# (probablement le cas puisque le site appelle déjà l'API ailleurs),
-# rien à faire de plus. Sinon, ajoute :
-#
-# from fastapi.middleware.cors import CORSMiddleware
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=["https://laurence-mermet-bijon.fr"],
-#     allow_methods=["GET"],
-# )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://laurence-mermet-bijon.fr"],
+    allow_methods=["GET"],
+)
