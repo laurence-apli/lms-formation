@@ -93,3 +93,10 @@ def page_profil(request: Request, admin: Administrateur = Depends(admin_connecte
         request, "admin/profil.html",
         {"profil": _profil_admin(admin), "page_active": "profil"},
     )
+
+@router.get("/cercle-femmes", response_class=HTMLResponse)
+def page_cercle_femmes(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(
+        request, "admin/cercle_femmes.html",
+        {"profil": _profil_admin(admin), "page_active": "cercle_femmes"},
+    )
