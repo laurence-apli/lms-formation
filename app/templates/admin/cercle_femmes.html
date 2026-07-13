@@ -1,0 +1,107 @@
+
+{% extends "admin/base.html" %}
+{% block titre %}Cercle de Femmes — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .form-cercle { max-width: 640px; background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+  .form-cercle label { display:block; font-size:13px; font-weight:600; margin:16px 0 6px; }
+  .form-cercle label:first-child { margin-top:0; }
+  .form-cercle input[type="text"], .form-cercle textarea { width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:14px; }
+  .form-cercle textarea { min-height:120px; resize:vertical; }
+  .form-cercle .checkbox-row { display:flex; align-items:center; gap:8px; margin-top:18px; }
+  .form-cercle .checkbox-row input { width:auto; }
+  .form-cercle .form-actions { margin-top:22px; display:flex; gap:10px; align-items:center; }
+</style>
+
+<div class="topbar"><div><h1>Cercle de Femmes</h1></div></div>
+<p style="font-size:13px;color:var(--grey);max-width:640px;margin-bottom:20px">
+  Ces informations s'affichent automatiquement sur la page "Cercle de Femmes" du site — pas besoin de mise en ligne Netlify.
+</p>
+
+<div class="form-cercle">
+  <div id="zone-erreur"></div>
+
+  <label>Titre</label>
+  <input type="text" id="input-titre" placeholder="Ex: Cercle de Femmes de rentrée">
+
+  <label>Date et horaire (texte libre)</label>
+  <input type="text" id="input-date" placeholder="Ex: Samedi 12 septembre 2026, 14h-17h">
+
+  <label>Lieu</label>
+  <input type="text" id="input-lieu" placeholder="Ex: Cabinet de Véranne (42520)">
+
+  <label>Description / thème / informations pratiques</label>
+  <textarea id="input-description" placeholder="Thème du cercle, ce qu'il faut apporter, tarif, modalités d'inscription..."></textarea>
+
+  <label>Photo (optionnelle)</label>
+  <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <img id="apercu-photo" src="" alt="" style="display:none;max-width:160px;border-radius:8px;border:1px solid var(--border)">
+    <input type="file" id="input-photo" accept="image/*" onchange="previsualiserPhoto(event)">
+  </div>
+  <p style="font-size:12px;color:var(--grey);margin-top:6px">Formats acceptés : JPG, PNG. La photo est enregistrée avec la fiche lors de l'enregistrement ci-dessous.</p>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="input-publie">
+    <label style="margin:0" for="input-publie">Afficher ces informations sur le site</label>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" onclick="enregistrerCercle()">Enregistrer</button>
+    <span id="confirmation-enregistrement" style="font-size:13px;color:var(--gold);display:none">✓ Enregistré</span>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let photoBase64Actuelle = '';
+
+async function chargerCercle() {
+  const data = await appelApi('/admin/cercle-femmes');
+  document.getElementById('input-titre').value = data.titre || '';
+  document.getElementById('input-date').value = data.date_evenement || '';
+  document.getElementById('input-lieu').value = data.lieu || '';
+  document.getElementById('input-description').value = data.description_html || '';
+  document.getElementById('input-publie').checked = !!data.publie;
+  if (data.photo_url) {
+    photoBase64Actuelle = data.photo_url;
+    const apercu = document.getElementById('apercu-photo');
+    apercu.src = data.photo_url;
+    apercu.style.display = 'block';
+  }
+}
+
+function previsualiserPhoto(event) {
+  const fichier = event.target.files[0];
+  if (!fichier) return;
+  const lecteur = new FileReader();
+  lecteur.onload = () => {
+    photoBase64Actuelle = lecteur.result;
+    const apercu = document.getElementById('apercu-photo');
+    apercu.src = photoBase64Actuelle;
+    apercu.style.display = 'block';
+  };
+  lecteur.readAsDataURL(fichier);
+}
+
+async function enregistrerCercle() {
+  const data = new FormData();
+  data.append('titre', document.getElementById('input-titre').value.trim());
+  data.append('date_evenement', document.getElementById('input-date').value.trim());
+  data.append('lieu', document.getElementById('input-lieu').value.trim());
+  data.append('description_html', document.getElementById('input-description').value.trim());
+  data.append('publie', document.getElementById('input-publie').checked);
+  data.append('photo_url', photoBase64Actuelle);
+  try {
+    await appelApi('/admin/cercle-femmes', { method: 'POST', body: data });
+    const confirmation = document.getElementById('confirmation-enregistrement');
+    confirmation.style.display = 'inline';
+    setTimeout(() => confirmation.style.display = 'none', 2500);
+  } catch (e) {
+    document.getElementById('zone-erreur').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+  }
+}
+
+chargerCercle();
+</script>
+{% endblock %}
