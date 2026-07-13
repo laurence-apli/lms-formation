@@ -52,3 +52,23 @@ def verification_sante():
     """Route simple pour vérifier que le serveur répond -- utile pour Render
     et pour tout outil de supervision."""
     return {"statut": "ok"}
+
+from .routes import cercle_femmes
+app.include_router(cercle_femmes.router)
+
+@app.get("/ping")
+def ping():
+    return {"ok": True}
+
+
+# Vérifie aussi que CORS autorise bien laurence-mermet-bijon.fr à appeler
+# /public/cercle-femmes -- si un middleware CORSMiddleware existe déjà
+# (probablement le cas puisque le site appelle déjà l'API ailleurs),
+# rien à faire de plus. Sinon, ajoute :
+#
+# from fastapi.middleware.cors import CORSMiddleware
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=["https://laurence-mermet-bijon.fr"],
+#     allow_methods=["GET"],
+# )
