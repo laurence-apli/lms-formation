@@ -261,13 +261,14 @@ def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -
     return True
 
 
-def chapitre_est_accessible(session: Session, eleve_id: int, chapitre) -> tuple:
+def chapitre_est_accessible(session, eleve_id: int, chapitre, acces=None) -> tuple:
     formation = chapitre.module.formation
-    acces = (
-        session.query(AccesFormation)
-        .filter_by(eleve_id=eleve_id, formation_id=formation.id)
-        .first()
-    )
+    if acces is None:
+        acces = (
+            session.query(AccesFormation)
+            .filter_by(eleve_id=eleve_id, formation_id=formation.id)
+            .first()
+        )
     if acces is None:
         return False, "aucun_acces"
     if formation.nb_niveaux > 1 and acces.niveau < chapitre.module.niveau_requis:
@@ -291,12 +292,13 @@ def chapitre_est_accessible(session: Session, eleve_id: int, chapitre) -> tuple:
     return True, ""
 
 
-def progression_pourcentage(session: Session, eleve_id: int, formation: Formation) -> float:
-    acces = (
-        session.query(AccesFormation)
-        .filter_by(eleve_id=eleve_id, formation_id=formation.id)
-        .first()
-    )
+def progression_pourcentage(session, eleve_id: int, formation, acces=None) -> float:
+    if acces is None:
+        acces = (
+            session.query(AccesFormation)
+            .filter_by(eleve_id=eleve_id, formation_id=formation.id)
+            .first()
+        )
     if acces is None:
         return 0.0
     seq_visible = [c for c in sequence_chapitres(formation)
@@ -310,6 +312,7 @@ def progression_pourcentage(session: Session, eleve_id: int, formation: Formatio
         .count()
     )
     return round(100 * valides / len(seq_visible), 1)
+
 
 
 def module_est_termine(session: Session, eleve_id: int, module: Module) -> bool:
