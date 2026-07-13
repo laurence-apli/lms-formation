@@ -423,3 +423,38 @@ if __name__ == "__main__":
     engine = create_engine("sqlite:///lms_prototype.db", echo=False)
     Base.metadata.create_all(engine)
     print("Structure de données créée avec succès dans lms_prototype.db")
+
+class CercleFemmes(Base):
+    """Bloc unique ('singleton') pour annoncer le prochain Cercle de Femmes
+    sur le site vitrine. Laurence le modifie depuis l'admin ; le site public
+    va chercher ces infos via une route publique en lecture seule."""
+    __tablename__ = "cercle_femmes"
+
+    id = Column(Integer, primary_key=True)
+    titre = Column(String(200), default="Cercle de Femmes")
+    date_evenement = Column(String(150))   # texte libre, ex: "Samedi 12 septembre 2026, 14h-17h"
+    lieu = Column(String(300))             # ex: "Cabinet de Véranne (42520)"
+    description_html = Column(Text)        # thème, déroulé, informations pratiques
+    photo_url = Column(Text)               # optionnel, image encodée en base64
+    publie = Column(Boolean, default=True) # si False, le site affiche un message d'attente
+    mis_a_jour_le = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+def obtenir_ou_creer_cercle_femmes(session: Session) -> "CercleFemmes":
+    """Il n'existe qu'une seule fiche 'prochain cercle' à la fois -- on la
+    récupère si elle existe, sinon on la crée avec des valeurs de départ
+    réalistes (Laurence les modifiera ensuite depuis l'admin)."""
+    cercle = session.query(CercleFemmes).first()
+    if cercle is None:
+        cercle = CercleFemmes(
+            titre="Cercle de Femmes de rentrée",
+            date_evenement="Mercredi 10 septembre 2026, 14h-17h",
+            lieu="Cabinet de Véranne (42520)",
+            description_html="Un cercle pour se retrouver après l'été, se relier à son cycle et à la puissance du féminin sacré. Places limitées, inscription par message.",
+            photo_url="images/laurence-huiles-cadran.jpg",
+            publie=True,
+        )
+        session.add(cercle)
+        session.commit()
+        session.refresh(cercle)
+    return cercle
