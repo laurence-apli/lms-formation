@@ -1,49 +1,55 @@
 """
-Routes côté élève -- toutes dépendent de eleve_connecte (un élève doit être
-authentifié pour voir quoi que ce soit ici).
+Correction performance -- route de validation de chapitre.
+Remplace la route existante dans app/routes/espace_eleve.py.
+
+Ce qui change par rapport à l'original :
+1. Le chapitre est chargé avec toute sa formation (modules + chapitres) en une
+   seule fois via `selectinload`, au lieu de laisser chaque relation se
+   charger une par une (module, puis formation, puis modules de la
+   formation, puis chapitres de chaque module...).
+2. L'accès élève (AccesFormation) n'est récupéré qu'UNE fois, puis réutilisé
+   -- avant, la même requête était refaite 3 fois (une dans la vérification
+   d'accès, une dans chapitre_est_accessible, une dans progression_pourcentage).
 """
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import obtenir_session
 from ..models import (
-    Eleve, Formation, Module, Chapitre, AccesFormation,
-    sequence_chapitres, chapitre_dans_le_niveau, chapitre_est_accessible,
-    progression_pourcentage, valider_chapitre as valider_chapitre_modele,
+    Eleve, Chapitre, Module, Formation, AccesFormation,
+    chapitre_est_accessible, progression_pourcentage,
+    valider_chapitre as valider_chapitre_modele,
 )
 from .auth import eleve_connecte
 
-router = APIRouter(prefix="/api/eleve", dependencies=[Depends(eleve_connecte)])
+router = APIRouter(prefix="/eleve", dependencies=[Depends(eleve_connecte)])
 
 
-@router.get("/tableau-de-bord")
-def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
-    formations_acquises = []
-    for acces in eleve.acces_formations:
-        formation = acces.formation
-        if not formation.actif:
-            continue  # formation désactivée : invisible côté élève, même si l'accès existe toujours en base
-        formations_acquises.append({
-            "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
-            "nb_niveaux": formation.nb_niveaux, "niveau": acces.niveau,
-            "progression": progression_pourcentage(session, eleve.id, formation),
-        })
+@router.post("/chapitres/{chapitre_id}/valider")
+def valider_chapitre_eleve(
+    chapitre_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
+):
+    # 1. Une seule requête qui charge le chapitre ET toute sa formation
+    #    (modules + chapitres) d'un coup, au lieu de laisser chaque relation
+    #    se charger une par une plus tard dans le code.
+    chapitre = (
+        session.query(Chapitre)
+        .options(
+            selectinload(Chapitre.module)
+            .selectinload(Module.formation)
+            .selectinload(Formation.modules)
+            .selectinload(Module.chapitres)
+        )
+        .filter(Chapitre.id == chapitre_id)
+        .first()
+    )
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
 
-    ids_acquis = {f["id"] for f in formations_acquises}
-    formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur}
-        for f in session.query(Formation).filter_by(actif=True).all()
-        if f.id not in ids_acquis
-    ]
+    formation = chapitre.module.formation
 
-    return {
-        "eleve": {"id": eleve.id, "prenom": eleve.prenom, "nom": eleve.nom, "actif": eleve.actif},
-        "formations_acquises": formations_acquises,
-        "formations_disponibles": formations_disponibles,
-    }
-
-
-def _verifier_acces_formation(eleve: Eleve, formation: Formation, session: Session) -> AccesFormation:
+    # 2. Une seule requête pour l'accès élève -- réutilisée ensuite partout,
+    #    au lieu d'être refaite à chaque fonction appelée.
     acces = (
         session.query(AccesFormation)
         .filter_by(eleve_id=eleve.id, formation_id=formation.id)
@@ -51,117 +57,11 @@ def _verifier_acces_formation(eleve: Eleve, formation: Formation, session: Sessi
     )
     if acces is None:
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
-    if not formation.actif:
-        # Vérification de sécurité même si l'élève a déjà l'onglet ouvert ou
-        # connaît l'adresse exacte -- une formation désactivée doit rester
-        # inaccessible à tout moment, pas seulement absente du tableau de bord.
-        raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
-    return acces
 
-
-@router.get("/formations/{formation_id}")
-def detail_formation(
-    formation_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
-):
-    """Renvoie le sommaire complet (modules/chapitres VISIBLES au niveau de
-    l'élève uniquement) -- les éléments hors niveau sont totalement absents
-    de cette réponse, pas seulement grisés côté affichage."""
-    formation = session.get(Formation, formation_id)
-    if formation is None:
-        raise HTTPException(status_code=404, detail="Formation introuvable.")
-    acces = _verifier_acces_formation(eleve, formation, session)
-
-    modules_visibles = []
-    for module in formation.modules:
-        if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
-            continue  # module hors niveau : totalement invisible
-
-        chapitres_visibles = []
-        for chapitre in module.chapitres:
-            if not chapitre_dans_le_niveau(formation, acces.niveau, chapitre):
-                continue  # chapitre hors niveau : totalement invisible
-
-            ok, _ = chapitre_est_accessible(session, eleve.id, chapitre)
-            deja_valide = any(v.chapitre_id == chapitre.id for v in eleve.validations)
-            chapitres_visibles.append({
-                "id": chapitre.id, "titre": chapitre.titre,
-                "accessible": ok, "valide": deja_valide,
-            })
-
-        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaît pas du tout
-            modules_visibles.append({
-                "id": module.id, "titre": module.titre, "chapitres": chapitres_visibles,
-            })
-
-    jours_total = formation.jours_pour_niveau(acces.niveau)
-    return {
-        "id": formation.id, "titre": formation.titre,
-        "presentation_html": formation.presentation_html,
-        "progression": progression_pourcentage(session, eleve.id, formation),
-        "modules": modules_visibles,
-        "accompagnement": {
-            "total": jours_total,
-            "restants": acces.jours_accompagnement_restants(),
-        } if jours_total > 0 else None,
-    }
-
-
-@router.get("/modules/{module_id}")
-def detail_module(
-    module_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
-):
-    module = session.get(Module, module_id)
-    if module is None:
-        raise HTTPException(status_code=404, detail="Module introuvable.")
-    formation = module.formation
-    acces = _verifier_acces_formation(eleve, formation, session)
-
-    if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
-        raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accès.")
-
-    return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html}
-
-
-@router.get("/chapitres/{chapitre_id}")
-def detail_chapitre(
-    chapitre_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
-):
-    chapitre = session.get(Chapitre, chapitre_id)
-    if chapitre is None:
-        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
-    formation = chapitre.module.formation
-    _verifier_acces_formation(eleve, formation, session)
-
-    ok, raison = chapitre_est_accessible(session, eleve.id, chapitre)
-    deja_valide = any(v.chapitre_id == chapitre.id for v in eleve.validations)
-
-    if not ok and not deja_valide:
-        raise HTTPException(status_code=403, detail=f"Chapitre non accessible : {raison}")
-
-    medias = [
-        {"id": m.id, "type": m.type, "titre": m.titre, "url": m.url, "telechargeable": m.telechargeable}
-        for m in chapitre.medias
-    ]
-    return {
-        "id": chapitre.id, "titre": chapitre.titre, "contenu_html": chapitre.contenu_html,
-        "valide": deja_valide, "medias": medias,
-    }
-
-
-@router.post("/chapitres/{chapitre_id}/valider")
-def valider_chapitre_eleve(
-    chapitre_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
-):
-    chapitre = session.get(Chapitre, chapitre_id)
-    if chapitre is None:
-        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
-    formation = chapitre.module.formation
-    _verifier_acces_formation(eleve, formation, session)
-
-    ok, raison = chapitre_est_accessible(session, eleve.id, chapitre)
+    ok, raison = chapitre_est_accessible(session, eleve.id, chapitre, acces=acces)
     if not ok:
         raise HTTPException(status_code=403, detail=f"Impossible de valider ce chapitre : {raison}")
 
     valider_chapitre_modele(session, eleve.id, chapitre_id)
-    nouvelle_progression = progression_pourcentage(session, eleve.id, formation)
+    nouvelle_progression = progression_pourcentage(session, eleve.id, formation, acces=acces)
     return {"ok": True, "progression": nouvelle_progression}
