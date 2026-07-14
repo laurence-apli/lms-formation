@@ -142,8 +142,10 @@ document.getElementById('form-oubli').addEventListener('submit', async function(
   e.preventDefault();
   const data = new FormData(e.target);
   await fetch('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
-  document.getElementById('form-oubli').innerHTML =
-    '<p style="font-size:13px; text-align:center; color:var(--ink); margin-top:16px;">Si cette adresse existe dans notre système, un e-mail vient de vous être envoyé avec un lien pour réinitialiser votre mot de passe.</p>';
+ document.getElementById('form-oubli').innerHTML =
+  '<p style="font-size:13px; text-align:center; color:var(--ink); margin-top:16px;">Si cette adresse existe dans notre système, un e-mail vient de vous être envoyé avec un lien pour réinitialiser votre mot de passe.</p>' +
+  '<p style="font-size:12px; text-align:center; color:var(--ink); opacity:0.7; margin-top:8px;">Pensez à vérifier vos e-mails indésirables (spams) si vous ne le voyez pas arriver.</p>' +
+  '<p style="text-align:center; margin-top:20px;"><a href="#" onclick="annulerOubli(); return false;" style="font-size:13px; color:var(--or, #B8922A); text-decoration:underline; cursor:pointer;">← Retour à la connexion</a></p>';
 });
 </script>
 {% endblock %}
