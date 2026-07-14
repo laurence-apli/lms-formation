@@ -16,6 +16,8 @@ from .models import Eleve, Formation, Administrateur, TokenAuthEleve, TokenAuthA
 from .routes.auth import eleve_connecte
 from .config import URL_SITE_VITRINE
 
+
+
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
@@ -125,3 +127,18 @@ def page_formation(
         request, "eleve/formation.html",
         {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session), "url_site_vitrine": URL_SITE_VITRINE},
     )
+
+@router.get("/portail", response_class=HTMLResponse)
+def page_portail(request: Request):
+    return templates.TemplateResponse(request, "eleve/portail.html", {})
+
+
+@router.get("/eleve/inscription", response_class=HTMLResponse)
+def page_inscription(request: Request):
+    return templates.TemplateResponse(request, "eleve/inscription.html", {})
+
+
+@router.get("/eleve/catalogue", response_class=HTMLResponse)
+def page_catalogue(request: Request):
+    return templates.TemplateResponse(request, "eleve/catalogue.html", {})
+
