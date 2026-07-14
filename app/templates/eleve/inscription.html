@@ -1,0 +1,67 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Créer mon compte — Laurence Mermet-Bijon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --or:#B8922A; --sable-dk:#C9B89A; --profond:#2E2210; --rose:#C47B6E; --creme:#FDFAF5; --doux:#7A6A56;
+  --serif:'Cormorant Garamond',Georgia,serif; --sans:'Jost',system-ui,sans-serif;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--profond); min-height:100vh; display:flex; align-items:center; justify-content:center; }
+.carte { background:#fff; border:1px solid var(--sable-dk); border-radius:16px; padding:44px 42px; width:100%; max-width:420px; box-shadow:0 10px 34px rgba(46,34,16,.07); }
+.retour { font-size:12.5px; color:var(--doux); text-decoration:none; display:inline-block; margin-bottom:20px; }
+h1 { font-family:var(--serif); font-weight:300; font-size:28px; margin:0 0 6px; text-align:center; }
+.sous { text-align:center; color:var(--doux); font-size:13px; margin-bottom:28px; }
+label { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--doux); display:block; margin:14px 0 6px; }
+input { width:100%; padding:11px 14px; border:1px solid var(--sable-dk); border-radius:8px; font-size:14px; font-family:var(--sans); }
+.btn-valider { width:100%; margin-top:24px; background:var(--or); color:#fff; border:none; border-radius:30px; padding:14px; font-size:14px; font-weight:600; letter-spacing:.03em; text-transform:uppercase; cursor:pointer; }
+.erreur { color:var(--rose); font-size:12.5px; margin-top:12px; text-align:center; display:none; }
+</style>
+</head>
+<body>
+<div class="carte">
+  <a class="retour" href="/portail">← Retour</a>
+  <h1>Crée ton compte</h1>
+  <p class="sous">Accède à toutes les formations en quelques secondes</p>
+
+  <form id="form-inscription">
+    <label>Prénom</label>
+    <input type="text" id="prenom" required>
+    <label>Nom</label>
+    <input type="text" id="nom" required>
+    <label>Email</label>
+    <input type="email" id="email" required>
+    <label>Mot de passe (8 caractères minimum)</label>
+    <input type="password" id="mot_de_passe" required minlength="8">
+    <div class="erreur" id="zone-erreur"></div>
+    <button class="btn-valider" type="submit">Créer mon compte</button>
+  </form>
+</div>
+
+<script>
+document.getElementById('form-inscription').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const data = new FormData();
+  data.append('prenom', document.getElementById('prenom').value);
+  data.append('nom', document.getElementById('nom').value);
+  data.append('email', document.getElementById('email').value);
+  data.append('mot_de_passe', document.getElementById('mot_de_passe').value);
+
+  const resp = await fetch('/eleve/inscription', { method: 'POST', body: data });
+  if (resp.redirected) {
+    window.location.href = resp.url;
+  } else {
+    const erreur = await resp.json();
+    const zone = document.getElementById('zone-erreur');
+    zone.textContent = erreur.detail || "Une erreur est survenue.";
+    zone.style.display = 'block';
+  }
+});
+</script>
+</body>
+</html>
