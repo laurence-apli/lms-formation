@@ -37,7 +37,7 @@ app.include_router(setup_temporaire.router)
 app.include_router(migration_web_temporaire.router)
 
 
-from .routes import boutique_public, boutique_paiement, boutique_admin
+
 app.include_router(boutique_public.router)
 app.include_router(boutique_paiement.router)
 app.include_router(boutique_admin.router)
