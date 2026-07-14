@@ -45,6 +45,11 @@ def _envoyer_email(destinataire: str, sujet: str, corps_html: str) -> bool:
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json",
+            # CORRECTION : sans en-tête User-Agent, Cloudflare (qui protège
+            # l'API Resend) rejette parfois la requête avec une erreur 1010
+            # ("Access Denied: Bad Bot") -- ajouté pour ressembler à une
+            # requête standard plutôt qu'à un script sans identification.
+            "User-Agent": "Mozilla/5.0 (compatible; LMS-Formation/1.0)",
         },
         method="POST",
     )
@@ -109,60 +114,4 @@ def email_reinitialisation_mot_de_passe(destinataire: str, prenom: str, lien: st
                 Bonjour {prenom},
               </p>
               <p style="margin:0 0 20px; font-size:15px; color:#3a2f1a; line-height:1.7;">
-                Vous avez demandé à réinitialiser votre mot de passe pour accéder à votre espace de formation.
-              </p>
-              <p style="margin:0 0 32px; font-size:15px; color:#3a2f1a; line-height:1.7;">
-                Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe. Ce lien est valable <strong>24 heures</strong>.
-              </p>
-
-              <!-- Bouton -->
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="{lien}"
-                       style="display:inline-block; background:#B8922A; color:#FFFFFF; text-decoration:none;
-                              font-family:Arial, sans-serif; font-size:14px; font-weight:700;
-                              letter-spacing:1px; text-transform:uppercase;
-                              padding:14px 36px; border-radius:8px;">
-                      Réinitialiser mon mot de passe
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Lien de secours -->
-              <p style="margin:28px 0 0; font-size:12px; color:#8a7656; line-height:1.6; text-align:center;">
-                Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>
-                <a href="{lien}" style="color:#B8922A; word-break:break-all;">{lien}</a>
-              </p>
-            </td>
-          </tr>
-
-          <!-- Séparateur -->
-          <tr>
-            <td style="padding:0 40px;">
-              <hr style="border:none; border-top:1px solid #EDE4D4; margin:0;">
-            </td>
-          </tr>
-
-          <!-- Pied de page -->
-          <tr>
-            <td style="padding:24px 40px; text-align:center;">
-              <p style="margin:0; font-size:12px; color:#8a7656; line-height:1.6;">
-                Si vous n'avez pas demandé cette réinitialisation, ignorez simplement cet email.<br>
-                Votre mot de passe actuel reste inchangé.
-              </p>
-              <p style="margin:12px 0 0; font-size:11px; color:#ad9c7a;">
-                Laurence Mermet-Bijon · 31 route de Maclas, Véranne (42520)
-              </p>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-"""
-    return _envoyer_email(destinataire, sujet, corps_html)
+                Vous avez demandé à réinitialiser votre mot
