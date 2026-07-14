@@ -1,0 +1,116 @@
+
+{% extends "admin/base.html" %}
+{% block titre %}Catalogue & Tarifs — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .grid-catalogue { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:20px; }
+  .carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
+  .carte-formation .ligne-haut { display:flex; gap:14px; align-items:flex-start; }
+  .carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
+  .carte-formation h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 4px; }
+  .carte-formation .desc { font-size:12px; color:var(--grey); margin:4px 0 10px; }
+  .bloc-tarif { background:var(--cream-light); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
+  .btn { border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
+  .btn-primary { background:var(--gold); color:#fff; }
+  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
+  .champ-inline { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:6px; }
+  label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:10px; }
+</style>
+
+<div class="topbar"><div><h1>Catalogue & Tarifs</h1></div></div>
+<p style="font-size:13px;color:var(--grey);margin-bottom:10px">Modifie ici la photo, le texte de présentation, les prix et les promotions de chaque formation — tout se répercute automatiquement sur le site et le catalogue élève.</p>
+
+<div id="zone-catalogue" class="grid-catalogue">Chargement…</div>
+
+<script>
+let dernierCatalogueCharge = [];
+
+async function chargerCatalogueAdmin() {
+  const catalogue = await appelApi('/public/catalogue');
+  dernierCatalogueCharge = catalogue;
+  const zone = document.getElementById('zone-catalogue');
+  zone.innerHTML = catalogue.map(f => `
+    <div class="carte-formation" data-id="${f.formation_id}">
+      <div class="ligne-haut">
+        <img class="apercu" src="${f.image_url || ''}" onerror="this.style.display='none'">
+        <div style="flex:1">
+          <h3>${f.titre}</h3>
+        </div>
+      </div>
+      <label class="petit">Photo (URL ou base64)</label>
+      <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Colle une image en base64 ou une URL">
+      <label class="petit">Texte de présentation</label>
+      <textarea class="champ-inline" id="desc-${f.formation_id}" rows="3">${f.description_courte || ''}</textarea>
+      <button class="btn btn-outline" style="margin-top:10px" onclick="enregistrerPresentation(${f.formation_id})">Enregistrer photo & texte</button>
+
+      <div style="margin-top:14px">
+        ${f.tarifs.map(t => `
+          <div class="bloc-tarif">
+            <span>${t.nom_option} — ${t.prix_final}€ ${t.en_promo ? '(promo)' : ''} ${t.autoriser_3x ? '· 3x' : ''} ${t.cumulable ? '· cumulable niv.' + t.niveau : ''}</span>
+            <button class="btn btn-outline" onclick="ouvrirEditionTarif(${f.formation_id}, ${t.tarif_id})">Modifier</button>
+          </div>
+        `).join('')}
+        <button class="btn btn-primary" style="margin-top:10px" onclick="ouvrirCreationTarif(${f.formation_id})">+ Ajouter un tarif</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function enregistrerPresentation(formationId) {
+  const image_url = document.getElementById(`image-${formationId}`).value;
+  const description_courte = document.getElementById(`desc-${formationId}`).value;
+  await appelApi(`/admin/formations/${formationId}/presentation`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_url, description_courte }),
+  });
+  alert('Enregistré !');
+}
+
+function ouvrirCreationTarif(formationId) {
+  const nom_option = prompt("Nom de cette offre (ex: Tarif unique, Essentiel, Confort...) :", "Tarif unique");
+  if (!nom_option) return;
+  const prix = parseFloat(prompt("Prix (€) :", "100"));
+  if (isNaN(prix)) return;
+  const cumulable = confirm("Ce tarif fait-il partie d'un ensemble de paliers cumulables (niveau 1/2/3 d'une même formation) ? OK = oui, Annuler = non (option indépendante ou tarif unique)");
+  const niveau = cumulable ? parseInt(prompt("Numéro de ce niveau (1, 2, 3...) :", "1")) : 1;
+  const autoriser_3x = confirm("Autoriser le paiement en 3x (Alma) sur ce tarif ?");
+
+  appelApi('/admin/tarifs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formation_id: formationId, niveau, nom_option, prix,
+      promo_active: false, promo_pourcentage: null, autoriser_3x, cumulable, ordre: niveau,
+    }),
+  }).then(() => chargerCatalogueAdmin());
+}
+
+function ouvrirEditionTarif(formationId, tarifId) {
+  const formation = dernierCatalogueCharge.find(f => f.formation_id === formationId);
+  const tarifActuel = formation.tarifs.find(t => t.tarif_id === tarifId);
+
+  const nouveauPrix = parseFloat(prompt("Nouveau prix (€) :", tarifActuel.prix));
+  if (isNaN(nouveauPrix)) return;
+  const promo_active = confirm("Activer une promo 'du moment' sur ce tarif ?");
+  const promo_pourcentage = promo_active ? parseInt(prompt("Pourcentage de réduction :", "20")) : null;
+
+  appelApi(`/admin/tarifs/${tarifId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formation_id: formationId,
+      niveau: tarifActuel.niveau,
+      nom_option: tarifActuel.nom_option,
+      prix: nouveauPrix,
+      promo_active, promo_pourcentage,
+      autoriser_3x: tarifActuel.autoriser_3x,
+      cumulable: tarifActuel.cumulable,
+      ordre: tarifActuel.niveau,
+    }),
+  }).then(() => chargerCatalogueAdmin());
+}
+
+chargerCatalogueAdmin();
+</script>
+{% endblock %}
