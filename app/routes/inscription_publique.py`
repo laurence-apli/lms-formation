@@ -1,0 +1,46 @@
+"""
+Auto-inscription publique -- différent de la création d'élève par l'admin
+(qui reste inchangée, avec son mailto contrôlé). Ici, un visiteur crée
+lui-même son compte pour accéder au catalogue et acheter une formation.
+
+À placer dans app/routes/inscription_publique.py
+"""
+from fastapi import APIRouter, Request, Form, HTTPException
+from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
+from fastapi import Depends
+
+from ..database import obtenir_session
+from ..models import Eleve
+
+router = APIRouter()
+
+
+@router.post("/eleve/inscription")
+def creer_compte_eleve(
+    request: Request,
+    prenom: str = Form(...),
+    nom: str = Form(...),
+    email: str = Form(...),
+    mot_de_passe: str = Form(...),
+    session: Session = Depends(obtenir_session),
+):
+    email_normalise = email.strip().lower()
+    existe_deja = session.query(Eleve).filter_by(email=email_normalise).first()
+    if existe_deja is not None:
+        raise HTTPException(status_code=400, detail="Un compte existe déjà avec cette adresse e-mail.")
+
+    if len(mot_de_passe) < 8:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit contenir au moins 8 caractères.")
+
+    eleve = Eleve(prenom=prenom.strip(), nom=nom.strip(), email=email_normalise, actif=True)
+    eleve.definir_mot_de_passe(mot_de_passe)
+    session.add(eleve)
+    session.commit()
+    session.refresh(eleve)
+
+    # Connexion immédiate après inscription -- pas besoin de se reconnecter
+    # juste après avoir créé son compte.
+    request.session["eleve_id"] = eleve.id
+
+    return RedirectResponse(url="/eleve/catalogue", status_code=303)
