@@ -1,0 +1,46 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mon espace formation — Laurence Mermet-Bijon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --or:#B8922A; --sable-dk:#C9B89A; --profond:#2E2210; --rose:#C47B6E; --creme:#FDFAF5; --doux:#7A6A56;
+  --serif:'Cormorant Garamond',Georgia,serif; --sans:'Jost',system-ui,sans-serif;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:var(--sans); background:var(--profond); color:var(--creme); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:30px; }
+.wrap { max-width:760px; text-align:center; }
+.label { font-size:12px; letter-spacing:.25em; text-transform:uppercase; color:rgba(184,146,42,.85); }
+h1 { font-family:var(--serif); font-weight:300; font-size:38px; margin:18px 0 40px; }
+.choix { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.carte-choix { background:rgba(253,250,245,.05); border:1px solid rgba(253,250,245,.15); border-radius:14px; padding:32px 26px; text-decoration:none; color:var(--creme); transition:all .2s; }
+.carte-choix:hover { background:rgba(253,250,245,.09); border-color:var(--or); }
+.carte-choix .icone { font-size:30px; margin-bottom:14px; }
+.carte-choix h2 { font-family:var(--serif); font-weight:400; font-size:21px; margin:0 0 8px; }
+.carte-choix p { font-size:13px; color:rgba(253,250,245,.65); line-height:1.6; margin:0; }
+@media (max-width:600px) { .choix { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="label">Formations en ligne</span>
+  <h1>Bienvenue dans ton espace</h1>
+  <div class="choix">
+    <a class="carte-choix" href="/eleve/connexion">
+      <div class="icone">🔑</div>
+      <h2>J'ai déjà un compte</h2>
+      <p>Se connecter pour retrouver mes formations en cours.</p>
+    </a>
+    <a class="carte-choix" href="/eleve/inscription">
+      <div class="icone">✨</div>
+      <h2>Je découvre les formations</h2>
+      <p>Créer un compte et parcourir le catalogue.</p>
+    </a>
+  </div>
+</div>
+</body>
+</html>
