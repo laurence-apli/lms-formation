@@ -100,3 +100,19 @@ def page_cercle_femmes(request: Request, admin: Administrateur = Depends(admin_c
         request, "admin/cercle_femmes.html",
         {"profil": _profil_admin(admin), "page_active": "cercle_femmes"},
     )
+
+@router.get("/catalogue-tarifs", response_class=HTMLResponse)
+def page_catalogue_tarifs(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(
+        request, "admin/catalogue_tarifs.html",
+        {"profil": _profil_admin(admin), "page_active": "catalogue_tarifs"},
+    )
+
+
+@router.get("/codes-promo", response_class=HTMLResponse)
+def page_codes_promo(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(
+        request, "admin/codes_promo.html",
+        {"profil": _profil_admin(admin), "page_active": "codes_promo"},
+    )
+    
