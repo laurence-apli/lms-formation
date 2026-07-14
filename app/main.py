@@ -37,6 +37,17 @@ app.include_router(setup_temporaire.router)
 app.include_router(migration_web_temporaire.router)
 
 
+from .routes import boutique_public, boutique_paiement, boutique_admin
+app.include_router(boutique_public.router)
+app.include_router(boutique_paiement.router)
+app.include_router(boutique_admin.router)
+
+# N'oublie pas d'ajouter "stripe" dans requirements.txt (une ligne suffit :
+# stripe
+# ) sinon le déploiement échouera au démarrage avec une erreur d'import.
+
+
+
 @app.on_event("startup")
 def au_demarrage():
     initialiser_base()
