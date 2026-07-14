@@ -1,0 +1,210 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Choisir mes formations — Laurence Mermet-Bijon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --or:#B8922A; --or-lt:#F5EDD6; --sable:#EDE4D4; --sable-lt:#F7F3EC; --sable-dk:#C9B89A;
+  --profond:#2E2210; --rose:#C47B6E; --rose-lt:#FAF0EE; --creme:#FDFAF5; --doux:#7A6A56; --leger:#B0A090;
+  --serif:'Cormorant Garamond',Georgia,serif; --sans:'Jost',system-ui,sans-serif;
+}
+* { box-sizing:border-box; }
+body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--profond); }
+.topbar { background:var(--profond); color:var(--creme); padding:20px 40px; font-family:var(--serif); font-size:20px; }
+.wrap { max-width:1180px; margin:0 auto; padding:36px 28px 80px; display:grid; grid-template-columns:1fr 360px; gap:32px; align-items:start; }
+h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; }
+.sous-titre { color:var(--doux); font-size:14px; margin-bottom:20px; }
+
+.bloc-montee { background:var(--rose-lt); border:1px solid var(--rose); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
+.bloc-montee h3 { font-family:var(--serif); font-size:16px; margin:0 0 6px; }
+.bloc-montee p { font-size:13px; color:var(--doux); margin:0 0 10px; }
+.bloc-montee button { background:var(--rose); color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; }
+
+.formation-bloc { background:#fff; border:1px solid var(--sable-dk); border-radius:12px; padding:22px 24px; margin-bottom:16px; }
+.f-row { display:flex; align-items:flex-start; gap:14px; }
+.f-visuel { width:64px; height:64px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--sable-lt); }
+.f-visuel img { width:100%; height:100%; object-fit:cover; }
+.f-check { width:22px; height:22px; border:2px solid var(--sable-dk); border-radius:6px; flex-shrink:0; margin-top:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.f-check.checked { background:var(--or); border-color:var(--or); color:#fff; font-size:13px; font-weight:700; }
+.f-titre { font-family:var(--serif); font-size:20px; font-weight:600; margin:0 0 4px; }
+.f-desc-courte { font-size:12.5px; color:var(--doux); line-height:1.55; margin:6px 0; }
+.f-prix { display:flex; align-items:baseline; gap:10px; margin-top:8px; }
+.f-final { font-family:var(--serif); font-size:20px; font-weight:600; }
+.opt-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--sable-dk); border-radius:8px; cursor:pointer; margin-top:8px; }
+.opt-row.selected { border-color:var(--or); background:var(--or-lt); }
+
+.recap { position:sticky; top:28px; background:#fff; border:1px solid var(--sable-dk); border-radius:14px; padding:26px 24px; }
+.recap h2 { font-family:var(--serif); font-weight:600; font-size:19px; margin:0 0 16px; }
+.recap-item { display:flex; justify-content:space-between; font-size:13.5px; margin-bottom:9px; padding-bottom:9px; border-bottom:1px solid var(--sable-lt); }
+.recap-total { display:flex; justify-content:space-between; align-items:baseline; padding-top:14px; border-top:2px solid var(--profond); margin-top:6px; }
+.recap-total .val { font-family:var(--serif); font-size:28px; font-weight:600; color:var(--or); }
+.btn-payer { width:100%; margin-top:20px; background:var(--or); color:#fff; border:none; border-radius:30px; padding:14px; font-size:14px; font-weight:600; text-transform:uppercase; cursor:pointer; }
+.promo-input-row { display:flex; gap:8px; margin-top:10px; }
+.promo-input-row input { flex:1; padding:9px 12px; border:1px solid var(--sable-dk); border-radius:8px; }
+.promo-input-row button { background:var(--profond); color:var(--creme); border:none; border-radius:8px; padding:9px 16px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">Formation proposée par Laurence Mermet-Bijon</div>
+
+<div class="wrap">
+  <div>
+    <h1>Choisis tes formations</h1>
+    <p class="sous-titre">Sélectionne une ou plusieurs formations — le récapitulatif se met à jour à droite.</p>
+    <div id="zone-montees"></div>
+    <div id="zone-formations">Chargement…</div>
+  </div>
+  <div class="recap">
+    <h2>Récapitulatif</h2>
+    <div id="recap-contenu"><p style="color:var(--leger);font-size:13px">Sélectionne une formation pour commencer</p></div>
+  </div>
+</div>
+
+<script>
+let catalogue = [];
+let selection = {}; // tarif_id -> {nom, prix}
+let codeApplique = null;
+
+async function chargerTout() {
+  catalogue = await fetch('/public/catalogue').then(r => r.json());
+  const montees = await fetch('/api/eleve/montees-de-niveau').then(r => r.json());
+
+  document.getElementById('zone-montees').innerHTML = montees.map(m => `
+    <div class="bloc-montee">
+      <h3>Aller plus loin dans "${m.formation_titre}"</h3>
+      <p>Passe au niveau "${m.nom_option}" pour seulement ${m.difference_a_payer} € de plus (au lieu du prix plein).</p>
+      <button onclick="payerMonteeNiveau(${m.tarif_id})">Monter de niveau — ${m.difference_a_payer} €</button>
+    </div>
+  `).join('');
+
+  document.getElementById('zone-formations').innerHTML = catalogue.map(f => {
+    if (f.tarifs.length === 1) {
+      const t = f.tarifs[0];
+      return `
+        <div class="formation-bloc" onclick="toggleSimple(${t.tarif_id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix_final})">
+          <div class="f-row">
+            <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
+            <div class="f-check" id="check-${t.tarif_id}"></div>
+            <div>
+              <p class="f-titre">${f.titre}</p>
+              <p class="f-desc-courte">${f.description_courte || ''}</p>
+              <div class="f-prix"><span class="f-final">${t.prix_final} €</span></div>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      return `
+        <div class="formation-bloc">
+          <div class="f-row">
+            <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
+            <div>
+              <p class="f-titre">${f.titre}</p>
+              <p class="f-desc-courte">${f.description_courte || ''} Choisis l'une des offres ci-dessous.</p>
+              ${f.tarifs.map(t => `
+                <div class="opt-row" id="opt-${t.tarif_id}" onclick="event.stopPropagation(); choisirOption('${f.titre.replace(/'/g, "\\'")}', ${t.tarif_id}, '${t.nom_option}', ${t.prix_final})">
+                  <span style="flex:1">${t.nom_option}</span>
+                  <span style="font-family:var(--serif);font-weight:600">${t.prix_final} €</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
+  }).join('');
+}
+
+function toggleSimple(tarifId, nom, prix) {
+  const check = document.getElementById(`check-${tarifId}`);
+  if (selection[tarifId]) {
+    delete selection[tarifId];
+    check.classList.remove('checked'); check.innerHTML = '';
+  } else {
+    selection[tarifId] = { nom, prix };
+    check.classList.add('checked'); check.innerHTML = '✓';
+  }
+  majRecap();
+}
+
+function choisirOption(formationTitre, tarifId, nomOption, prix) {
+  // Retire les autres options de la même formation (non cumulables)
+  document.querySelectorAll(`[id^="opt-"]`).forEach(el => {
+    if (el.dataset.formation === formationTitre) el.classList.remove('selected');
+  });
+  Object.keys(selection).forEach(id => {
+    if (selection[id].formationTitre === formationTitre) delete selection[id];
+  });
+  document.getElementById(`opt-${tarifId}`).classList.add('selected');
+  selection[tarifId] = { nom: `${formationTitre} — ${nomOption}`, prix, formationTitre };
+  majRecap();
+}
+
+async function majRecap() {
+  const tarifIds = Object.keys(selection).map(Number);
+  const zone = document.getElementById('recap-contenu');
+  if (tarifIds.length === 0) {
+    zone.innerHTML = '<p style="color:var(--leger);font-size:13px">Sélectionne une formation pour commencer</p>';
+    return;
+  }
+
+  const apercu = await fetch('/eleve/panier/apercu', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tarif_ids: tarifIds, code_promo: codeApplique }),
+  }).then(r => r.json());
+
+  let html = apercu.lignes.map(l => `
+    <div class="recap-item"><span>${l.nom}</span><span>${l.prix_final} €</span></div>
+  `).join('');
+
+  html += `<div class="promo-input-row">
+    <input type="text" id="code-input" placeholder="Code promo">
+    <button onclick="appliquerCode()">OK</button>
+  </div>`;
+  if (apercu.erreur_code) html += `<p style="color:var(--rose);font-size:12px;margin-top:6px">${apercu.erreur_code}</p>`;
+
+  html += `<div class="recap-total"><span>Total</span><span class="val">${apercu.total} €</span></div>`;
+  html += `<button class="btn-payer" onclick="payer(${JSON.stringify(tarifIds)})">Passer au paiement</button>`;
+  zone.innerHTML = html;
+}
+
+function appliquerCode() {
+  codeApplique = document.getElementById('code-input').value;
+  majRecap();
+}
+
+async function payer(tarifIds) {
+  const resp = await fetch('/eleve/panier/paiement', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tarif_ids: tarifIds, code_promo: codeApplique }),
+  });
+  if (resp.ok) {
+    const data = await resp.json();
+    window.location.href = data.checkout_url;
+  } else {
+    const erreur = await resp.json();
+    alert(erreur.detail || "Une erreur est survenue.");
+  }
+}
+
+async function payerMonteeNiveau(tarifId) {
+  const resp = await fetch('/eleve/montee-de-niveau/paiement', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tarif_id: tarifId }),
+  });
+  if (resp.ok) {
+    const data = await resp.json();
+    window.location.href = data.checkout_url;
+  } else {
+    const erreur = await resp.json();
+    alert(erreur.detail || "Une erreur est survenue.");
+  }
+}
+
+chargerTout();
+</script>
+</body>
+</html>
