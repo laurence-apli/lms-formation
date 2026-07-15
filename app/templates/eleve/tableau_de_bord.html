@@ -2,83 +2,91 @@
 {% block titre %}Mon espace formation{% endblock %}
 {% block contenu %}
 <style>
-  .dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; }
-  .formation-card-eleve { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; transition:box-shadow .15s, border-color .15s; text-decoration:none; color:var(--ink); display:block; }
-  .formation-card-eleve:hover { border-color:var(--gold); box-shadow:0 6px 20px rgba(184,146,42,0.12); }
-  .formation-card-eleve .banniere { height:90px; }
-  .formation-card-eleve .corps { padding:16px 18px; }
-  .formation-card-eleve h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 8px; }
-  .niveau-tag { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; color:var(--gold); background:var(--cream); padding:2px 9px; border-radius:10px; display:inline-block; margin-bottom:10px; }
-  .progress-track { height:7px; background:var(--cream); border-radius:4px; overflow:hidden; margin-bottom:6px; }
-  .progress-track .fill { height:100%; background:var(--gold); }
-  .progress-label { font-size:12px; color:var(--grey); }
-  .formation-card-eleve.terminee .progress-track .fill { background:var(--green); }
-  .badge-termine { font-size:11px; color:var(--green); font-weight:600; margin-top:6px; }
-  .section-dispo { margin-top:36px; }
-  .section-dispo h2 { font-family:'League Spartan',sans-serif; font-size:13px; letter-spacing:.05em; color:var(--grey); margin-bottom:14px; }
-  .formation-card-eleve.non-acquise { opacity:.75; cursor:default; }
-  .formation-card-eleve.desactivee { opacity:.4; cursor:not-allowed; filter:grayscale(60%); pointer-events: none; }
-  .bandeau-inactif { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:20px 24px; margin-bottom:24px; }
-  .bandeau-inactif .statut-inactif-titre { font-family:'League Spartan',sans-serif; font-weight:700; font-size:18px; color:#72243E; margin-bottom:8px; letter-spacing:.03em; }
-  .bandeau-inactif p { margin:4px 0; font-size:14px; color:#72243E; }
-  .empty-dashboard { text-align:center; padding:60px 20px; color:var(--grey); }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; }
+.formation-card-eleve { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; transition:box-shadow .15s, border-color .15s; text-decoration:none; color:var(--ink); display:block; }
+.formation-card-eleve:hover { border-color:var(--gold); box-shadow:0 6px 20px rgba(184,146,42,0.12); }
+.formation-card-eleve .banniere { height:90px; }
+.formation-card-eleve .corps { padding:16px 18px; }
+.formation-card-eleve h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 8px; }
+.niveau-tag { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; color:var(--gold); background:var(--cream); padding:2px 9px; border-radius:10px; display:inline-block; margin-bottom:10px; }
+.progress-track { height:7px; background:var(--cream); border-radius:4px; overflow:hidden; margin-bottom:6px; }
+.progress-track .fill { height:100%; background:var(--gold); }
+.progress-label { font-size:12px; color:var(--grey); }
+.formation-card-eleve.terminee .progress-track .fill { background:var(--green); }
+.badge-termine { font-size:11px; color:var(--green); font-weight:600; margin-top:6px; }
+.section-dispo { margin-top:36px; }
+.section-dispo h2 { font-family:'League Spartan',sans-serif; font-size:13px; letter-spacing:.05em; color:var(--grey); margin-bottom:14px; }
+.formation-card-eleve.non-acquise { opacity:.85; cursor:pointer; }
+.formation-card-eleve.non-acquise .voir-catalogue { font-size:11px; color:var(--gold); font-weight:600; margin-top:6px; }
+.formation-card-eleve.desactivee { opacity:.4; cursor:not-allowed; filter:grayscale(60%); pointer-events: none; }
+.bandeau-inactif { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:20px 24px; margin-bottom:24px; }
+.bandeau-inactif .statut-inactif-titre { font-family:'League Spartan',sans-serif; font-weight:700; font-size:18px; color:#72243E; margin-bottom:8px; letter-spacing:.03em; }
+.bandeau-inactif p { margin:4px 0; font-size:14px; color:#72243E; }
+.empty-dashboard { text-align:center; padding:60px 20px; color:var(--grey); }
+.lien-catalogue { background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; text-decoration:none; display:inline-block; }
 </style>
 
 <div class="topbar-eleve">
-  <a class="brand" href="/eleve/tableau-de-bord">
-    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🏷️</span>{% endif %}
-    <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
-  </a>
-  <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
-  <div class="user-zone">
-    <span>{{ eleve.prenom }} {{ eleve.nom }}</span>
-    <form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
-  </div>
+<a class="brand" href="/eleve/tableau-de-bord">
+{% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🏷️</span>{% endif %}
+<span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
+</a>
+<div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
+<div class="user-zone">
+<span>{{ eleve.prenom }} {{ eleve.nom }}</span>
+<a href="/eleve/catalogue" class="lien-catalogue">Catalogue</a>
+<form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
+</div>
 </div>
 
 <div class="main-eleve">
-  <h1 class="titre-page">Bonjour {{ eleve.prenom }}</h1>
+<h1 class="titre-page">Bonjour {{ eleve.prenom }}</h1>
 
-  {% if not eleve.actif %}
-  <div class="bandeau-inactif">
-    <div class="statut-inactif-titre">⚠ STATUT INACTIF</div>
-    <p>Votre compte est actuellement inactif et l'accès à vos formations est suspendu.</p>
-    <p>Pour plus de renseignements, contactez {{ profil.prenom }} {{ profil.nom }}{% if profil.email %} — <a href="mailto:{{ profil.email }}" style="color:var(--ink); font-weight:600;">{{ profil.email }}</a>{% endif %}.</p>
-  </div>
-  {% endif %}
+{% if not eleve.actif %}
+<div class="bandeau-inactif">
+<div class="statut-inactif-titre">⚠ STATUT INACTIF</div>
+<p>Votre compte est actuellement inactif et l'accès à vos formations est suspendu.</p>
+<p>Pour plus de renseignements, contactez {{ profil.prenom }} {{ profil.nom }}{% if profil.email %} — <a href="mailto:{{ profil.email }}" style="color:var(--ink); font-weight:600;">{{ profil.email }}</a>{% endif %}.</p>
+</div>
+{% endif %}
 
-  {% if formations_acquises %}
-  <div class="dashboard-grid">
-    {% for f in formations_acquises %}
-    <a class="formation-card-eleve {% if f.progression == 100 %}terminee{% endif %} {% if not eleve.actif %}desactivee{% endif %}"
-       href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}">
-      <div class="banniere" style="background:{{ f.couleur }};"></div>
-      <div class="corps">
-        <h3>{{ f.titre }}</h3>
-        {% if f.nb_niveaux > 1 %}<div class="niveau-tag">Niveau {{ f.niveau }}</div>{% endif %}
-        <div class="progress-track"><div class="fill" style="width:{{ f.progression }}%"></div></div>
-        <div class="progress-label">{{ f.progression }}% complété</div>
-        {% if f.progression == 100 %}<div class="badge-termine">✓ Formation terminée</div>{% endif %}
-      </div>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty-dashboard">Vous n'avez accès à aucune formation pour l'instant.</div>
-  {% endif %}
+{% if formations_acquises %}
+<div class="dashboard-grid">
+{% for f in formations_acquises %}
+<a class="formation-card-eleve {% if f.progression == 100 %}terminee{% endif %} {% if not eleve.actif %}desactivee{% endif %}"
+href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}">
+<div class="banniere" style="background:{{ f.couleur }};"></div>
+<div class="corps">
+<h3>{{ f.titre }}</h3>
+{% if f.nb_niveaux > 1 %}<div class="niveau-tag">Niveau {{ f.niveau }}</div>{% endif %}
+<div class="progress-track"><div class="fill" style="width:{{ f.progression }}%"></div></div>
+<div class="progress-label">{{ f.progression }}% complété</div>
+{% if f.progression == 100 %}<div class="badge-termine">✓ Formation terminée</div>{% endif %}
+{% if f.nb_niveaux > 1 and f.niveau < f.nb_niveaux %}<div class="badge-termine"><a href="/eleve/catalogue" style="color:var(--gold);">↑ Monter de niveau</a></div>{% endif %}
+</div>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-dashboard">Vous n'avez accès à aucune formation pour l'instant.</div>
+{% endif %}
 
-  {% if formations_disponibles %}
-  <div class="section-dispo">
-    <h2>FORMATIONS DISPONIBLES</h2>
-    <div class="dashboard-grid">
-      {% for f in formations_disponibles %}
-      <div class="formation-card-eleve non-acquise">
-        <div class="banniere" style="background:{{ f.couleur }}; opacity:.5;"></div>
-        <div class="corps"><h3>{{ f.titre }}</h3></div>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
+{% if formations_disponibles %}
+<div class="section-dispo">
+<h2>FORMATIONS DISPONIBLES</h2>
+<div class="dashboard-grid">
+{% for f in formations_disponibles %}
+<a class="formation-card-eleve non-acquise" href="/eleve/catalogue">
+<div class="banniere" style="background:{{ f.couleur }}; opacity:.5;"></div>
+<div class="corps"><h3>{{ f.titre }}</h3><div class="voir-catalogue">Voir dans le catalogue →</div></div>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div style="text-align:center; margin-top:40px;">
+<a href="/eleve/catalogue" class="lien-catalogue" style="color:var(--gold); border-color:var(--gold); padding:10px 22px; font-size:13px;">Voir le catalogue complet</a>
+</div>
 </div>
 {% endblock %}
