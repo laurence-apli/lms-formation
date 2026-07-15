@@ -69,3 +69,8 @@ app.add_middleware(
     allow_origins=["https://laurence-mermet-bijon.fr"],
     allow_methods=["GET"],
 )
+
+from .routes import boutique_public, boutique_paiement, boutique_admin
+app.include_router(boutique_public.router)
+app.include_router(boutique_paiement.router)
+app.include_router(boutique_admin.router)
