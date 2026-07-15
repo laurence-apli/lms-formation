@@ -14,13 +14,11 @@ from sqlalchemy.orm import Session
 from .database import obtenir_session
 from .models import Eleve, Formation, Administrateur, TokenAuthEleve, TokenAuthAdmin, AccesFormation, progression_pourcentage
 from .routes.auth import eleve_connecte
+from .routes.boutique_models import Commande
 from .config import URL_SITE_VITRINE
-
-
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
-
 
 def _profil_pour_affichage(session: Session) -> dict:
     """Le profil de l'administratrice, affiché dans la topbar élève (logo, nom)
@@ -36,16 +34,13 @@ def _profil_pour_affichage(session: Session) -> dict:
         "logo_url": admin.logo_url, "photo_url": admin.photo_url,
     }
 
-
 @router.get("/eleve/connexion", response_class=HTMLResponse)
 def page_connexion(request: Request):
     return templates.TemplateResponse(request, "eleve/connexion.html", {})
 
-
 @router.get("/admin/connexion", response_class=HTMLResponse)
 def page_connexion_admin(request: Request):
     return templates.TemplateResponse(request, "admin/connexion.html", {})
-
 
 @router.get("/admin/definir-mot-de-passe/{token}", response_class=HTMLResponse)
 def page_definir_mot_de_passe_admin(request: Request, token: str, session: Session = Depends(obtenir_session)):
@@ -54,7 +49,6 @@ def page_definir_mot_de_passe_admin(request: Request, token: str, session: Sessi
     return templates.TemplateResponse(
         request, "admin/definir_mot_de_passe.html", {"token_valide": token_valide},
     )
-
 
 @router.get("/eleve/definir-mot-de-passe/{token}", response_class=HTMLResponse)
 def page_definir_mot_de_passe(request: Request, token: str, session: Session = Depends(obtenir_session)):
@@ -73,7 +67,6 @@ def page_definir_mot_de_passe(request: Request, token: str, session: Session = D
          "eleve_prenom": eleve_prenom, "eleve_email": eleve_email},
     )
 
-
 @router.get("/eleve/tableau-de-bord", response_class=HTMLResponse)
 def page_tableau_de_bord(
     request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
@@ -85,12 +78,13 @@ def page_tableau_de_bord(
             continue
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
+            "image_url": formation.image_url,
             "nb_niveaux": formation.nb_niveaux, "niveau": acces.niveau,
             "progression": progression_pourcentage(session, eleve.id, formation),
         })
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur}
+        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url}
         for f in session.query(Formation).filter_by(actif=True).all()
         if f.id not in ids_acquis
     ]
@@ -104,7 +98,6 @@ def page_tableau_de_bord(
             "url_site_vitrine": URL_SITE_VITRINE,
         },
     )
-
 
 @router.get("/eleve/voir-formation/{formation_id}", response_class=HTMLResponse)
 def page_formation(
@@ -128,17 +121,33 @@ def page_formation(
         {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session), "url_site_vitrine": URL_SITE_VITRINE},
     )
 
+@router.get("/eleve/paiement-confirme", response_class=HTMLResponse)
+def page_paiement_confirme(
+    request: Request, session_id: str = "", eleve: Eleve = Depends(eleve_connecte),
+    session: Session = Depends(obtenir_session),
+):
+    """Page affichée juste après le paiement (réel via Stripe, ou simulé --
+    voir MODE_SIMULATION_PAIEMENT dans boutique_paiement.py). Ne fait AUCUN
+    appel à Stripe ici : elle se contente d'afficher ce que la commande
+    contient déjà en base, puisque c'est le webhook (ou la simulation) qui a
+    la responsabilité d'activer réellement les accès."""
+    commande = (
+        session.query(Commande).filter_by(stripe_session_id=session_id).first()
+        if session_id else None
+    )
+    return templates.TemplateResponse(
+        request, "eleve/paiement_confirme.html",
+        {"eleve": eleve, "commande": commande, "profil": _profil_pour_affichage(session)},
+    )
+
 @router.get("/portail", response_class=HTMLResponse)
 def page_portail(request: Request):
     return templates.TemplateResponse(request, "eleve/portail.html", {})
-
 
 @router.get("/eleve/inscription", response_class=HTMLResponse)
 def page_inscription(request: Request):
     return templates.TemplateResponse(request, "eleve/inscription.html", {})
 
-
 @router.get("/eleve/catalogue", response_class=HTMLResponse)
 def page_catalogue(request: Request):
     return templates.TemplateResponse(request, "eleve/catalogue.html", {})
-
