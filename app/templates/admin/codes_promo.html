@@ -50,7 +50,7 @@
 let tousLesTarifs = [];
 
 async function chargerCodesEtTarifs() {
-  const catalogue = await appelApi('/public/catalogue');
+  const catalogue = await appelApi('/admin/catalogue-complet');
   tousLesTarifs = [];
   catalogue.forEach(f => f.tarifs.forEach(t => tousLesTarifs.push({
     id: t.tarif_id, label: f.titre + (t.nom_option !== 'Tarif unique' ? ' — ' + t.nom_option : ''),
