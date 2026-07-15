@@ -1,15 +1,15 @@
 """
 Routes de paiement -- création de la session Stripe (achat neuf OU montée en
-niveau), et webhook qui active automatiquement les accès une fois le
-paiement confirmé.
+niveau, éventuellement combinés dans le même panier), et webhook qui active
+automatiquement les accès une fois le paiement confirmé.
 
 À placer dans app/routes/boutique_paiement.py
 
 ⚠️ Nécessite d'ajouter "stripe" à requirements.txt (pip install stripe)
 ⚠️ Nécessite les variables d'environnement STRIPE_SECRET_KEY et
-   STRIPE_WEBHOOK_SECRET sur Render (voir instructions_stripe.txt) --
-   RIEN de tout ça ne fonctionnera avant la création du compte Stripe,
-   mais le code peut être installé dès maintenant sans risque.
+STRIPE_WEBHOOK_SECRET sur Render (voir instructions_stripe.txt) --
+RIEN de tout ça ne fonctionnera avant la création du compte Stripe,
+mais le code peut être installé dès maintenant sans risque.
 """
 import os
 from datetime import datetime
@@ -30,11 +30,10 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 URL_SITE_VITRINE = os.environ.get("URL_SITE_VITRINE", "https://laurence-mermet-bijon.fr")
 URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
 
-
 class CreerPaiementRequete(BaseModel):
-    tarif_ids: list[int]
+    tarif_ids: list[int] = []
+    montee_tarif_ids: list[int] = []
     code_promo: str | None = None
-
 
 @router.post("/eleve/panier/paiement")
 def creer_session_paiement(
@@ -42,13 +41,14 @@ def creer_session_paiement(
     eleve: Eleve = Depends(eleve_connecte),
     session: Session = Depends(obtenir_session),
 ):
-    """Crée la session de paiement Stripe pour un achat neuf. Le montant
-    n'est JAMAIS pris tel quel depuis ce que le client a vu à l'écran -- on
-    recalcule tout ici, depuis la base de données, une dernière fois."""
-    if not requete.tarif_ids:
+    """Crée la session de paiement Stripe pour un panier -- achats neufs et/ou
+    montées de niveau. Le montant n'est JAMAIS pris tel quel depuis ce que le
+    client a vu à l'écran -- on recalcule tout ici, depuis la base de
+    données, une dernière fois."""
+    if not requete.tarif_ids and not requete.montee_tarif_ids:
         raise HTTPException(status_code=400, detail="Panier vide.")
 
-    panier = calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id)
+    panier = calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id, requete.montee_tarif_ids)
     if panier["erreur_code"]:
         raise HTTPException(status_code=400, detail=panier["erreur_code"])
     if not panier["lignes"]:
@@ -94,10 +94,8 @@ def creer_session_paiement(
     session.commit()
     return {"checkout_url": checkout_session.url}
 
-
 class MonteeNiveauRequete(BaseModel):
     tarif_id: int  # le tarif du NOUVEAU niveau souhaité
-
 
 @router.post("/eleve/montee-de-niveau/paiement")
 def creer_session_paiement_montee_niveau(
@@ -105,9 +103,9 @@ def creer_session_paiement_montee_niveau(
     eleve: Eleve = Depends(eleve_connecte),
     session: Session = Depends(obtenir_session),
 ):
-    """Crée la session de paiement pour une MONTÉE DE NIVEAU -- montant
-    recalculé ici (prix du nouveau palier moins ce qui a été réellement payé
-    pour le palier actuel), jamais transmis tel quel depuis l'écran."""
+    """Ancienne route -- paiement direct pour UNE SEULE montée de niveau,
+    sans passer par le panier. Conservée pour compatibilité ; le catalogue
+    utilise désormais /eleve/panier/paiement pour tout combiner."""
     from .boutique_models import propositions_montee_niveau
 
     propositions = propositions_montee_niveau(session, eleve.id)
@@ -151,7 +149,6 @@ def creer_session_paiement_montee_niveau(
     session.commit()
     return {"checkout_url": checkout_session.url}
 
-
 @router.post("/webhooks/stripe")
 async def webhook_stripe(request: Request, session: Session = Depends(obtenir_session)):
     """Stripe appelle cette route automatiquement quand un paiement est
@@ -187,13 +184,17 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
                 )
                 if acces_existant:
                     # Montée de niveau : on ne remplace le niveau que s'il est
-                    # réellement supérieur (sécurité contre tout rejeu de webhook).
+                    # réellement supérieur (sécurité contre tout rejeu de
+                    # webhook). Le compteur de séances d'accompagnement se
+                    # recalcule tout seul (formation.jours_pour_niveau du
+                    # NOUVEAU niveau moins les séances déjà consommées), donc
+                    # rien d'autre à faire ici -- voir AccesFormation.jours_accompagnement_restants().
                     if tarif.niveau > acces_existant.niveau:
                         acces_existant.niveau = tarif.niveau
                 else:
                     session.add(AccesFormation(
                         eleve_id=commande.eleve_id, formation_id=tarif.formation_id, niveau=tarif.niveau,
                     ))
-            session.commit()
+                session.commit()
 
     return {"ok": True}

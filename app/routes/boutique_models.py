@@ -15,14 +15,12 @@ from sqlalchemy.orm import relationship, Session
 
 from ..models import Base, Formation, Eleve, AccesFormation
 
-
 codes_promo_tarifs = Table(
     "codes_promo_tarifs",
     Base.metadata,
     Column("code_promo_id", Integer, ForeignKey("codes_promo.id"), primary_key=True),
     Column("tarif_formation_id", Integer, ForeignKey("tarifs_formation.id"), primary_key=True),
 )
-
 
 class TarifFormation(Base):
     __tablename__ = "tarifs_formation"
@@ -48,7 +46,6 @@ class TarifFormation(Base):
             return round(prix * (1 - self.promo_pourcentage / 100), 2)
         return prix
 
-
 class CodePromo(Base):
     __tablename__ = "codes_promo"
 
@@ -70,7 +67,6 @@ class CodePromo(Base):
             return False
         return True
 
-
 class Commande(Base):
     __tablename__ = "commandes"
 
@@ -87,7 +83,6 @@ class Commande(Base):
     eleve = relationship("Eleve", backref="commandes")
     lignes = relationship("LigneCommande", back_populates="commande", cascade="all, delete-orphan")
 
-
 class LigneCommande(Base):
     __tablename__ = "lignes_commande"
 
@@ -99,7 +94,6 @@ class LigneCommande(Base):
     commande = relationship("Commande", back_populates="lignes")
     tarif = relationship("TarifFormation", back_populates="lignes_commande")
 
-
 # --- Fonctions utilitaires -------------------------------------------------
 
 def a_deja_achete(session: Session, eleve_id: int) -> bool:
@@ -109,7 +103,6 @@ def a_deja_achete(session: Session, eleve_id: int) -> bool:
         .first()
         is not None
     )
-
 
 def calculer_meilleur_prix(tarif: TarifFormation, code):
     prix_original = float(tarif.prix)
@@ -127,51 +120,6 @@ def calculer_meilleur_prix(tarif: TarifFormation, code):
             source = "code"
 
     return meilleur_prix, source
-
-
-def calculer_panier(session: Session, tarif_ids, code_str, eleve_id: int) -> dict:
-    """Calcule le détail complet d'un panier standard (nouvel achat).
-    Fait foi à la fois pour l'aperçu affiché et pour la création du paiement."""
-    tarifs = (
-        session.query(TarifFormation)
-        .filter(TarifFormation.id.in_(tarif_ids), TarifFormation.actif == True)  # noqa: E712
-        .all()
-    )
-
-    code = None
-    erreur_code = None
-    if code_str:
-        code = session.query(CodePromo).filter_by(code=code_str.strip().upper()).first()
-        if code is None or not code.est_valide_maintenant():
-            erreur_code = "Ce code n'existe pas ou n'est plus actif."
-            code = None
-        elif code.reserve_premier_achat and a_deja_achete(session, eleve_id):
-            erreur_code = "Ce code est réservé au premier achat -- tu l'as déjà utilisé."
-            code = None
-
-    lignes = []
-    total = 0.0
-    for tarif in tarifs:
-        prix, source = calculer_meilleur_prix(tarif, code)
-        total += prix
-        lignes.append({
-            "tarif_id": tarif.id,
-            "nom": f"{tarif.formation.titre} — {tarif.nom_option}" if tarif.nom_option != "Tarif unique" else tarif.formation.titre,
-            "prix_original": float(tarif.prix),
-            "prix_final": prix,
-            "reduction_appliquee": source,
-            "autoriser_3x": tarif.autoriser_3x,
-            "type": "achat",
-        })
-
-    return {
-        "lignes": lignes,
-        "total": round(total, 2),
-        "code_applique": code.code if code else None,
-        "erreur_code": erreur_code,
-        "trois_x_disponible": all(l["autoriser_3x"] for l in lignes) if lignes else False,
-    }
-
 
 def propositions_montee_niveau(session: Session, eleve_id: int) -> list:
     """Pour chaque formation à paliers cumulables déjà partiellement possédée
@@ -233,3 +181,80 @@ def propositions_montee_niveau(session: Session, eleve_id: int) -> list:
             })
 
     return propositions
+
+def calculer_prix_montee(session: Session, tarif_id: int, eleve_id: int):
+    """Calcule la ligne de panier pour UNE montée de niveau précise --
+    réutilise propositions_montee_niveau (même calcul, même filet de
+    sécurité) pour ne jamais dupliquer la logique de prix à deux endroits.
+    Renvoie None si ce tarif n'est pas une montée de niveau valide pour cet
+    élève (déjà au niveau, tarif inconnu, etc.) -- sécurité contre toute
+    tentative de faire passer un ID quelconque depuis le navigateur."""
+    propositions = propositions_montee_niveau(session, eleve_id)
+    proposition = next((p for p in propositions if p["tarif_id"] == tarif_id), None)
+    if proposition is None:
+        return None
+    tarif = session.get(TarifFormation, tarif_id)
+    return {
+        "tarif_id": tarif_id,
+        "nom": f"{proposition['formation_titre']} — {proposition['nom_option']} (montée de niveau)",
+        "prix_original": proposition["difference_a_payer"],
+        "prix_final": proposition["difference_a_payer"],
+        "reduction_appliquee": None,
+        "autoriser_3x": tarif.autoriser_3x if tarif else False,
+        "type": "montee",
+    }
+
+def calculer_panier(session: Session, tarif_ids, code_str, eleve_id: int, montee_tarif_ids=None) -> dict:
+    """Calcule le détail complet d'un panier -- achats neufs ET montées de
+    niveau combinés dans le même récapitulatif et le même paiement. Fait foi
+    à la fois pour l'aperçu affiché et pour la création du paiement : le
+    montant envoyé à Stripe vient TOUJOURS d'ici, jamais de ce que le client
+    a affiché à l'écran."""
+    tarifs = (
+        session.query(TarifFormation)
+        .filter(TarifFormation.id.in_(tarif_ids), TarifFormation.actif == True)  # noqa: E712
+        .all()
+    ) if tarif_ids else []
+
+    code = None
+    erreur_code = None
+    if code_str:
+        code = session.query(CodePromo).filter_by(code=code_str.strip().upper()).first()
+        if code is None or not code.est_valide_maintenant():
+            erreur_code = "Ce code n'existe pas ou n'est plus actif."
+            code = None
+        elif code.reserve_premier_achat and a_deja_achete(session, eleve_id):
+            erreur_code = "Ce code est réservé au premier achat -- tu l'as déjà utilisé."
+            code = None
+
+    lignes = []
+    total = 0.0
+    for tarif in tarifs:
+        prix, source = calculer_meilleur_prix(tarif, code)
+        total += prix
+        lignes.append({
+            "tarif_id": tarif.id,
+            "nom": f"{tarif.formation.titre} — {tarif.nom_option}" if tarif.nom_option != "Tarif unique" else tarif.formation.titre,
+            "prix_original": float(tarif.prix),
+            "prix_final": prix,
+            "reduction_appliquee": source,
+            "autoriser_3x": tarif.autoriser_3x,
+            "type": "achat",
+        })
+
+    # Montées de niveau : le code promo ne s'applique pas ici -- seule une
+    # promo intégrée au tarif cible (promo_active) est déjà reflétée dans
+    # la différence calculée par calculer_prix_montee.
+    for montee_id in (montee_tarif_ids or []):
+        ligne_montee = calculer_prix_montee(session, montee_id, eleve_id)
+        if ligne_montee:
+            total += ligne_montee["prix_final"]
+            lignes.append(ligne_montee)
+
+    return {
+        "lignes": lignes,
+        "total": round(total, 2),
+        "code_applique": code.code if code else None,
+        "erreur_code": erreur_code,
+        "trois_x_disponible": all(l["autoriser_3x"] for l in lignes) if lignes else False,
+    }

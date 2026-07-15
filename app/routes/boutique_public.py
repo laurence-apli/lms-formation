@@ -15,7 +15,6 @@ from .auth import eleve_connecte
 
 router = APIRouter()
 
-
 @router.get("/public/catalogue")
 def lire_catalogue(session: Session = Depends(obtenir_session)):
     """Renvoie toutes les formations actives avec leurs tarifs, photo et
@@ -48,11 +47,10 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
         })
     return resultat
 
-
 class ApercuPanierRequete(BaseModel):
-    tarif_ids: list[int]
+    tarif_ids: list[int] = []
+    montee_tarif_ids: list[int] = []
     code_promo: str | None = None
-
 
 @router.post("/eleve/panier/apercu")
 def apercu_panier(
@@ -62,11 +60,11 @@ def apercu_panier(
 ):
     """Calcule le récapitulatif du panier -- mêmes règles de calcul que la
     vraie création de paiement, pour ne jamais afficher un prix différent
-    de ce qui sera réellement facturé."""
-    if not requete.tarif_ids:
+    de ce qui sera réellement facturé. Le panier peut mélanger des achats
+    neufs (tarif_ids) et des montées de niveau (montee_tarif_ids)."""
+    if not requete.tarif_ids and not requete.montee_tarif_ids:
         return {"lignes": [], "total": 0, "code_applique": None, "erreur_code": None, "trois_x_disponible": False}
-    return calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id)
-
+    return calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id, requete.montee_tarif_ids)
 
 @router.get("/eleve/montees-de-niveau")
 def lire_montees_de_niveau(eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
