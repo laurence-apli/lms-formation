@@ -1,22 +1,21 @@
-
 {% extends "admin/base.html" %}
 {% block titre %}Codes promo — Administration{% endblock %}
 {% block contenu %}
 <style>
-  .liste-codes { display:flex; flex-direction:column; gap:10px; margin:20px 0 30px; }
-  .ligne-code { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:flex; align-items:center; gap:16px; }
-  .ligne-code .nom { font-weight:700; background:var(--cream-light); padding:4px 10px; border-radius:6px; min-width:120px; text-align:center; }
-  .ligne-code .infos { flex:1; font-size:12.5px; color:var(--grey); }
-  .btn { border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
-  .btn-primary { background:var(--gold); color:#fff; }
-  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
-  .form-nouveau { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
-  .champ-inline { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:6px; }
-  label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:12px; }
-  .row2 { display:flex; gap:12px; }
-  .row2 > div { flex:1; }
-  .formations-check { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-  .formations-check label { background:var(--cream-light); padding:5px 10px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:5px; }
+.liste-codes { display:flex; flex-direction:column; gap:10px; margin:20px 0 30px; }
+.ligne-code { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 18px; display:flex; align-items:center; gap:16px; }
+.ligne-code .nom { font-weight:700; background:var(--cream-light); padding:4px 10px; border-radius:6px; min-width:120px; text-align:center; }
+.ligne-code .infos { flex:1; font-size:12.5px; color:var(--grey); }
+.btn { border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
+.btn-primary { background:var(--gold); color:#fff; }
+.btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
+.form-nouveau { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
+.champ-inline { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:6px; }
+label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:12px; }
+.row2 { display:flex; gap:12px; }
+.row2 > div { flex:1; }
+.formations-check { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.formations-check label { background:var(--cream-light); padding:5px 10px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:5px; }
 </style>
 
 <div class="topbar"><div><h1>Codes promo</h1></div></div>
@@ -24,26 +23,26 @@
 <div class="liste-codes" id="liste-codes">Chargement…</div>
 
 <div class="form-nouveau">
-  <h2 style="font-family:'EB Garamond',serif;margin:0 0 14px">Créer / modifier un code</h2>
-  <input type="hidden" id="code-id-en-cours">
-  <label class="petit">Code</label>
-  <input class="champ-inline" id="input-code" style="text-transform:uppercase" placeholder="Ex: RENTREE2026">
-  <div class="row2">
-    <div><label class="petit">Type</label>
-      <select class="champ-inline" id="input-type">
-        <option value="pourcentage">Pourcentage (%)</option>
-        <option value="montant">Montant fixe (€)</option>
-      </select>
-    </div>
-    <div><label class="petit">Valeur</label><input class="champ-inline" id="input-valeur" type="number"></div>
-  </div>
-  <label class="petit">Réservé au premier achat ?</label>
-  <input type="checkbox" id="input-premier-achat">
-  <label class="petit">Date de fin (jj/mm/aaaa, optionnel)</label>
-  <input class="champ-inline" id="input-fin" placeholder="jj/mm/aaaa">
-  <label class="petit">Formations concernées</label>
-  <div class="formations-check" id="formations-check"></div>
-  <button class="btn btn-primary" style="margin-top:16px" onclick="enregistrerCode()">Enregistrer</button>
+<h2 style="font-family:'EB Garamond',serif;margin:0 0 14px">Créer / modifier un code</h2>
+<input type="hidden" id="code-id-en-cours">
+<label class="petit">Code</label>
+<input class="champ-inline" id="input-code" style="text-transform:uppercase" placeholder="Ex: RENTREE2026">
+<div class="row2">
+<div><label class="petit">Type</label>
+<select class="champ-inline" id="input-type">
+<option value="pourcentage">Pourcentage (%)</option>
+<option value="montant">Montant fixe (€)</option>
+</select>
+</div>
+<div><label class="petit">Valeur</label><input class="champ-inline" id="input-valeur" type="number"></div>
+</div>
+<label class="petit">Réservé au premier achat ?</label>
+<input type="checkbox" id="input-premier-achat">
+<label class="petit">Date de fin (jj/mm/aaaa, optionnel)</label>
+<input class="champ-inline" id="input-fin" placeholder="jj/mm/aaaa">
+<label class="petit">Formations concernées</label>
+<div class="formations-check" id="formations-check"></div>
+<button class="btn btn-primary" style="margin-top:16px" onclick="enregistrerCode()">Enregistrer</button>
 </div>
 
 <script>
@@ -90,27 +89,46 @@ function modifierCode(c) {
 
 async function enregistrerCode() {
   const idEnCours = document.getElementById('code-id-en-cours').value;
+  const code = document.getElementById('input-code').value.trim();
+  const valeurBrute = document.getElementById('input-valeur').value;
+  const valeur = parseFloat(valeurBrute);
+  const dateFinBrute = document.getElementById('input-fin').value.trim();
+
+  if (!code) { afficherToast("Le code est obligatoire."); return; }
+  if (valeurBrute === '' || isNaN(valeur)) { afficherToast("La valeur de la réduction est obligatoire et doit être un nombre."); return; }
+  if (dateFinBrute && !/^\d{2}\/\d{2}\/\d{4}$/.test(dateFinBrute)) { afficherToast("Date de fin : utilise le format jj/mm/aaaa."); return; }
+
   const tarif_ids = Array.from(document.querySelectorAll('#formations-check input:checked')).map(cb => parseInt(cb.value));
   const corps = {
-    code: document.getElementById('input-code').value,
-    type_reduction: document.getElementById('input-type').value,
-    valeur: parseFloat(document.getElementById('input-valeur').value),
+    code, type_reduction: document.getElementById('input-type').value, valeur,
     reserve_premier_achat: document.getElementById('input-premier-achat').checked,
-    date_fin: document.getElementById('input-fin').value || null,
+    date_fin: dateFinBrute || null,
     tarif_ids,
   };
   const url = idEnCours ? `/admin/codes-promo/${idEnCours}` : '/admin/codes-promo';
   const methode = idEnCours ? 'PUT' : 'POST';
-  await appelApi(url, { method: methode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
-  document.getElementById('code-id-en-cours').value = '';
-  document.getElementById('input-code').value = '';
-  alert('Code enregistré !');
-  chargerCodesEtTarifs();
+  try {
+    await appelApi(url, { method: methode, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+    document.getElementById('code-id-en-cours').value = '';
+    document.getElementById('input-code').value = '';
+    document.getElementById('input-valeur').value = '';
+    document.getElementById('input-fin').value = '';
+    document.getElementById('input-premier-achat').checked = false;
+    document.querySelectorAll('#formations-check input').forEach(cb => cb.checked = false);
+    afficherToast('Code enregistré !');
+    chargerCodesEtTarifs();
+  } catch (e) {
+    afficherToast(e.message);
+  }
 }
 
 async function toggleCode(id) {
-  await appelApi(`/admin/codes-promo/${id}/toggle`, { method: 'POST' });
-  chargerCodesEtTarifs();
+  try {
+    await appelApi(`/admin/codes-promo/${id}/toggle`, { method: 'POST' });
+    chargerCodesEtTarifs();
+  } catch (e) {
+    afficherToast(e.message);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', chargerCodesEtTarifs);
