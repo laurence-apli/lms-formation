@@ -161,3 +161,17 @@ def activer_desactiver_code(code_id: int, session: Session = Depends(obtenir_ses
     code.actif = not code.actif
     session.commit()
     return {"actif": code.actif}
+
+
+def _tarif_admin_dict(t):
+    return {"tarif_id": t.id, "nom_option": t.nom_option, "prix": float(t.prix), "prix_final": t.prix_final(), "en_promo": t.promo_active, "promo_pourcentage": t.promo_pourcentage, "autoriser_3x": t.autoriser_3x, "cumulable": t.cumulable, "niveau": t.niveau, "actif": t.actif}
+
+
+@router.get("/catalogue-complet")
+def lire_catalogue_complet(session: Session = Depends(obtenir_session)):
+    formations = session.query(Formation).all()
+    resultat = []
+    for f in formations:
+        tarifs_tries = sorted(f.tarifs, key=lambda t: t.ordre)
+        resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "image_url": f.image_url, "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
+    return resultat
