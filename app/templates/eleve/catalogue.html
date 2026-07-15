@@ -20,10 +20,12 @@ body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--p
 h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; }
 .sous-titre { color:var(--doux); font-size:14px; margin-bottom:20px; }
 
-.bloc-montee { background:var(--rose-lt); border:1px solid var(--rose); border-radius:10px; padding:16px 20px; margin-bottom:20px; }
+.bloc-montee { background:var(--rose-lt); border:1px solid var(--rose); border-radius:10px; padding:16px 20px; margin-bottom:20px; cursor:pointer; }
+.bloc-montee-row { display:flex; align-items:flex-start; gap:12px; }
 .bloc-montee h3 { font-family:var(--serif); font-size:16px; margin:0 0 6px; }
-.bloc-montee p { font-size:13px; color:var(--doux); margin:0 0 10px; }
-.bloc-montee button { background:var(--rose); color:#fff; border:none; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer; }
+.bloc-montee p { font-size:13px; color:var(--doux); margin:0; }
+.bloc-montee .f-check { border-color:var(--rose); }
+.bloc-montee .f-check.checked { background:var(--rose); border-color:var(--rose); }
 
 .formation-bloc { background:#fff; border:1px solid var(--sable-dk); border-radius:12px; padding:22px 24px; margin-bottom:16px; }
 .f-row { display:flex; align-items:flex-start; gap:14px; }
@@ -72,7 +74,7 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 
 <script>
 let catalogue = [];
-let selection = {}; // tarif_id -> {nom, prix}
+let selection = {}; // tarif_id -> {nom, prix, montee?}
 let codeApplique = null;
 
 async function chargerTout() {
@@ -92,10 +94,14 @@ async function chargerTout() {
   );
 
   document.getElementById('zone-montees').innerHTML = montees.map(m => `
-    <div class="bloc-montee">
-      <h3>Aller plus loin dans "${m.formation_titre}"</h3>
-      <p>Passe au niveau "${m.nom_option}" pour seulement ${m.difference_a_payer} € de plus (au lieu du prix plein).</p>
-      <button onclick="payerMonteeNiveau(${m.tarif_id})">Monter de niveau — ${m.difference_a_payer} €</button>
+    <div class="bloc-montee" id="montee-${m.tarif_id}" onclick="toggleMontee(${m.tarif_id}, '${m.formation_titre.replace(/'/g, "\\'")} — ${m.nom_option.replace(/'/g, "\\'")}', ${m.difference_a_payer})">
+      <div class="bloc-montee-row">
+        <div class="f-check" id="check-montee-${m.tarif_id}"></div>
+        <div>
+          <h3>Aller plus loin dans "${m.formation_titre}"</h3>
+          <p>Passe au niveau "${m.nom_option}" pour seulement ${m.difference_a_payer} € de plus (au lieu du prix plein).</p>
+        </div>
+      </div>
     </div>
   `).join('');
 
@@ -145,11 +151,23 @@ async function chargerTout() {
 
 function toggleSimple(tarifId, nom, prix) {
   const check = document.getElementById(`check-${tarifId}`);
-  if (selection[tarifId]) {
+  if (selection[tarifId] && !selection[tarifId].montee) {
     delete selection[tarifId];
     check.classList.remove('checked'); check.innerHTML = '';
   } else {
     selection[tarifId] = { nom, prix };
+    check.classList.add('checked'); check.innerHTML = '✓';
+  }
+  majRecap();
+}
+
+function toggleMontee(tarifId, nom, prix) {
+  const check = document.getElementById(`check-montee-${tarifId}`);
+  if (selection[tarifId] && selection[tarifId].montee) {
+    delete selection[tarifId];
+    check.classList.remove('checked'); check.innerHTML = '';
+  } else {
+    selection[tarifId] = { nom, prix, montee: true };
     check.classList.add('checked'); check.innerHTML = '✓';
   }
   majRecap();
@@ -170,16 +188,19 @@ function choisirOption(formationTitre, tarifId, nomOption, prix) {
 }
 
 async function majRecap() {
-  const tarifIds = Object.keys(selection).map(Number);
+  const cles = Object.keys(selection);
   const zone = document.getElementById('recap-contenu');
-  if (tarifIds.length === 0) {
+  if (cles.length === 0) {
     zone.innerHTML = '<p style="color:var(--leger);font-size:13px">Sélectionne une formation pour commencer</p>';
     return;
   }
 
+  const tarifIds = cles.filter(id => !selection[id].montee).map(Number);
+  const monteeIds = cles.filter(id => selection[id].montee).map(Number);
+
   const apercu = await fetch('/eleve/panier/apercu', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tarif_ids: tarifIds, code_promo: codeApplique }),
+    body: JSON.stringify({ tarif_ids: tarifIds, montee_tarif_ids: monteeIds, code_promo: codeApplique }),
   }).then(r => r.json());
 
   let html = apercu.lignes.map(l => `
@@ -193,7 +214,7 @@ async function majRecap() {
   if (apercu.erreur_code) html += `<p style="color:var(--rose);font-size:12px;margin-top:6px">${apercu.erreur_code}</p>`;
 
   html += `<div class="recap-total"><span>Total</span><span class="val">${apercu.total} €</span></div>`;
-  html += `<button class="btn-payer" onclick="payer(${JSON.stringify(tarifIds)})">Passer au paiement</button>`;
+  html += `<button class="btn-payer" onclick="payer(${JSON.stringify(tarifIds)}, ${JSON.stringify(monteeIds)})">Passer au paiement</button>`;
   zone.innerHTML = html;
 }
 
@@ -202,24 +223,10 @@ function appliquerCode() {
   majRecap();
 }
 
-async function payer(tarifIds) {
+async function payer(tarifIds, monteeIds) {
   const resp = await fetch('/eleve/panier/paiement', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tarif_ids: tarifIds, code_promo: codeApplique }),
-  });
-  if (resp.ok) {
-    const data = await resp.json();
-    window.location.href = data.checkout_url;
-  } else {
-    const erreur = await resp.json();
-    alert(erreur.detail || "Une erreur est survenue.");
-  }
-}
-
-async function payerMonteeNiveau(tarifId) {
-  const resp = await fetch('/eleve/montee-de-niveau/paiement', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tarif_id: tarifId }),
+    body: JSON.stringify({ tarif_ids: tarifIds, montee_tarif_ids: monteeIds, code_promo: codeApplique }),
   });
   if (resp.ok) {
     const data = await resp.json();
