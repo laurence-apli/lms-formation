@@ -1,20 +1,23 @@
-
 {% extends "admin/base.html" %}
 {% block titre %}Catalogue & Tarifs — Administration{% endblock %}
 {% block contenu %}
 <style>
-  .grid-catalogue { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:20px; }
-  .carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
-  .carte-formation .ligne-haut { display:flex; gap:14px; align-itemsPage_DownPage_DownPage_Down:flex-start; }
-  .carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
-  .carte-formation h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 4px; }
-  .carte-formation .desc { font-size:12px; color:var(--grey); margin:4px 0 10px; }
-  .bloc-tarif { background:var(--cream-light); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:13px; display:flex; justify-content:space-between; align-items:center; }
-  .btn { border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
-  .btn-primary { background:var(--gold); color:#fff; }
-  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
-  .champ-inline { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:6px; }
-  label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:10px; }
+.grid-catalogue { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:20px; }
+.carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
+.carte-formation .ligne-haut { display:flex; gap:14px; align-items:flex-start; }
+.carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
+.carte-formation h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 4px; }
+.carte-formation .desc { font-size:12px; color:var(--grey); margin:4px 0 10px; }
+.bloc-tarif { background:var(--cream-light); border-radius:8px; padding:10px 12px; margin-top:8px; font-size:13px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.bloc-tarif .actions-tarif { display:flex; gap:6px; flex-shrink:0; }
+.edition-tarif { background:#fff; border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:6px; }
+.edition-tarif label.checkbox-inline { display:flex; align-items:center; gap:6px; margin-top:8px; font-size:12.5px; text-transform:none; color:var(--ink); }
+.btn { border:none; border-radius:8px; padding:8px 14px; font-family:inherit; font-weight:700; font-size:12.5px; cursor:pointer; }
+.btn-primary { background:var(--gold); color:#fff; }
+.btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
+.btn-danger { background:transparent; border:1px solid #C0475A; color:#C0475A; }
+.champ-inline { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; margin-top:6px; }
+label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:10px; }
 </style>
 
 <div class="topbar"><div><h1>Catalogue & Tarifs</h1></div></div>
@@ -39,17 +42,36 @@ async function chargerCatalogueAdmin() {
       </div>
       <label class="petit">Photo (URL ou base64)</label>
       <input type="file" accept="image/*" onchange="previsualiserPhotoFormation(event, ${f.formation_id})">
-            <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Ou colle une image en base64 ou une URL">
-                  <div style="font-size:11px;color:var(--grey);margin-top:2px">Choisis un fichier ci-dessus, ou colle une URL/base64 dans le champ.</div>
+      <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Ou colle une image en base64 ou une URL">
+      <div style="font-size:11px;color:var(--grey);margin-top:2px">Choisis un fichier ci-dessus, ou colle une URL/base64 dans le champ.</div>
       <label class="petit">Texte de présentation</label>
       <textarea class="champ-inline" id="desc-${f.formation_id}" rows="3">${f.description_courte || ''}</textarea>
       <button class="btn btn-outline" style="margin-top:10px" onclick="enregistrerPresentation(${f.formation_id})">Enregistrer photo & texte</button>
 
       <div style="margin-top:14px">
-        ${f.tarifs.map(t => `
+        ${f.tarifs.filter(t => t.actif).map(t => `
           <div class="bloc-tarif">
             <span>${t.nom_option} — ${t.prix_final}€ ${t.en_promo ? '(promo)' : ''} ${t.autoriser_3x ? '· 3x' : ''} ${t.cumulable ? '· cumulable niv.' + t.niveau : ''}</span>
-            <button class="btn btn-outline" onclick="ouvrirEditionTarif(${f.formation_id}, ${t.tarif_id})">Modifier</button>
+            <div class="actions-tarif">
+              <button class="btn btn-outline" onclick="toggleEditionTarif(${t.tarif_id})">Modifier</button>
+              <button class="btn btn-danger" onclick="supprimerTarif(${t.tarif_id})">Supprimer</button>
+            </div>
+          </div>
+          <div class="edition-tarif" id="edition-${t.tarif_id}" style="display:none">
+            <label class="petit">Nom de l'offre</label>
+            <input class="champ-inline" id="nom-${t.tarif_id}" value="${t.nom_option}">
+            <div style="display:flex;gap:12px">
+              <div style="flex:1"><label class="petit">Prix (€)</label><input class="champ-inline" type="number" step="0.01" id="prix-${t.tarif_id}" value="${t.prix}"></div>
+              <div style="flex:1"><label class="petit">Niveau</label><input class="champ-inline" type="number" id="niveau-${t.tarif_id}" value="${t.niveau}"></div>
+            </div>
+            <label class="checkbox-inline"><input type="checkbox" id="cumulable-${t.tarif_id}" ${t.cumulable ? 'checked' : ''}> Palier cumulable (montée de niveau possible)</label>
+            <label class="checkbox-inline"><input type="checkbox" id="autoriser3x-${t.tarif_id}" ${t.autoriser_3x ? 'checked' : ''}> Autoriser le paiement en 3x (Alma)</label>
+            <label class="checkbox-inline"><input type="checkbox" id="promoactive-${t.tarif_id}" ${t.en_promo ? 'checked' : ''} onchange="document.getElementById('promopct-${t.tarif_id}').style.display = this.checked ? 'block' : 'none'"> Promo active</label>
+            <input class="champ-inline" type="number" id="promopct-${t.tarif_id}" placeholder="Pourcentage de réduction" value="${t.promo_pourcentage || ''}" style="display:${t.en_promo ? 'block' : 'none'}">
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <button class="btn btn-primary" onclick="enregistrerEditionTarif(${f.formation_id}, ${t.tarif_id})">Enregistrer</button>
+              <button class="btn btn-outline" onclick="toggleEditionTarif(${t.tarif_id})">Annuler</button>
+            </div>
           </div>
         `).join('')}
         <button class="btn btn-primary" style="margin-top:10px" onclick="ouvrirCreationTarif(${f.formation_id})">+ Ajouter un tarif</button>
@@ -59,28 +81,79 @@ async function chargerCatalogueAdmin() {
 }
 
 function previsualiserPhotoFormation(event, formationId) {
-    const fichier = event.target.files[0];
-    if (!fichier) return;
-    if (!fichier.type.startsWith('image/')) { afficherToast("Ce fichier n'est pas une image"); return; }
-    const lecteur = new FileReader();
-    lecteur.onload = () => {
-          const dataUrl = lecteur.result;
-          document.getElementById(`image-${formationId}`).value = dataUrl;
-          const img = document.querySelector(`.carte-formation[data-id="${formationId}"] img.apercu`);
-          if (img) { img.src = dataUrl; img.style.display = ''; }
-    };
-    lecteur.readAsDataURL(fichier);
+  const fichier = event.target.files[0];
+  if (!fichier) return;
+  if (!fichier.type.startsWith('image/')) { afficherToast("Ce fichier n'est pas une image"); return; }
+  const lecteur = new FileReader();
+  lecteur.onload = () => {
+    const dataUrl = lecteur.result;
+    document.getElementById(`image-${formationId}`).value = dataUrl;
+    const img = document.querySelector(`.carte-formation[data-id="${formationId}"] img.apercu`);
+    if (img) { img.src = dataUrl; img.style.display = ''; }
+  };
+  lecteur.readAsDataURL(fichier);
 }
-  
-  async function enregistrerPresentation(formationId) {
+
+async function enregistrerPresentation(formationId) {
   const image_url = document.getElementById(`image-${formationId}`).value;
   const description_courte = document.getElementById(`desc-${formationId}`).value;
-  await appelApi(`/admin/formations/${formationId}/presentation`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image_url, description_courte }),
-  });
-  alert('Enregistré !');
+  try {
+    await appelApi(`/admin/formations/${formationId}/presentation`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image_url, description_courte }),
+    });
+    afficherToast('Enregistré !');
+  } catch (e) {
+    afficherToast(e.message);
+  }
+}
+
+function toggleEditionTarif(tarifId) {
+  const panneau = document.getElementById(`edition-${tarifId}`);
+  panneau.style.display = panneau.style.display === 'none' ? 'block' : 'none';
+}
+
+async function enregistrerEditionTarif(formationId, tarifId) {
+  const nom_option = document.getElementById(`nom-${tarifId}`).value.trim();
+  const prix = parseFloat(document.getElementById(`prix-${tarifId}`).value);
+  const niveau = parseInt(document.getElementById(`niveau-${tarifId}`).value);
+  const cumulable = document.getElementById(`cumulable-${tarifId}`).checked;
+  const autoriser_3x = document.getElementById(`autoriser3x-${tarifId}`).checked;
+  const promo_active = document.getElementById(`promoactive-${tarifId}`).checked;
+  const promoPctBrut = document.getElementById(`promopct-${tarifId}`).value;
+  const promo_pourcentage = promo_active && promoPctBrut !== '' ? parseInt(promoPctBrut) : null;
+
+  if (!nom_option) { afficherToast("Le nom de l'offre est obligatoire."); return; }
+  if (isNaN(prix)) { afficherToast("Le prix doit être un nombre."); return; }
+  if (isNaN(niveau)) { afficherToast("Le niveau doit être un nombre."); return; }
+  if (promo_active && (promoPctBrut === '' || isNaN(promo_pourcentage))) { afficherToast("Indique un pourcentage de promo, ou décoche « Promo active »."); return; }
+
+  try {
+    await appelApi(`/admin/tarifs/${tarifId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        formation_id: formationId, niveau, nom_option, prix,
+        promo_active, promo_pourcentage, autoriser_3x, cumulable, ordre: niveau,
+      }),
+    });
+    afficherToast('Tarif mis à jour !');
+    chargerCatalogueAdmin();
+  } catch (e) {
+    afficherToast(e.message);
+  }
+}
+
+async function supprimerTarif(tarifId) {
+  if (!confirm("Supprimer ce tarif ? Il ne sera plus proposé à la vente, mais l'historique des commandes déjà passées est conservé.")) return;
+  try {
+    await appelApi(`/admin/tarifs/${tarifId}`, { method: 'DELETE' });
+    afficherToast('Tarif supprimé.');
+    chargerCatalogueAdmin();
+  } catch (e) {
+    afficherToast(e.message);
+  }
 }
 
 function ouvrirCreationTarif(formationId) {
@@ -99,32 +172,7 @@ function ouvrirCreationTarif(formationId) {
       formation_id: formationId, niveau, nom_option, prix,
       promo_active: false, promo_pourcentage: null, autoriser_3x, cumulable, ordre: niveau,
     }),
-  }).then(() => chargerCatalogueAdmin());
-}
-
-function ouvrirEditionTarif(formationId, tarifId) {
-  const formation = dernierCatalogueCharge.find(f => f.formation_id === formationId);
-  const tarifActuel = formation.tarifs.find(t => t.tarif_id === tarifId);
-
-  const nouveauPrix = parseFloat(prompt("Nouveau prix (€) :", tarifActuel.prix));
-  if (isNaN(nouveauPrix)) return;
-  const promo_active = confirm("Activer une promo 'du moment' sur ce tarif ?");
-  const promo_pourcentage = promo_active ? parseInt(prompt("Pourcentage de réduction :", "20")) : null;
-
-  appelApi(`/admin/tarifs/${tarifId}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      formation_id: formationId,
-      niveau: tarifActuel.niveau,
-      nom_option: tarifActuel.nom_option,
-      prix: nouveauPrix,
-      promo_active, promo_pourcentage,
-      autoriser_3x: tarifActuel.autoriser_3x,
-      cumulable: tarifActuel.cumulable,
-      ordre: tarifActuel.niveau,
-    }),
-  }).then(() => chargerCatalogueAdmin());
+  }).then(() => chargerCatalogueAdmin()).catch(e => afficherToast(e.message));
 }
 
 document.addEventListener('DOMContentLoaded', chargerCatalogueAdmin);
