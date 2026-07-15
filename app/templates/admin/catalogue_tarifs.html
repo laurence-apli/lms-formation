@@ -26,7 +26,7 @@
 let dernierCatalogueCharge = [];
 
 async function chargerCatalogueAdmin() {
-  const catalogue = await appelApi('/public/catalogue');
+  const catalogue = await appelApi('/admin/catalogue-complet');
   dernierCatalogueCharge = catalogue;
   const zone = document.getElementById('zone-catalogue');
   zone.innerHTML = catalogue.map(f => `
