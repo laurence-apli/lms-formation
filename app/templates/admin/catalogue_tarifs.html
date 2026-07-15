@@ -111,6 +111,6 @@ function ouvrirEditionTarif(formationId, tarifId) {
   }).then(() => chargerCatalogueAdmin());
 }
 
-chargerCatalogueAdmin();
+document.addEventListener('DOMContentLoaded', chargerCatalogueAdmin);
 </script>
 {% endblock %}
