@@ -43,6 +43,8 @@ class Formation(Base):
     actif = Column(Boolean, default=True)
     fichier_recu_nom = Column(String(300))
     cree_le = Column(DateTime, default=datetime.utcnow)
+    image_url = Column(Text, nullable=True)
+    description_courte = Column(Text, nullable=True)
 
     modules = relationship("Module", back_populates="formation", order_by="Module.ordre",
                             cascade="all, delete-orphan")
