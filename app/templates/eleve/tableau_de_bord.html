@@ -2,23 +2,25 @@
 {% block titre %}Mon espace formation{% endblock %}
 {% block contenu %}
 <style>
-.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:18px; }
-.formation-card-eleve { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; cursor:pointer; transition:box-shadow .15s, border-color .15s; text-decoration:none; color:var(--ink); display:block; }
-.formation-card-eleve:hover { border-color:var(--gold); box-shadow:0 6px 20px rgba(184,146,42,0.12); }
-.formation-card-eleve .banniere { height:90px; }
-.formation-card-eleve .corps { padding:16px 18px; }
-.formation-card-eleve h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 8px; }
-.niveau-tag { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; color:var(--gold); background:var(--cream); padding:2px 9px; border-radius:10px; display:inline-block; margin-bottom:10px; }
-.progress-track { height:7px; background:var(--cream); border-radius:4px; overflow:hidden; margin-bottom:6px; }
-.progress-track .fill { height:100%; background:var(--gold); }
-.progress-label { font-size:12px; color:var(--grey); }
-.formation-card-eleve.terminee .progress-track .fill { background:var(--green); }
-.badge-termine { font-size:11px; color:var(--green); font-weight:600; margin-top:6px; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
+.carte-formation-eleve { position:relative; border-radius:14px; overflow:hidden; aspect-ratio:1/1; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--border); transition:box-shadow .15s, border-color .15s; }
+.carte-formation-eleve:hover { border-color:var(--gold); box-shadow:0 6px 20px rgba(184,146,42,0.16); }
+.carte-formation-eleve.desactivee { opacity:.4; filter:grayscale(60%); pointer-events:none; }
+.carte-zone-principale { flex:1; display:flex; flex-direction:column; justify-content:flex-end; background-size:cover; background-position:center; position:relative; text-decoration:none; color:inherit; }
+.carte-zone-principale::before { content:''; position:absolute; inset:0; background:linear-gradient(to top, rgba(20,16,8,.90) 0%, rgba(20,16,8,.35) 45%, rgba(20,16,8,0) 72%); }
+.carte-corps { position:relative; z-index:1; padding:14px 16px; }
+.carte-corps h3 { font-family:'EB Garamond',serif; font-size:16px; margin:0 0 6px; color:#FFFDF7; }
+.carte-niveau { font-family:'League Spartan',sans-serif; font-size:11px; color:var(--gold); margin-bottom:8px; }
+.carte-progress-track { height:6px; background:rgba(255,255,255,.28); border-radius:4px; overflow:hidden; margin-bottom:6px; }
+.carte-progress-track .fill { height:100%; background:var(--gold); }
+.carte-formation-eleve.terminee .carte-progress-track .fill { background:var(--green); }
+.carte-progress-label { font-size:11px; color:#F5EDD6; }
+.carte-bandeau-niveau { display:block; text-align:center; padding:9px 0; font-size:12.5px; font-weight:600; color:var(--gold); background:var(--cream); text-decoration:none; border-top:1px solid var(--border); }
+.carte-bandeau-niveau:hover { background:var(--gold); color:#fff; }
 .section-dispo { margin-top:36px; }
 .section-dispo h2 { font-family:'League Spartan',sans-serif; font-size:13px; letter-spacing:.05em; color:var(--grey); margin-bottom:14px; }
-.formation-card-eleve.non-acquise { opacity:.85; cursor:pointer; }
-.formation-card-eleve.non-acquise .voir-catalogue { font-size:11px; color:var(--gold); font-weight:600; margin-top:6px; }
-.formation-card-eleve.desactivee { opacity:.4; cursor:not-allowed; filter:grayscale(60%); pointer-events: none; }
+.carte-disponible .carte-zone-principale { opacity:.75; }
+.carte-voir-catalogue { font-size:11px; color:#F5EDD6; font-weight:600; }
 .bandeau-inactif { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:20px 24px; margin-bottom:24px; }
 .bandeau-inactif .statut-inactif-titre { font-family:'League Spartan',sans-serif; font-weight:700; font-size:18px; color:#72243E; margin-bottom:8px; letter-spacing:.03em; }
 .bandeau-inactif p { margin:4px 0; font-size:14px; color:#72243E; }
@@ -53,18 +55,20 @@
 {% if formations_acquises %}
 <div class="dashboard-grid">
 {% for f in formations_acquises %}
-<a class="formation-card-eleve {% if f.progression == 100 %}terminee{% endif %} {% if not eleve.actif %}desactivee{% endif %}"
-href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}">
-<div class="banniere" style="background:{{ f.couleur }};"></div>
-<div class="corps">
+<div class="carte-formation-eleve {% if f.progression == 100 %}terminee{% endif %} {% if not eleve.actif %}desactivee{% endif %}">
+<a class="carte-zone-principale" href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}"
+style="background-color:{{ f.couleur }};{% if f.image_url %} background-image:url('{{ f.image_url }}');{% endif %}">
+<div class="carte-corps">
 <h3>{{ f.titre }}</h3>
-{% if f.nb_niveaux > 1 %}<div class="niveau-tag">Niveau {{ f.niveau }}</div>{% endif %}
-<div class="progress-track"><div class="fill" style="width:{{ f.progression }}%"></div></div>
-<div class="progress-label">{{ f.progression }}% complété</div>
-{% if f.progression == 100 %}<div class="badge-termine">✓ Formation terminée</div>{% endif %}
-{% if f.nb_niveaux > 1 and f.niveau < f.nb_niveaux %}<div class="badge-termine"><a href="/eleve/catalogue" style="color:var(--gold);">↑ Monter de niveau</a></div>{% endif %}
+{% if f.nb_niveaux > 1 %}<div class="carte-niveau">Niveau {{ f.niveau }} sur {{ f.nb_niveaux }}</div>{% endif %}
+<div class="carte-progress-track"><div class="fill" style="width:{{ f.progression }}%"></div></div>
+<div class="carte-progress-label">{% if f.progression == 100 %}Terminée{% else %}{{ f.progression }}% complété{% endif %}</div>
 </div>
 </a>
+{% if f.nb_niveaux > 1 and f.niveau < f.nb_niveaux %}
+<a class="carte-bandeau-niveau" href="/eleve/catalogue">↑ Monter de niveau</a>
+{% endif %}
+</div>
 {% endfor %}
 </div>
 {% else %}
@@ -76,10 +80,15 @@ href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}
 <h2>FORMATIONS DISPONIBLES</h2>
 <div class="dashboard-grid">
 {% for f in formations_disponibles %}
-<a class="formation-card-eleve non-acquise" href="/eleve/catalogue">
-<div class="banniere" style="background:{{ f.couleur }}; opacity:.5;"></div>
-<div class="corps"><h3>{{ f.titre }}</h3><div class="voir-catalogue">Voir dans le catalogue →</div></div>
+<div class="carte-formation-eleve carte-disponible">
+<a class="carte-zone-principale" href="/eleve/catalogue"
+style="background-color:{{ f.couleur }};{% if f.image_url %} background-image:url('{{ f.image_url }}');{% endif %}">
+<div class="carte-corps">
+<h3>{{ f.titre }}</h3>
+<div class="carte-voir-catalogue">Voir dans le catalogue →</div>
+</div>
 </a>
+</div>
 {% endfor %}
 </div>
 </div>
