@@ -74,3 +74,6 @@ from .routes import boutique_public, boutique_paiement, boutique_admin
 app.include_router(boutique_public.router)
 app.include_router(boutique_paiement.router)
 app.include_router(boutique_admin.router)
+
+from .routes import inscription_publique
+app.include_router(inscription_publique.router)
