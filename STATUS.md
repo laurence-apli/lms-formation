@@ -29,3 +29,12 @@ Workflow d'edition prefere par Fabien: interface web GitHub, bouton crayon ou Ad
 Piege a eviter: avant de faire confiance au nom d'un fichier fourni par Fabien en upload, verifier le commentaire a placer dans en tete du fichier. Episode reel de decalage entre noms de fichiers exportes et contenu reel sur un lot de 16 fichiers, voir conversation du 15 juillet 2026. Le commentaire interne fait foi, jamais le nom du fichier seul.
 
 Laurence n'utilise ni chakras ni lithotherapie, ne jamais en parler dans le contenu produit pour elle. Attestation de fin de formation est le terme legalement correct, jamais diplome.
+
+
+## Mise a jour du 15 juillet, session acces au parcours boutique
+
+Deux bugs supplementaires trouves et corriges: app/templates/eleve/catalogue.html et app/routes/inscription_publique.py avaient un caractere backtick parasite a la fin de leur nom de fichier reel sur GitHub. La page catalogue plantait en 500 et le formulaire d'inscription public n'etait pas enregistre dans main.py. Renommes proprement, inscription_publique.router ajoute a main.py, redeploye avec succes.
+
+Parcours d'acces au LMS depuis le site vitrine, verifie en direct: sur menopause.html et initiations.html, le bouton Acceder a mon espace perso pointe vers slash reveil dest eleve, qui redirige vers slash eleve slash connexion. Cette page propose deja Se connecter et un lien vers slash eleve slash inscription. Il existe aussi une page slash portail deja construite mais pas reliee au site vitrine, avec deux boutons J'ai deja un compte et Je decouvre les formations, la version la plus proche de ce que Fabien avait imagine.
+
+Catalogue: GET slash eleve slash catalogue et slash public slash catalogue fonctionnent maintenant, mais renvoient un tableau vide, aucune formation n'a de tarif actif configure cote admin pour l'instant. Le bouton Passer au paiement du catalogue appelle une route protegee par connexion; si un visiteur non connecte clique dessus, il recoit une erreur silencieuse au lieu d'etre redirige vers connexion ou inscription, point d'amelioration UX identifie mais pas corrige.
