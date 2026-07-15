@@ -5,7 +5,7 @@
 <style>
   .grid-catalogue { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:20px; }
   .carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
-  .carte-formation .ligne-haut { display:flex; gap:14px; align-items:flex-start; }
+  .carte-formation .ligne-haut { display:flex; gap:14px; align-itemsPage_DownPage_DownPage_Down:flex-start; }
   .carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
   .carte-formation h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 4px; }
   .carte-formation .desc { font-size:12px; color:var(--grey); margin:4px 0 10px; }
@@ -38,7 +38,9 @@ async function chargerCatalogueAdmin() {
         </div>
       </div>
       <label class="petit">Photo (URL ou base64)</label>
-      <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Colle une image en base64 ou une URL">
+      <input type="file" accept="image/*" onchange="previsualiserPhotoFormation(event, ${f.formation_id})">
+            <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Ou colle une image en base64 ou une URL">
+                  <div style="font-size:11px;color:var(--grey);margin-top:2px">Choisis un fichier ci-dessus, ou colle une URL/base64 dans le champ.</div>
       <label class="petit">Texte de présentation</label>
       <textarea class="champ-inline" id="desc-${f.formation_id}" rows="3">${f.description_courte || ''}</textarea>
       <button class="btn btn-outline" style="margin-top:10px" onclick="enregistrerPresentation(${f.formation_id})">Enregistrer photo & texte</button>
@@ -56,7 +58,21 @@ async function chargerCatalogueAdmin() {
   `).join('');
 }
 
-async function enregistrerPresentation(formationId) {
+function previsualiserPhotoFormation(event, formationId) {
+    const fichier = event.target.files[0];
+    if (!fichier) return;
+    if (!fichier.type.startsWith('image/')) { afficherToast("Ce fichier n'est pas une image"); return; }
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+          const dataUrl = lecteur.result;
+          document.getElementById(`image-${formationId}`).value = dataUrl;
+          const img = document.querySelector(`.carte-formation[data-id="${formationId}"] img.apercu`);
+          if (img) { img.src = dataUrl; img.style.display = ''; }
+    };
+    lecteur.readAsDataURL(fichier);
+}
+  
+  async function enregistrerPresentation(formationId) {
   const image_url = document.getElementById(`image-${formationId}`).value;
   const description_courte = document.getElementById(`desc-${formationId}`).value;
   await appelApi(`/admin/formations/${formationId}/presentation`, {
