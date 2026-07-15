@@ -1,4 +1,4 @@
-"""
+""
 Auto-inscription publique -- différent de la création d'élève par l'admin
 (qui reste inchangée, avec son mailto contrôlé). Ici, un visiteur crée
 lui-même son compte pour accéder au catalogue et acheter une formation.
