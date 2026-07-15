@@ -10,6 +10,13 @@ automatiquement les accès une fois le paiement confirmé.
 STRIPE_WEBHOOK_SECRET sur Render (voir instructions_stripe.txt) --
 RIEN de tout ça ne fonctionnera avant la création du compte Stripe,
 mais le code peut être installé dès maintenant sans risque.
+
+⚠️ MODE_SIMULATION_PAIEMENT (ci-dessous) : tant que Stripe n'est pas branché,
+mettre ce drapeau à True fait que "Passer au paiement" active directement les
+accès, comme si le paiement avait réussi -- pratique pour tester tout le
+parcours (achat, montée de niveau, décompte des séances...) sans compte
+Stripe. Le jour où Stripe est prêt, il suffit de repasser ce drapeau à False
+-- tout le code Stripe ci-dessous reste inchangé et se réactive tel quel.
 """
 import os
 from datetime import datetime
@@ -26,9 +33,35 @@ from .auth import eleve_connecte
 
 router = APIRouter()
 
+MODE_SIMULATION_PAIEMENT = True  # ⚠️ Repasser à False une fois Stripe configuré
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 URL_SITE_VITRINE = os.environ.get("URL_SITE_VITRINE", "https://laurence-mermet-bijon.fr")
 URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
+
+def activer_acces_commande(session: Session, commande: Commande) -> None:
+    """Active (ou met à niveau) les accès formation pour toutes les lignes
+    d'une commande marquée payée -- utilisé aussi bien par le webhook Stripe
+    réel que par le mode simulation, pour ne jamais dupliquer cette logique
+    à deux endroits. Ne fait rien si la commande n'est pas (ou plus)
+    marquée payée, par sécurité."""
+    if commande.statut != "payee":
+        return
+    for ligne in commande.lignes:
+        tarif = session.get(TarifFormation, ligne.tarif_formation_id)
+        acces_existant = (
+            session.query(AccesFormation)
+            .filter_by(eleve_id=commande.eleve_id, formation_id=tarif.formation_id)
+            .first()
+        )
+        if acces_existant:
+            if tarif.niveau > acces_existant.niveau:
+                acces_existant.niveau = tarif.niveau
+        else:
+            session.add(AccesFormation(
+                eleve_id=commande.eleve_id, formation_id=tarif.formation_id, niveau=tarif.niveau,
+            ))
+    session.commit()
 
 class CreerPaiementRequete(BaseModel):
     tarif_ids: list[int] = []
@@ -65,6 +98,15 @@ def creer_session_paiement(
             commande_id=commande.id, tarif_formation_id=ligne["tarif_id"], prix_paye=ligne["prix_final"],
         ))
     session.commit()
+
+    if MODE_SIMULATION_PAIEMENT:
+        commande.statut = "payee"
+        commande.payee_le = datetime.utcnow()
+        commande.moyen_paiement = "simulation"
+        commande.stripe_session_id = f"simulation-{commande.id}"
+        session.commit()
+        activer_acces_commande(session, commande)
+        return {"checkout_url": f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={commande.stripe_session_id}"}
 
     line_items = [
         {
@@ -126,6 +168,15 @@ def creer_session_paiement_montee_niveau(
     session.add(LigneCommande(commande_id=commande.id, tarif_formation_id=tarif.id, prix_paye=montant))
     session.commit()
 
+    if MODE_SIMULATION_PAIEMENT:
+        commande.statut = "payee"
+        commande.payee_le = datetime.utcnow()
+        commande.moyen_paiement = "simulation"
+        commande.stripe_session_id = f"simulation-{commande.id}"
+        session.commit()
+        activer_acces_commande(session, commande)
+        return {"checkout_url": f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={commande.stripe_session_id}"}
+
     payment_method_types = ["card"]
     if tarif.autoriser_3x:
         payment_method_types.append("alma")
@@ -154,7 +205,9 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
     """Stripe appelle cette route automatiquement quand un paiement est
     confirmé. C'est ICI que les accès sont réellement activés (ou mis à
     jour vers un niveau supérieur) -- jamais avant, jamais depuis le
-    navigateur du client."""
+    navigateur du client. (En mode simulation, ce webhook n'est jamais
+    appelé -- c'est creer_session_paiement qui active directement les accès,
+    voir plus haut.)"""
     payload = await request.body()
     signature = request.headers.get("stripe-signature")
     webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
@@ -174,27 +227,6 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
             commande.payee_le = datetime.utcnow()
             commande.moyen_paiement = stripe_session.get("payment_method_types", ["card"])[0]
             session.commit()
-
-            for ligne in commande.lignes:
-                tarif = session.get(TarifFormation, ligne.tarif_formation_id)
-                acces_existant = (
-                    session.query(AccesFormation)
-                    .filter_by(eleve_id=commande.eleve_id, formation_id=tarif.formation_id)
-                    .first()
-                )
-                if acces_existant:
-                    # Montée de niveau : on ne remplace le niveau que s'il est
-                    # réellement supérieur (sécurité contre tout rejeu de
-                    # webhook). Le compteur de séances d'accompagnement se
-                    # recalcule tout seul (formation.jours_pour_niveau du
-                    # NOUVEAU niveau moins les séances déjà consommées), donc
-                    # rien d'autre à faire ici -- voir AccesFormation.jours_accompagnement_restants().
-                    if tarif.niveau > acces_existant.niveau:
-                        acces_existant.niveau = tarif.niveau
-                else:
-                    session.add(AccesFormation(
-                        eleve_id=commande.eleve_id, formation_id=tarif.formation_id, niveau=tarif.niveau,
-                    ))
-                session.commit()
+            activer_acces_commande(session, commande)
 
     return {"ok": True}
