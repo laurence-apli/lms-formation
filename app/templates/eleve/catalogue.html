@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -14,7 +13,9 @@
 }
 * { box-sizing:border-box; }
 body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--profond); }
-.topbar { background:var(--profond); color:var(--creme); padding:20px 40px; font-family:var(--serif); font-size:20px; }
+.topbar { background:var(--profond); color:var(--creme); padding:20px 40px; font-family:var(--serif); font-size:20px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.topbar a.retour { font-family:var(--sans); font-size:12.5px; color:var(--creme); text-decoration:none; border:1px solid rgba(253,250,245,.3); border-radius:20px; padding:7px 16px; white-space:nowrap; }
+.topbar a.retour:hover { border-color:var(--or); color:var(--or); }
 .wrap { max-width:1180px; margin:0 auto; padding:36px 28px 80px; display:grid; grid-template-columns:1fr 360px; gap:32px; align-items:start; }
 h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; }
 .sous-titre { color:var(--doux); font-size:14px; margin-bottom:20px; }
@@ -34,7 +35,7 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 .f-desc-courte { font-size:12.5px; color:var(--doux); line-height:1.55; margin:6px 0; }
 .f-prix { display:flex; align-items:baseline; gap:10px; margin-top:8px; }
 .f-final { font-family:var(--serif); font-size:20px; font-weight:600; }
-  .prix-barre { text-decoration:line-through; color:var(--leger); font-size:14px; font-weight:400; }
+.prix-barre { text-decoration:line-through; color:var(--leger); font-size:14px; font-weight:400; }
 .opt-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--sable-dk); border-radius:8px; cursor:pointer; margin-top:8px; }
 .opt-row.selected { border-color:var(--or); background:var(--or-lt); }
 
@@ -51,7 +52,10 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 </head>
 <body>
 
-<div class="topbar">Formation proposée par Laurence Mermet-Bijon</div>
+<div class="topbar">
+  <span>Formation proposée par Laurence Mermet-Bijon</span>
+  <a class="retour" href="/eleve/tableau-de-bord">← Retour à mon espace</a>
+</div>
 
 <div class="wrap">
   <div>
@@ -72,8 +76,20 @@ let selection = {}; // tarif_id -> {nom, prix}
 let codeApplique = null;
 
 async function chargerTout() {
-  catalogue = await fetch('/public/catalogue').then(r => r.json());
-    const montees = await fetch('/eleve/montees-de-niveau').then(r => r.json());
+  const [cat, montees, tableauDeBord] = await Promise.all([
+    fetch('/public/catalogue').then(r => r.json()),
+    fetch('/eleve/montees-de-niveau').then(r => r.json()),
+    fetch('/api/eleve/tableau-de-bord').then(r => r.ok ? r.json() : null).catch(() => null),
+  ]);
+  catalogue = cat;
+
+  // Formations déjà possédées (même partiellement, ex. niveau 1 sur 3) :
+  // on ne les propose plus dans le catalogue général -- la seule façon de
+  // les faire progresser est le bloc "Monter de niveau" ci-dessus, qui
+  // calcule la vraie différence à payer plutôt que le prix plein.
+  const idsDejaAcquis = new Set(
+    ((tableauDeBord && tableauDeBord.formations_acquises) || []).map(f => f.id)
+  );
 
   document.getElementById('zone-montees').innerHTML = montees.map(m => `
     <div class="bloc-montee">
@@ -83,10 +99,17 @@ async function chargerTout() {
     </div>
   `).join('');
 
-  document.getElementById('zone-formations').innerHTML = catalogue.map(f => {
-    if (f.tarifs.length === 1) {
-      const t = f.tarifs[0];
-      return `
+  const formationsAProposer = catalogue.filter(f => !idsDejaAcquis.has(f.formation_id));
+
+  if (formationsAProposer.length === 0) {
+    document.getElementById('zone-formations').innerHTML = montees.length
+      ? ''
+      : '<p style="color:var(--leger);font-size:13px">Tu as déjà accès à toutes les formations disponibles pour le moment.</p>';
+  } else {
+    document.getElementById('zone-formations').innerHTML = formationsAProposer.map(f => {
+      if (f.tarifs.length === 1) {
+        const t = f.tarifs[0];
+        return `
         <div class="formation-bloc" onclick="toggleSimple(${t.tarif_id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix_final})">
           <div class="f-row">
             <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
@@ -98,8 +121,8 @@ async function chargerTout() {
             </div>
           </div>
         </div>`;
-    } else {
-      return `
+      } else {
+        return `
         <div class="formation-bloc">
           <div class="f-row">
             <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
@@ -107,7 +130,7 @@ async function chargerTout() {
               <p class="f-titre">${f.titre}</p>
               <p class="f-desc-courte">${f.description_courte || ''} Choisis l'une des offres ci-dessous.</p>
               ${f.tarifs.map(t => `
-                <div class="opt-row" id="opt-${t.tarif_id}" onclick="event.stopPropagation(); choisirOption('${f.titre.replace(/'/g, "\\'")}', ${t.tarif_id}, '${t.nom_option}', ${t.prix_final})">
+                <div class="opt-row" id="opt-${t.tarif_id}" data-formation="${f.titre.replace(/"/g, '&quot;')}" onclick="event.stopPropagation(); choisirOption('${f.titre.replace(/'/g, "\\'")}', ${t.tarif_id}, '${t.nom_option}', ${t.prix_final})">
                   <span style="flex:1">${t.nom_option}</span>
                   ${t.en_promo ? `<span class="prix-barre">${t.prix} €</span> ` : ''}<span style="font-family:var(--serif);font-weight:600">${t.prix_final} €</span>
                 </div>
@@ -115,8 +138,9 @@ async function chargerTout() {
             </div>
           </div>
         </div>`;
-    }
-  }).join('');
+      }
+    }).join('');
+  }
 }
 
 function toggleSimple(tarifId, nom, prix) {
@@ -132,7 +156,8 @@ function toggleSimple(tarifId, nom, prix) {
 }
 
 function choisirOption(formationTitre, tarifId, nomOption, prix) {
-  // Retire les autres options de la même formation (non cumulables)
+  // Retire les autres options de la même formation (non cumulables) --
+  // comparaison via data-formation, posé sur chaque ligne au rendu.
   document.querySelectorAll(`[id^="opt-"]`).forEach(el => {
     if (el.dataset.formation === formationTitre) el.classList.remove('selected');
   });
