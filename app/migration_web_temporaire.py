@@ -30,6 +30,8 @@ def executer_migration(cle: str):
         ("medias", "url", "ALTER TABLE medias ALTER COLUMN url TYPE TEXT;"),
         ("administrateurs", "photo_url", "ALTER TABLE administrateurs ALTER COLUMN photo_url TYPE TEXT;"),
         ("administrateurs", "logo_url", "ALTER TABLE administrateurs ALTER COLUMN logo_url TYPE TEXT;"),
+        ("formations", "image_url", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS image_url TEXT;"),
+        ("formations", "description_courte", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS description_courte TEXT;"),
     ]
 
     resultats = []
