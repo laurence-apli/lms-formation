@@ -73,7 +73,7 @@ let codeApplique = null;
 
 async function chargerTout() {
   catalogue = await fetch('/public/catalogue').then(r => r.json());
-  const montees = await fetch('/api/eleve/montees-de-niveau').then(r => r.json());
+    const montees = await fetch('/eleve/montees-de-niveau').then(r => r.json());
 
   document.getElementById('zone-montees').innerHTML = montees.map(m => `
     <div class="bloc-montee">
