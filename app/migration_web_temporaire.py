@@ -1,3 +1,4 @@
+
 """
 Route web TEMPORAIRE pour exécuter la migration de colonnes sans avoir besoin
 d'un accès Shell (non disponible sur le plan gratuit de Render -- même
@@ -32,6 +33,7 @@ def executer_migration(cle: str):
         ("administrateurs", "logo_url", "ALTER TABLE administrateurs ALTER COLUMN logo_url TYPE TEXT;"),
         ("formations", "image_url", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS image_url TEXT;"),
         ("formations", "description_courte", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS description_courte TEXT;"),
+        ("tarifs_formation", "contenu_ajoute", "ALTER TABLE tarifs_formation ADD COLUMN IF NOT EXISTS contenu_ajoute TEXT;"),
     ]
 
     resultats = []
