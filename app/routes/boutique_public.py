@@ -41,6 +41,7 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
                     "autoriser_3x": t.autoriser_3x,
                     "cumulable": t.cumulable,
                     "niveau": t.niveau,
+                    "contenu_ajoute": t.contenu_ajoute,
                 }
                 for t in sorted(tarifs, key=lambda t: t.ordre)
             ],
