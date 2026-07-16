@@ -156,7 +156,8 @@ def email_reinitialisation_mot_de_passe(destinataire: str, prenom: str, lien: st
     </tr>
   </table>
 </body>
-</html>
+</html>"""
+    return _envoyer_email(destinataire, sujet, corps_html)
 
 EMAIL_ADMIN = os.environ.get("EMAIL_ADMIN", "laurencemb42@gmail.com")
 
