@@ -48,6 +48,7 @@ class TarifRequete(BaseModel):
     promo_pourcentage: int | None = None
     autoriser_3x: bool = False
     cumulable: bool = False
+    contenu_ajoute: str | None = None
     ordre: int = 1
 
 
@@ -59,6 +60,7 @@ def lire_tarifs(formation_id: int, session: Session = Depends(obtenir_session)):
             "id": t.id, "niveau": t.niveau, "nom_option": t.nom_option, "prix": float(t.prix),
             "promo_active": t.promo_active, "promo_pourcentage": t.promo_pourcentage,
             "autoriser_3x": t.autoriser_3x, "cumulable": t.cumulable, "actif": t.actif,
+            "contenu_ajoute": t.contenu_ajoute,
         }
         for t in tarifs
     ]
@@ -164,7 +166,7 @@ def activer_desactiver_code(code_id: int, session: Session = Depends(obtenir_ses
 
 
 def _tarif_admin_dict(t):
-    return {"tarif_id": t.id, "nom_option": t.nom_option, "prix": float(t.prix), "prix_final": t.prix_final(), "en_promo": t.promo_active, "promo_pourcentage": t.promo_pourcentage, "autoriser_3x": t.autoriser_3x, "cumulable": t.cumulable, "niveau": t.niveau, "actif": t.actif}
+    return {"tarif_id": t.id, "nom_option": t.nom_option, "prix": float(t.prix), "prix_final": t.prix_final(), "en_promo": t.promo_active, "promo_pourcentage": t.promo_pourcentage, "autoriser_3x": t.autoriser_3x, "cumulable": t.cumulable, "niveau": t.niveau, "contenu_ajoute": t.contenu_ajoute, "actif": t.actif}
 
 
 @router.get("/catalogue-complet")
