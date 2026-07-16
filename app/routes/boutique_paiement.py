@@ -35,6 +35,17 @@ router = APIRouter()
 
 MODE_SIMULATION_PAIEMENT = True  # ⚠️ Repasser à False une fois Stripe configuré
 
+# Tant que MODE_SIMULATION_PAIEMENT est actif, seuls ces comptes de test
+# peuvent valider un paiement simulé. Tous les autres reçoivent un message
+# "paiement indisponible" -- évite que n'importe quel élève obtienne un
+# accès gratuit pendant la phase de test des solutions de paiement.
+EMAILS_TEST_PAIEMENT = {
+    "laurencemb42@gmail.com",
+    "chatagnon_fab@hotmail.com",
+    "maresonance42@gmail.com",
+    "n.chatagnon2804@gmail.com",
+}
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
 URL_SITE_VITRINE = os.environ.get("URL_SITE_VITRINE", "https://laurence-mermet-bijon.fr")
 URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
@@ -86,6 +97,9 @@ def creer_session_paiement(
         raise HTTPException(status_code=400, detail=panier["erreur_code"])
     if not panier["lignes"]:
         raise HTTPException(status_code=400, detail="Aucune formation valide dans le panier.")
+
+    if MODE_SIMULATION_PAIEMENT and eleve.email not in EMAILS_TEST_PAIEMENT:
+        raise HTTPException(status_code=503, detail="Paiement indisponible pour le moment, merci de réessayer plus tard.")
 
     commande = Commande(
         eleve_id=eleve.id, montant_total=panier["total"], statut="en_attente",
@@ -158,6 +172,9 @@ def creer_session_paiement_montee_niveau(
     montant = proposition["difference_a_payer"]
     if montant <= 0:
         raise HTTPException(status_code=400, detail="Aucun montant à payer pour cette montée de niveau.")
+
+    if MODE_SIMULATION_PAIEMENT and eleve.email not in EMAILS_TEST_PAIEMENT:
+        raise HTTPException(status_code=503, detail="Paiement indisponible pour le moment, merci de réessayer plus tard.")
 
     tarif = session.get(TarifFormation, requete.tarif_id)
     commande = Commande(
