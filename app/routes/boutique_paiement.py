@@ -30,7 +30,7 @@ from ..database import obtenir_session
 from ..models import Eleve, AccesFormation
 from .boutique_models import TarifFormation, Commande, LigneCommande, calculer_panier
 from .auth import eleve_connecte
-
+from ..emails import email_notification_paiement_reussi, email_notification_paiement_echoue
 router = APIRouter()
 
 MODE_SIMULATION_PAIEMENT = True  # ⚠️ Repasser à False une fois Stripe configuré
@@ -74,6 +74,13 @@ def activer_acces_commande(session: Session, commande: Commande) -> None:
             ))
     session.commit()
 
+    eleve = session.get(Eleve, commande.eleve_id)
+    description = ", ".join(
+        (f"{l.tarif.formation.titre} — {l.tarif.nom_option}" if l.tarif.nom_option != "Tarif unique" else l.tarif.formation.titre)
+        for l in commande.lignes
+    )
+    email_notification_paiement_reussi(f"{eleve.prenom} {eleve.nom}", eleve.email, description, float(commande.montant_total))
+
 class CreerPaiementRequete(BaseModel):
     tarif_ids: list[int] = []
     montee_tarif_ids: list[int] = []
@@ -99,6 +106,7 @@ def creer_session_paiement(
         raise HTTPException(status_code=400, detail="Aucune formation valide dans le panier.")
 
     if MODE_SIMULATION_PAIEMENT and eleve.email not in EMAILS_TEST_PAIEMENT:
+        email_notification_paiement_echoue(f"{eleve.prenom} {eleve.nom}", eleve.email, ", ".join(l["nom"] for l in panier["lignes"]), float(panier["total"]), "Tentative pendant la phase de test (Stripe non branche).")
         raise HTTPException(status_code=503, detail="Paiement indisponible pour le moment, merci de réessayer plus tard.")
 
     commande = Commande(
@@ -174,6 +182,7 @@ def creer_session_paiement_montee_niveau(
         raise HTTPException(status_code=400, detail="Aucun montant à payer pour cette montée de niveau.")
 
     if MODE_SIMULATION_PAIEMENT and eleve.email not in EMAILS_TEST_PAIEMENT:
+        email_notification_paiement_echoue(f"{eleve.prenom} {eleve.nom}", eleve.email, f"{proposition['formation_titre']} — {proposition['nom_option']} (montee de niveau)", float(montant), "Tentative pendant la phase de test (Stripe non branche).")
         raise HTTPException(status_code=503, detail="Paiement indisponible pour le moment, merci de réessayer plus tard.")
 
     tarif = session.get(TarifFormation, requete.tarif_id)
