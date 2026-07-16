@@ -34,6 +34,7 @@ class TarifFormation(Base):
     promo_pourcentage = Column(Integer, nullable=True)
     autoriser_3x = Column(Boolean, default=False)
     cumulable = Column(Boolean, default=False)  # True = palier d'une même formation (montée de niveau possible)
+    contenu_ajoute = Column(Text, nullable=True)
     ordre = Column(Integer, default=1)
     actif = Column(Boolean, default=True)
 
