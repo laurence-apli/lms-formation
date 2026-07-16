@@ -157,5 +157,19 @@ def email_reinitialisation_mot_de_passe(destinataire: str, prenom: str, lien: st
   </table>
 </body>
 </html>
-"""
-    return _envoyer_email(destinataire, sujet, corps_html)
+
+EMAIL_ADMIN = os.environ.get("EMAIL_ADMIN", "laurencemb42@gmail.com")
+
+def _corps_email_admin(titre, couleur_barre, montant, nom_complet, email_client, description_achat, motif=""):
+    motif_html = f'<p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Motif :</strong> {motif}</p>' if motif else ""
+    return f"""<!DOCTYPE html><html lang="fr"><body style="margin:0; padding:0; background:#F5EDD6; font-family:Georgia, serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6; padding:40px 20px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF; border-radius:12px; overflow:hidden;"><tr><td style="background:#2E2210; padding:24px 32px; text-align:center;"><p style="margin:0; font-family:Georgia, serif; font-size:19px; font-weight:600; color:#F5EDD6;">{titre}</p></td></tr><tr><td style="background:{couleur_barre}; height:4px;"></td></tr><tr><td style="padding:32px;"><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Montant :</strong> {montant:.2f} EUR</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Client :</strong> {nom_complet} ({email_client})</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Formation(s) :</strong> {description_achat}</p>{motif_html}</td></tr></table></td></tr></table></body></html>"""
+
+def email_notification_paiement_reussi(nom_complet, email_client, description_achat, montant):
+    sujet = f"Paiement recu - {montant:.2f} EUR"
+    corps_html = _corps_email_admin("Paiement confirme", "#B8922A", montant, nom_complet, email_client, description_achat)
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps_html)
+
+def email_notification_paiement_echoue(nom_complet, email_client, description_achat, montant, motif=""):
+    sujet = f"Paiement echoue - {montant:.2f} EUR"
+    corps_html = _corps_email_admin("Tentative de paiement echouee", "#C47B6E", montant, nom_complet, email_client, description_achat, motif)
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps_html)
