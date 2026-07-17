@@ -149,6 +149,10 @@ def email_reinitialisation_mot_de_passe(destinataire: str, prenom: str, lien: st
               <p style="margin:12px 0 0; font-size:11px; color:#ad9c7a;">
                 Laurence Mermet-Bijon · 31 route de Maclas, Véranne (42520)
               </p>
+              <p style="margin:8px 0 0; font-size:11px; color:#ad9c7a;">
+                Ceci est un message automatique, merci de ne pas y répondre directement.<br>
+                Pour nous contacter : laurencemb42@gmail.com
+              </p>
             </td>
           </tr>
 
@@ -167,7 +171,7 @@ def _corps_email_admin(titre, couleur_barre, montant, nom_complet, email_client,
     motif_html = ""
     if motif:
         motif_html = '<p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Motif :</strong> ' + motif + '</p>'
-    html = '<!DOCTYPE html><html lang="fr"><body style="margin:0; padding:0; background:#F5EDD6; font-family:Georgia, serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6; padding:40px 20px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF; border-radius:12px; overflow:hidden;"><tr><td style="background:#2E2210; padding:24px 32px; text-align:center;"><p style="margin:0; font-family:Georgia, serif; font-size:19px; font-weight:600; color:#F5EDD6;">' + titre + '</p></td></tr><tr><td style="background:' + couleur_barre + '; height:4px;"></td></tr>' + '<tr><td style="padding:32px;"><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Montant :</strong> ' + montant_str + ' EUR</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Client :</strong> ' + nom_complet + ' (' + email_client + ')</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Formation(s) :</strong> ' + description_achat + '</p>' + motif_html + '</td></tr>' + '</table></td></tr></table></body></html>'
+    html = '<!DOCTYPE html><html lang="fr"><body style="margin:0; padding:0; background:#F5EDD6; font-family:Georgia, serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6; padding:40px 20px;"><tr><td align="center"><table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF; border-radius:12px; overflow:hidden;"><tr><td style="background:#2E2210; padding:24px 32px; text-align:center;"><p style="margin:0; font-family:Georgia, serif; font-size:19px; font-weight:600; color:#F5EDD6;">' + titre + '</p></td></tr><tr><td style="background:' + couleur_barre + '; height:4px;"></td></tr>' + '<tr><td style="padding:32px;"><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Montant :</strong> ' + montant_str + ' EUR</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Client :</strong> ' + nom_complet + ' (' + email_client + ')</p><p style="margin:0 0 16px; font-size:15px; color:#2E2210;"><strong>Formation(s) :</strong> ' + description_achat + '</p>' + motif_html + '<p style="margin:16px 0 0; font-size:11px; color:#2E2210;">Ceci est un message automatique, merci de ne pas y répondre directement. Pour nous contacter : laurencemb42@gmail.com</p>' + '</td></tr>' + '</table></td></tr></table></body></html>'
     return html
 
 def email_notification_paiement_reussi(nom_complet, email_client, description_achat, montant):
