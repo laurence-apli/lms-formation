@@ -34,6 +34,7 @@ def _envoyer_email(destinataire: str, sujet: str, corps_html: str) -> bool:
 
     payload = json.dumps({
         "from": f"{NOM_EXPEDITEUR} <{EMAIL_EXPEDITEUR}>",
+        "reply_to": [EMAIL_EXPEDITEUR],
         "to": [destinataire],
         "subject": sujet,
         "html": corps_html,
