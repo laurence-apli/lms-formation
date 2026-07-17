@@ -34,6 +34,7 @@ def executer_migration(cle: str):
         ("formations", "image_url", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS image_url TEXT;"),
         ("formations", "description_courte", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS description_courte TEXT;"),
         ("tarifs_formation", "contenu_ajoute", "ALTER TABLE tarifs_formation ADD COLUMN IF NOT EXISTS contenu_ajoute TEXT;"),
+        ("formations", "ordre_affichage", "ALTER TABLE formations ADD COLUMN IF NOT EXISTS ordre_affichage INTEGER NOT NULL DEFAULT 0;"),
     ]
 
     resultats = []
