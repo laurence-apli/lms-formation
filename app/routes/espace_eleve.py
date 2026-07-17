@@ -25,14 +25,16 @@ def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = D
             continue  # formation désactivée : invisible côté élève, même si l'accès existe toujours en base
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
-            "nb_niveaux": formation.nb_niveaux, "niveau": acces.niveau,
+            "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
             "progression": progression_pourcentage(session, eleve.id, formation),
         })
 
+    formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
+
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur}
-        for f in session.query(Formation).filter_by(actif=True).all()
+        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "ordre_affichage": f.ordre_affichage}
+        for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
 
