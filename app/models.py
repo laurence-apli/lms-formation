@@ -40,6 +40,7 @@ class Formation(Base):
     couleur = Column(String(20))
     presentation_html = Column(Text)
     nb_niveaux = Column(Integer, nullable=False, default=3)
+    ordre_affichage = Column(Integer, nullable=False, default=0)
     actif = Column(Boolean, default=True)
     fichier_recu_nom = Column(String(300))
     cree_le = Column(DateTime, default=datetime.utcnow)
