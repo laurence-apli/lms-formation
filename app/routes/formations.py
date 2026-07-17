@@ -22,11 +22,11 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
 @router.get("/formations")
 def lister_formations(session: Session = Depends(obtenir_session)):
-    formations = session.query(Formation).all()
+    formations = session.query(Formation).order_by(Formation.ordre_affichage, Formation.id).all()
     return [
         {
             "id": f.id, "titre": f.titre, "couleur": f.couleur, "actif": f.actif,
-            "nb_niveaux": f.nb_niveaux, "nb_modules": len(f.modules),
+            "nb_niveaux": f.nb_niveaux, "ordre_affichage": f.ordre_affichage, "nb_modules": len(f.modules),
             "nb_chapitres": sum(len(m.chapitres) for m in f.modules),
         }
         for f in formations
@@ -40,7 +40,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         raise HTTPException(status_code=404, detail="Formation introuvable.")
     return {
         "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
-        "actif": formation.actif, "nb_niveaux": formation.nb_niveaux,
+        "actif": formation.actif, "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage,
         "presentation_html": formation.presentation_html or "",
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
         "modules": [
@@ -68,11 +68,11 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
 @router.post("/formations")
 def creer_formation(
     titre: str = Form(...), couleur: str = Form("#B8922A"), nb_niveaux: int = Form(3),
-    presentation_html: str = Form(""), session: Session = Depends(obtenir_session),
+    presentation_html: str = Form(""), ordre_affichage: int = Form(0), session: Session = Depends(obtenir_session),
 ):
     if nb_niveaux not in (1, 2, 3):
         raise HTTPException(status_code=400, detail="Le nombre de niveaux doit être 1, 2 ou 3.")
-    formation = Formation(titre=titre, couleur=couleur, nb_niveaux=nb_niveaux, presentation_html=presentation_html)
+    formation = Formation(titre=titre, couleur=couleur, nb_niveaux=nb_niveaux, presentation_html=presentation_html, ordre_affichage=ordre_affichage)
     session.add(formation)
     session.flush()
     for niveau in range(1, nb_niveaux + 1):
@@ -85,6 +85,7 @@ def creer_formation(
 def modifier_formation(
     formation_id: int, titre: str = Form(...), couleur: str = Form(...),
     nb_niveaux: int = Form(...), presentation_html: str = Form(""),
+    ordre_affichage: int = Form(0),
     session: Session = Depends(obtenir_session),
 ):
     formation = session.get(Formation, formation_id)
@@ -96,6 +97,7 @@ def modifier_formation(
     formation.titre = titre
     formation.couleur = couleur
     formation.presentation_html = presentation_html
+    formation.ordre_affichage = ordre_affichage
 
     if nb_niveaux != formation.nb_niveaux:
         # On ajoute les lignes de jours d'accompagnement manquantes pour les
