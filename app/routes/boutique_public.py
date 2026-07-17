@@ -20,7 +20,7 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
     """Renvoie toutes les formations actives avec leurs tarifs, photo et
     description -- c'est cette route que le site vitrine et le catalogue
     élève appellent pour tout afficher, toujours à jour."""
-    formations = session.query(Formation).filter_by(actif=True).all()
+    formations = session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
     resultat = []
     for f in formations:
         tarifs = [t for t in f.tarifs if t.actif]
