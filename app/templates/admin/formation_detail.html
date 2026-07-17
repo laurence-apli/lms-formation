@@ -274,6 +274,7 @@ function ouvrirModalEditerFormation() {
       <div id="zone-erreur-modal"></div>
       <label>Titre</label><input type="text" id="input-titre" value="${esc(f.titre)}">
       <label>Couleur</label><input type="color" id="input-couleur" value="${f.couleur}">
+      <label>Ordre d'affichage (les formations avec un chiffre plus petit apparaissent en premier)</label><input type="number" id="input-ordre-affichage" value="${f.ordre_affichage || 0}">
       <label>Nombre de niveaux</label>
       <select id="input-nb-niveaux" onchange="majChampsJours()">
         <option value="1" ${f.nb_niveaux===1?'selected':''}>1 niveau</option>
@@ -315,6 +316,7 @@ async function enregistrerFormation() {
   const data = new FormData();
   data.append('titre', titre);
   data.append('couleur', document.getElementById('input-couleur').value);
+    data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
