@@ -58,6 +58,8 @@ function ouvrirModalCreerFormation() {
       <input type="text" id="input-titre">
       <label>Couleur d'accent</label>
       <input type="color" id="input-couleur" value="#B8922A">
+      <label>Ordre d'affichage (facultatif, les plus petits chiffres apparaissent en premier)</label>
+      <input type="number" id="input-ordre-affichage" value="0">
       <label>Nombre de niveaux d'accès</label>
       <select id="input-nb-niveaux">
         <option value="1">1 niveau (accès unique, pas de palier)</option>
@@ -91,6 +93,7 @@ async function creerFormation() {
   data.append('titre', titre);
   data.append('couleur', document.getElementById('input-couleur').value);
   data.append('nb_niveaux', document.getElementById('input-nb-niveaux').value);
+  data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   try {
     const formation = await appelApi('/admin/formations', { method: 'POST', body: data });
     fermerModal();
