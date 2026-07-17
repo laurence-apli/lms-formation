@@ -79,13 +79,14 @@ def page_tableau_de_bord(
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "image_url": formation.image_url,
-            "nb_niveaux": formation.nb_niveaux, "niveau": acces.niveau,
+            "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
             "progression": progression_pourcentage(session, eleve.id, formation),
         })
+    formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url}
-        for f in session.query(Formation).filter_by(actif=True).all()
+        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage}
+        for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
     return templates.TemplateResponse(
