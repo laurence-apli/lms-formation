@@ -10,8 +10,10 @@ from ..models import (
     Eleve, Formation, Module, Chapitre, AccesFormation,
     sequence_chapitres, chapitre_dans_le_niveau, chapitre_est_accessible,
     progression_pourcentage, valider_chapitre as valider_chapitre_modele,
+    SeanceAccompagnement,
 )
 from .auth import eleve_connecte
+from ..emails import email_coaching_rdv
 
 router = APIRouter(prefix="/api/eleve", dependencies=[Depends(eleve_connecte)])
 
@@ -193,5 +195,22 @@ def valider_chapitre_eleve(
         raise HTTPException(status_code=403, detail=f"Impossible de valider ce chapitre : {raison}")
 
     valider_chapitre_modele(session, eleve.id, chapitre_id)
+
+    # Si ce chapitre a un lien coaching → première séance auto
+    if chapitre.lien_coaching:
+        seance = SeanceAccompagnement(
+            acces_id=acces.id,
+            lien_resalib=chapitre.lien_coaching,
+            type_envoi="auto",
+            statut="en_attente",
+        )
+        session.add(seance)
+        session.commit()
+        email_coaching_rdv(
+            destinataire=eleve.email,
+            prenom=eleve.prenom,
+            lien_resalib=chapitre.lien_coaching,
+            titre_formation=formation.titre,
+    )
     nouvelle_progression = progression_pourcentage(session, eleve.id, formation, acces=acces)
     return {"ok": True, "progression": nouvelle_progression}
