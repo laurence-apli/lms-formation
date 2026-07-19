@@ -6,8 +6,9 @@ Séparation volontaire : les routes dans espace_eleve.py / eleves.py /
 formations.py restent de pures API (testées indépendamment), ces routes-ci ne
 font que choisir QUELLE page HTML afficher et avec QUELLES données de départ.
 """
+import base64
 from fastapi import APIRouter, Depends, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -22,17 +23,65 @@ templates = Jinja2Templates(directory="app/templates")
 
 def _profil_pour_affichage(session: Session) -> dict:
     """Le profil de l'administratrice, affiché dans la topbar élève (logo, nom)
-    et dans la colonne de gauche de l'écran de formation (photo). S'il n'existe
-    pas encore de compte admin (cas impossible en pratique puisqu'il faut un
-    admin pour créer des élèves, mais on reste défensif), on renvoie des
-    valeurs neutres plutôt que de planter la page."""
+    et dans la colonne de gauche de l'écran de formation (photo).
+
+    CORRECTION TRANSFERT NEON : au lieu d'embarquer les images base64 (logo,
+    photo) directement dans la réponse HTML de chaque page, on renvoie des URLs
+    vers les endpoints dédiés /api/profil/logo et /api/profil/photo. Ces
+    endpoints ajoutent un Cache-Control d'une heure : le navigateur de l'élève
+    ne télécharge les images qu'une seule fois par session, au lieu de les
+    recevoir complètes dans chaque page HTML."""
     admin = session.query(Administrateur).first()
     if admin is None:
         return {"nom": "", "prenom": "", "email": "", "logo_url": None, "photo_url": None}
     return {
-        "nom": admin.nom, "prenom": admin.prenom, "email": admin.email,
-        "logo_url": admin.logo_url, "photo_url": admin.photo_url,
+        "nom": admin.nom,
+        "prenom": admin.prenom,
+        "email": admin.email,
+        "logo_url": "/api/profil/logo" if admin.logo_url else None,
+        "photo_url": "/api/profil/photo" if admin.photo_url else None,
     }
+
+
+# ---------------------------------------------------------------------------
+# Endpoints images profil admin — servis séparément avec cache navigateur
+# ---------------------------------------------------------------------------
+
+def _servir_image_base64(data_uri, cache_seconds=3600):
+    """Convertit une data URI base64 stockée en base de données en réponse
+    image HTTP avec en-tête Cache-Control. Le navigateur met l'image en cache
+    et ne la retélécharge pas à chaque navigation de l'élève."""
+    if not data_uri:
+        raise HTTPException(status_code=404, detail="Image non disponible.")
+    if data_uri.startswith("data:"):
+        try:
+            header, encoded = data_uri.split(",", 1)
+            content_type = header.split(";")[0].replace("data:", "") or "image/png"
+            image_bytes = base64.b64decode(encoded)
+        except Exception:
+            raise HTTPException(status_code=500, detail="Image corrompue.")
+    else:
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse(url=data_uri)
+    return Response(
+        content=image_bytes,
+        media_type=content_type,
+        headers={"Cache-Control": f"public, max-age={cache_seconds}"},
+    )
+
+
+@router.get("/api/profil/logo")
+def api_profil_logo(session: Session = Depends(obtenir_session)):
+    """Sert le logo de l'administratrice sous forme d'image HTTP mise en cache."""
+    admin = session.query(Administrateur).first()
+    return _servir_image_base64(admin.logo_url if admin else None)
+
+
+@router.get("/api/profil/photo")
+def api_profil_photo(session: Session = Depends(obtenir_session)):
+    """Sert la photo de l'administratrice sous forme d'image HTTP mise en cache."""
+    admin = session.query(Administrateur).first()
+    return _servir_image_base64(admin.photo_url if admin else None)
 
 @router.get("/eleve/connexion", response_class=HTMLResponse)
 def page_connexion(request: Request):
