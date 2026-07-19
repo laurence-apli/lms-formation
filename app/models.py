@@ -9,15 +9,13 @@ from sqlalchemy import (
     create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey,
     UniqueConstraint, Text
 )
-from sqlalchemy.orm import declarative_base, relationship, Session
+from sqlalchemy.orm import declarative_base, relationship, Session, deferred
 
 Base = declarative_base()
-
 
 def hacher_mot_de_passe(mot_de_passe_clair: str) -> str:
     sel = bcrypt.gensalt()
     return bcrypt.hashpw(mot_de_passe_clair.encode("utf-8"), sel).decode("utf-8")
-
 
 def verifier_mot_de_passe(mot_de_passe_clair: str, hash_stocke: str) -> bool:
     if not hash_stocke:
@@ -27,10 +25,8 @@ def verifier_mot_de_passe(mot_de_passe_clair: str, hash_stocke: str) -> bool:
     except ValueError:
         return False
 
-
 def generer_token_reinitialisation() -> str:
     return secrets.token_urlsafe(32)
-
 
 class Formation(Base):
     __tablename__ = "formations"
@@ -48,17 +44,16 @@ class Formation(Base):
     description_courte = Column(Text, nullable=True)
 
     modules = relationship("Module", back_populates="formation", order_by="Module.ordre",
-                            cascade="all, delete-orphan")
+                           cascade="all, delete-orphan")
     acces_eleves = relationship("AccesFormation", back_populates="formation")
     jours_par_niveau = relationship("JoursAccompagnementNiveau", back_populates="formation",
-                                     cascade="all, delete-orphan")
+                                   cascade="all, delete-orphan")
 
     def jours_pour_niveau(self, niveau: int) -> int:
         for j in self.jours_par_niveau:
             if j.niveau == niveau:
                 return j.jours
         return 0
-
 
 class JoursAccompagnementNiveau(Base):
     __tablename__ = "jours_accompagnement_niveau"
@@ -70,7 +65,6 @@ class JoursAccompagnementNiveau(Base):
     jours = Column(Integer, nullable=False, default=0)
 
     formation = relationship("Formation", back_populates="jours_par_niveau")
-
 
 class Module(Base):
     __tablename__ = "modules"
@@ -85,8 +79,7 @@ class Module(Base):
 
     formation = relationship("Formation", back_populates="modules")
     chapitres = relationship("Chapitre", back_populates="module", order_by="Chapitre.ordre",
-                              cascade="all, delete-orphan")
-
+                             cascade="all, delete-orphan")
 
 class Chapitre(Base):
     __tablename__ = "chapitres"
@@ -95,10 +88,10 @@ class Chapitre(Base):
     module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
     titre = Column(String(200), nullable=False)
     # CORRECTION TRANSFERT NEON : contenu_html peut contenir des Mo d'images base64.
-    # deferred=True évite de le charger lors des requêtes en masse (ex : validation
-    # de chapitre avec selectinload sur toute la formation). Il n'est chargé que
-    # lorsque explicitement accédé (route detail_chapitre, édition admin).
-    contenu_html = Column(Text, deferred=True)
+    # deferred(Column(...)) evite de le charger lors des requetes en masse (ex : validation
+    # de chapitre avec selectinload sur toute la formation). Il n'est charge que
+    # lorsque explicitement accede (route detail_chapitre, edition admin).
+    contenu_html = deferred(Column(Text))
     ordre = Column(Integer, nullable=False)
     niveau_requis = Column(Integer, nullable=False, default=1)
     fichier_recu_nom = Column(String(300))
@@ -106,7 +99,6 @@ class Chapitre(Base):
     module = relationship("Module", back_populates="chapitres")
     medias = relationship("Media", back_populates="chapitre", cascade="all, delete-orphan")
     validations = relationship("ValidationChapitre", back_populates="chapitre")
-
 
 class Media(Base):
     __tablename__ = "medias"
@@ -120,7 +112,6 @@ class Media(Base):
 
     chapitre = relationship("Chapitre", back_populates="medias")
 
-
 class Eleve(Base):
     __tablename__ = "eleves"
 
@@ -131,12 +122,12 @@ class Eleve(Base):
     mot_de_passe_hash = Column(String(255))
     actif = Column(Boolean, default=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
-    # Statistiques de connexion (colonnes ajoutées via migration Neon)
+    # Statistiques de connexion (colonnes ajoutees via migration Neon)
     nb_connexions = Column(Integer, default=0)
     derniere_connexion = Column(DateTime, nullable=True)
 
     acces_formations = relationship("AccesFormation", back_populates="eleve",
-                                     cascade="all, delete-orphan")
+                                   cascade="all, delete-orphan")
     validations = relationship("ValidationChapitre", back_populates="eleve")
     tokens = relationship("TokenAuthEleve", back_populates="eleve", cascade="all, delete-orphan")
 
@@ -145,7 +136,6 @@ class Eleve(Base):
 
     def verifier_mot_de_passe(self, mot_de_passe_clair: str) -> bool:
         return verifier_mot_de_passe(mot_de_passe_clair, self.mot_de_passe_hash)
-
 
 class TokenAuthEleve(Base):
     __tablename__ = "tokens_auth_eleves"
@@ -163,7 +153,6 @@ class TokenAuthEleve(Base):
     def est_valide(self) -> bool:
         return self.utilise_le is None and datetime.utcnow() < self.expire_le
 
-
 class Administrateur(Base):
     __tablename__ = "administrateurs"
 
@@ -174,10 +163,10 @@ class Administrateur(Base):
     telephone = Column(String(50))
     mot_de_passe_hash = Column(String(255))
     # CORRECTION TRANSFERT NEON : photo_url et logo_url sont des images base64
-    # potentiellement lourdes. deferred=True évite de les charger dans les requêtes
-    # d'authentification et autres requêtes qui n'ont pas besoin des images.
-    photo_url = Column(Text, deferred=True)
-    logo_url = Column(Text, deferred=True)
+    # potentiellement lourdes. deferred(Column(...)) evite de les charger dans les requetes
+    # d'authentification et autres requetes qui n'ont pas besoin des images.
+    photo_url = deferred(Column(Text))
+    logo_url = deferred(Column(Text))
     lien_github = Column(String(500))
     lien_render = Column(String(500))
     lien_neon = Column(String(500))
@@ -190,7 +179,6 @@ class Administrateur(Base):
 
     def verifier_mot_de_passe(self, mot_de_passe_clair: str) -> bool:
         return verifier_mot_de_passe(mot_de_passe_clair, self.mot_de_passe_hash)
-
 
 class TokenAuthAdmin(Base):
     __tablename__ = "tokens_auth_admin"
@@ -208,7 +196,6 @@ class TokenAuthAdmin(Base):
     def est_valide(self) -> bool:
         return self.utilise_le is None and datetime.utcnow() < self.expire_le
 
-
 class AccesFormation(Base):
     __tablename__ = "acces_formations"
     __table_args__ = (UniqueConstraint("eleve_id", "formation_id", name="uniq_eleve_formation"),)
@@ -223,13 +210,12 @@ class AccesFormation(Base):
     eleve = relationship("Eleve", back_populates="acces_formations")
     formation = relationship("Formation", back_populates="acces_eleves")
     seances_accompagnement = relationship("SeanceAccompagnement", back_populates="acces",
-                                           cascade="all, delete-orphan")
+                                         cascade="all, delete-orphan")
 
     def jours_accompagnement_restants(self) -> int:
         total = self.formation.jours_pour_niveau(self.niveau)
         utilises = len(self.seances_accompagnement)
         return max(0, total - utilises)
-
 
 class SeanceAccompagnement(Base):
     __tablename__ = "seances_accompagnement"
@@ -239,7 +225,6 @@ class SeanceAccompagnement(Base):
     date_seance = Column(DateTime, default=datetime.utcnow)
 
     acces = relationship("AccesFormation", back_populates="seances_accompagnement")
-
 
 class ValidationChapitre(Base):
     __tablename__ = "validations_chapitres"
@@ -253,13 +238,11 @@ class ValidationChapitre(Base):
     eleve = relationship("Eleve", back_populates="validations")
     chapitre = relationship("Chapitre", back_populates="validations")
 
-
 def sequence_chapitres(formation: Formation) -> list:
     chapitres = []
     for module in formation.modules:
         chapitres.extend(module.chapitres)
     return sorted(chapitres, key=lambda c: c.ordre)
-
 
 def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -> bool:
     if formation.nb_niveaux <= 1:
@@ -269,7 +252,6 @@ def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -
     if niveau_eleve < chapitre.niveau_requis:
         return False
     return True
-
 
 def chapitre_est_accessible(session, eleve_id: int, chapitre, acces=None) -> tuple:
     formation = chapitre.module.formation
@@ -301,7 +283,6 @@ def chapitre_est_accessible(session, eleve_id: int, chapitre, acces=None) -> tup
         break
     return True, ""
 
-
 def progression_pourcentage(session, eleve_id: int, formation, acces=None) -> float:
     if acces is None:
         acces = (
@@ -323,8 +304,6 @@ def progression_pourcentage(session, eleve_id: int, formation, acces=None) -> fl
     )
     return round(100 * valides / len(seq_visible), 1)
 
-
-
 def module_est_termine(session: Session, eleve_id: int, module: Module) -> bool:
     chapitre_ids = [c.id for c in module.chapitres]
     if not chapitre_ids:
@@ -336,12 +315,10 @@ def module_est_termine(session: Session, eleve_id: int, module: Module) -> bool:
     )
     return nb_valides == len(chapitre_ids)
 
-
 def formation_est_terminee(session: Session, eleve_id: int, formation: Formation) -> bool:
     if not formation.modules:
         return False
     return all(module_est_termine(session, eleve_id, m) for m in formation.modules)
-
 
 def dupliquer_chapitre(session: Session, chapitre_id: int) -> Chapitre:
     original = session.get(Chapitre, chapitre_id)
@@ -365,12 +342,11 @@ def dupliquer_chapitre(session: Session, chapitre_id: int) -> Chapitre:
     session.commit()
     return copie
 
-
 def deplacer_chapitre_vers_module(session: Session, chapitre_id: int, nouveau_module_id: int) -> None:
     chapitre = session.get(Chapitre, chapitre_id)
     nouveau_module = session.get(Module, nouveau_module_id)
     if nouveau_module.formation_id != chapitre.module.formation_id:
-        raise ValueError("Impossible de déplacer un chapitre vers une autre formation")
+        raise ValueError("Impossible de deplacer un chapitre vers une autre formation")
     dernier_ordre = (
         session.query(Chapitre)
         .join(Module)
@@ -382,7 +358,6 @@ def deplacer_chapitre_vers_module(session: Session, chapitre_id: int, nouveau_mo
     chapitre.ordre = (dernier_ordre.ordre + 1) if dernier_ordre else 1
     session.commit()
 
-
 def valider_chapitre(session: Session, eleve_id: int, chapitre_id: int) -> None:
     existe = (
         session.query(ValidationChapitre)
@@ -392,7 +367,6 @@ def valider_chapitre(session: Session, eleve_id: int, chapitre_id: int) -> None:
     if existe is None:
         session.add(ValidationChapitre(eleve_id=eleve_id, chapitre_id=chapitre_id))
         session.commit()
-
 
 def dupliquer_formation(session: Session, formation_id: int) -> Formation:
     original = session.get(Formation, formation_id)
@@ -431,11 +405,10 @@ def dupliquer_formation(session: Session, formation_id: int) -> Formation:
     session.commit()
     return copie
 
-
 if __name__ == "__main__":
     engine = create_engine("sqlite:///lms_prototype.db", echo=False)
     Base.metadata.create_all(engine)
-    print("Structure de données créée avec succès dans lms_prototype.db")
+    print("Structure de donnees creee avec succes dans lms_prototype.db")
 
 class CercleFemmes(Base):
     """Bloc unique ('singleton') pour annoncer le prochain Cercle de Femmes
@@ -445,25 +418,24 @@ class CercleFemmes(Base):
 
     id = Column(Integer, primary_key=True)
     titre = Column(String(200), default="Cercle de Femmes")
-    date_evenement = Column(String(150))   # texte libre, ex: "Samedi 12 septembre 2026, 14h-17h"
-    lieu = Column(String(300))             # ex: "Cabinet de Véranne (42520)"
-    description_html = Column(Text)        # thème, déroulé, informations pratiques
-    photo_url = Column(Text)               # optionnel, image encodée en base64
+    date_evenement = Column(String(150)) # texte libre, ex: "Samedi 12 septembre 2026, 14h-17h"
+    lieu = Column(String(300))           # ex: "Cabinet de Veranne (42520)"
+    description_html = Column(Text)      # theme, deroulé, informations pratiques
+    photo_url = Column(Text)             # optionnel, image encodee en base64
     publie = Column(Boolean, default=True) # si False, le site affiche un message d'attente
     mis_a_jour_le = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-
 def obtenir_ou_creer_cercle_femmes(session: Session) -> "CercleFemmes":
-    """Il n'existe qu'une seule fiche 'prochain cercle' à la fois -- on la
-    récupère si elle existe, sinon on la crée avec des valeurs de départ
-    réalistes (Laurence les modifiera ensuite depuis l'admin)."""
+    """Il n'existe qu'une seule fiche 'prochain cercle' a la fois -- on la
+    recupere si elle existe, sinon on la cree avec des valeurs de depart
+    realistes (Laurence les modifiera ensuite depuis l'admin)."""
     cercle = session.query(CercleFemmes).first()
     if cercle is None:
         cercle = CercleFemmes(
-            titre="Cercle de Femmes de rentrée",
+            titre="Cercle de Femmes de rentree",
             date_evenement="Mercredi 10 septembre 2026, 14h-17h",
-            lieu="Cabinet de Véranne (42520)",
-            description_html="Un cercle pour se retrouver après l'été, se relier à son cycle et à la puissance du féminin sacré. Places limitées, inscription par message.",
+            lieu="Cabinet de Veranne (42520)",
+            description_html="Un cercle pour se retrouver apres l'ete, se relier a son cycle et a la puissance du feminin sacre. Places limitees, inscription par message.",
             photo_url="images/laurence-huiles-cadran.jpg",
             publie=True,
         )
