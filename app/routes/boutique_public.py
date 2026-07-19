@@ -24,51 +24,62 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
     resultat = []
     for f in formations:
         tarifs = [t for t in f.tarifs if t.actif]
-        if not tarifs:
-            continue
         resultat.append({
-            "formation_id": f.id,
+            "id": f.id,
             "titre": f.titre,
-            "image_url": f.image_url,
             "description_courte": f.description_courte,
+            "image_url": f.image_url,
             "tarifs": [
                 {
-                    "tarif_id": t.id,
+                    "id": t.id,
                     "nom_option": t.nom_option,
-                    "prix": float(t.prix),
-                    "prix_final": t.prix_final(),
-                    "en_promo": t.promo_active,
-                    "autoriser_3x": t.autoriser_3x,
-                    "cumulable": t.cumulable,
-                    "niveau": t.niveau,
-                    "contenu_ajoute": t.contenu_ajoute,
+                    "prix": float(t.prix_final()),
+                    "prix_barre": float(t.prix) if t.prix_final() < float(t.prix) else None,
                 }
-                for t in sorted(tarifs, key=lambda t: t.ordre)
+                for t in tarifs
             ],
         })
     return resultat
 
-class ApercuPanierRequete(BaseModel):
-    tarif_ids: list[int] = []
-    montee_tarif_ids: list[int] = []
-    code_promo: str | None = None
 
-@router.post("/eleve/panier/apercu")
-def apercu_panier(
-    requete: ApercuPanierRequete,
+class ArticlesPanier(BaseModel):
+    articles: list[dict]  # [{tarif_id: int, quantite: int}]
+
+
+@router.post("/public/apercu-panier")
+def apercu_panier(body: ArticlesPanier, session: Session = Depends(obtenir_session)):
+    """Calcule le montant total d'un panier sans créer de commande.
+    Utilisé par le tunnel de paiement côté client pour afficher les totaux."""
+    return calculer_panier(body.articles, session)
+
+
+@router.get("/public/formations/{formation_id}/montee-niveau")
+def monter_niveau(
+    formation_id: int,
     eleve: Eleve = Depends(eleve_connecte),
     session: Session = Depends(obtenir_session),
 ):
-    """Calcule le récapitulatif du panier -- mêmes règles de calcul que la
-    vraie création de paiement, pour ne jamais afficher un prix différent
-    de ce qui sera réellement facturé. Le panier peut mélanger des achats
-    neufs (tarif_ids) et des montées de niveau (montee_tarif_ids)."""
-    if not requete.tarif_ids and not requete.montee_tarif_ids:
-        return {"lignes": [], "total": 0, "code_applique": None, "erreur_code": None, "trois_x_disponible": False}
-    return calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id, requete.montee_tarif_ids)
+    """Retourne les propositions de passage au niveau supérieur pour un élève
+    sur une formation donnée -- formations plus complètes, avec le delta à payer."""
+    formation = session.get(Formation, formation_id)
+    if not formation:
+        raise HTTPException(status_code=404, detail="Formation introuvable")
+    return propositions_montee_niveau(eleve, formation, session)
 
-@router.get("/eleve/montees-de-niveau")
-def lire_montees_de_niveau(eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
-    """Renvoie les propositions de montée en niveau pour l'élève connecté --
-    consommé à la fois par le tableau de bord et par le catalogue."""
-    return propositions_montee_niveau(session, eleve.id)
+
+@router.get("/api/tarifs-site")
+def tarifs_site(session: Session = Depends(obtenir_session)):
+    """Endpoint public CORS pour le site vitrine — retourne les tarifs actifs
+    de toutes les formations. Permet au site statique d'afficher les prix à jour."""
+    formations = session.query(Formation).filter_by(actif=True).all()
+    result = []
+    for f in formations:
+        tarifs_actifs = [t for t in f.tarifs if t.actif]
+        for t in tarifs_actifs:
+            result.append({
+                "formation": f.titre,
+                "nom_option": t.nom_option,
+                "prix": float(t.prix_final()),
+                "prix_barre": float(t.prix) if t.prix_final() < float(t.prix) else None,
+            })
+    return result
