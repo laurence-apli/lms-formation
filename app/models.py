@@ -94,7 +94,11 @@ class Chapitre(Base):
     id = Column(Integer, primary_key=True)
     module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
     titre = Column(String(200), nullable=False)
-    contenu_html = Column(Text)
+    # CORRECTION TRANSFERT NEON : contenu_html peut contenir des Mo d'images base64.
+    # deferred=True évite de le charger lors des requêtes en masse (ex : validation
+    # de chapitre avec selectinload sur toute la formation). Il n'est chargé que
+    # lorsque explicitement accédé (route detail_chapitre, édition admin).
+    contenu_html = Column(Text, deferred=True)
     ordre = Column(Integer, nullable=False)
     niveau_requis = Column(Integer, nullable=False, default=1)
     fichier_recu_nom = Column(String(300))
@@ -169,8 +173,11 @@ class Administrateur(Base):
     email = Column(String(200), nullable=False, unique=True)
     telephone = Column(String(50))
     mot_de_passe_hash = Column(String(255))
-    photo_url = Column(Text)
-    logo_url = Column(Text)
+    # CORRECTION TRANSFERT NEON : photo_url et logo_url sont des images base64
+    # potentiellement lourdes. deferred=True évite de les charger dans les requêtes
+    # d'authentification et autres requêtes qui n'ont pas besoin des images.
+    photo_url = Column(Text, deferred=True)
+    logo_url = Column(Text, deferred=True)
     lien_github = Column(String(500))
     lien_render = Column(String(500))
     lien_neon = Column(String(500))
