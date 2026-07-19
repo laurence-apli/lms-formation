@@ -5,6 +5,7 @@ d'accompagnement, diplômes, et la création de compte avec envoi d'e-mail
 automatique de première connexion.
 """
 import re
+from datetime import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,7 @@ from ..models import (
     progression_pourcentage,
 )
 from .auth import admin_connecte, creer_token_premiere_connexion
+from ..emails import email_coaching_rdv
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -293,3 +295,78 @@ def statistiques_connexions(session: Session = Depends(obtenir_session)):
         })
     resultats.sort(key=lambda x: x["nb_connexions"], reverse=True)
     return resultats
+
+# ---------------------------------------------------------------------------
+# Coaching -- gestion des séances d'accompagnement
+# ---------------------------------------------------------------------------
+
+@router.post("/eleves/{eleve_id}/coaching/envoyer")
+def coaching_envoyer_lien(
+    eleve_id: int,
+    lien_resalib: str = Form(...),
+    session: Session = Depends(obtenir_session),
+):
+    """Admin envoie manuellement un lien coaching à la cliente (séances 2, 3…)."""
+    acces = session.query(AccesFormation).filter_by(eleve_id=eleve_id).first()
+    if acces is None:
+        raise HTTPException(status_code=404, detail="Accès formation introuvable.")
+    eleve = session.get(Eleve, eleve_id)
+    if eleve is None:
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
+
+    seance = SeanceAccompagnement(
+        acces_id=acces.id,
+        lien_resalib=lien_resalib,
+        type_envoi="manuel",
+        statut="en_attente",
+    )
+    session.add(seance)
+    session.commit()
+    session.refresh(seance)
+
+    email_coaching_rdv(
+        destinataire=eleve.email,
+        prenom=eleve.prenom,
+        lien_resalib=lien_resalib,
+        titre_formation=acces.formation.titre,
+    )
+    return {"ok": True, "seance_id": seance.id}
+
+
+@router.post("/eleves/{eleve_id}/seances/{seance_id}/realiser")
+def coaching_marquer_realise(
+    eleve_id: int,
+    seance_id: int,
+    session: Session = Depends(obtenir_session),
+):
+    """Admin marque une séance comme réalisée — le compteur avance d'une unité."""
+    seance = session.get(SeanceAccompagnement, seance_id)
+    if seance is None or seance.acces.eleve_id != eleve_id:
+        raise HTTPException(status_code=404, detail="Séance introuvable.")
+    seance.statut = "realise"
+    seance.date_realise = datetime.utcnow()
+    session.commit()
+    return {"ok": True}
+
+
+@router.get("/eleves/{eleve_id}/coaching/historique")
+def coaching_historique(
+    eleve_id: int,
+    session: Session = Depends(obtenir_session),
+):
+    """Retourne toutes les séances coaching de cet élève avec leur statut."""
+    acces_list = session.query(AccesFormation).filter_by(eleve_id=eleve_id).all()
+    seances = []
+    for acces in acces_list:
+        for s in acces.seances_accompagnement:
+            seances.append({
+                "id": s.id,
+                "formation": acces.formation.titre,
+                "date_seance": s.date_seance.isoformat(),
+                "lien_resalib": s.lien_resalib,
+                "type_envoi": s.type_envoi,
+                "statut": s.statut,
+                "date_realise": s.date_realise.isoformat() if s.date_realise else None,
+            })
+    seances.sort(key=lambda x: x["date_seance"], reverse=True)
+    return {"seances": seances}
