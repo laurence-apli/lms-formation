@@ -81,7 +81,7 @@ let codeApplique = null;
 async function chargerTout() {
   const [cat, montees, tableauDeBord] = await Promise.all([
     fetch('/public/catalogue').then(r => r.json()),
-    fetch('/eleve/montees-de-niveau').then(r => r.ok ? r.json() : []).catch(() => []),
+    fetch('/api/eleve/montees-de-niveau').then(r => r.ok ? r.json() : []).catch(() => []),
     fetch('/api/eleve/tableau-de-bord').then(r => r.ok ? r.json() : null).catch(() => null),
   ]);
   catalogue = cat;
