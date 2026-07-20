@@ -106,21 +106,23 @@ async function chargerTout() {
     </div>
   `).join('');
 
-  const formationsAProposer = catalogue.filter(f => !idsDejaAcquis.has(f.formation_id));
+  const formationsAProposer = catalogue.filter(f => !idsDejaAcquis.has(f.id));
+  const formationsAcquises = catalogue.filter(f => idsDejaAcquis.has(f.id));
+  const htmlAcquises = formationsAcquises.length ? formationsAcquises.map(f => `<div class="formation-achetee"><p class="f-titre">${f.titre}</p><a href="/eleve/formation/${f.id}" class="btn-acceder">Accéder à ma formation →</a></div>`).join('') : '';
 
   if (formationsAProposer.length === 0) {
-    document.getElementById('zone-formations').innerHTML = montees.length
+    document.getElementById('zone-formations').innerHTML = htmlAcquises + (montees.length
       ? ''
-      : '<p style="color:var(--leger);font-size:13px">Tu as déjà accès à toutes les formations disponibles pour le moment.</p>';
+      : '<p style="color:var(--leger);font-size:13px">Tu as déjà accès à toutes les formations disponibles pour le moment.</p>');
   } else {
-    document.getElementById('zone-formations').innerHTML = formationsAProposer.map(f => {
+    document.getElementById('zone-formations').innerHTML = htmlAcquises + formationsAProposer.map(f => {
       if (f.tarifs.length === 1) {
         const t = f.tarifs[0];
         return `
-        <div class="formation-bloc" onclick="toggleSimple(${t.tarif_id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix_final})">
+        <div class="formation-bloc" onclick="toggleSimple(${t.id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix_final})">
           <div class="f-row">
             <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
-            <div class="f-check" id="check-${t.tarif_id}"></div>
+            <div class="f-check" id="check-${t.id}"></div>
             <div>
               <p class="f-titre">${f.titre}</p>
               <p class="f-desc-courte">${f.description_courte || ''}</p>
@@ -136,7 +138,7 @@ async function chargerTout() {
           var trait = i < f.tarifs.length - 1 ? '<span class="niveau-trait"></span>' : '';
           var promo = t.en_promo ? '<span class="prix-barre">' + t.prix + ' €</span> ' : '';
           var detail = t.contenu_ajoute ? '<p class="niveau-detail">' + t.contenu_ajoute + '</p>' : '';
-          niveauxHtml += '<div class="niveau-row opt-row" id="opt-' + t.tarif_id + '" data-formation="' + f.titre.replace(/"/g, '&quot;') + '" data-tarif="' + t.tarif_id + '" data-niveau="' + t.nom_option.replace(/"/g, '&quot;') + '" data-prix="' + t.prix_final + '" onclick="choisirOption(this.dataset.formation, parseInt(this.dataset.tarif), this.dataset.niveau, parseFloat(this.dataset.prix))">';
+          niveauxHtml += '<div class="niveau-row opt-row" id="opt-' + t.id + '" data-formation="' + f.titre.replace(/"/g, '&quot;') + '" data-tarif="' + id + '" data-niveau="' + t.nom_option.replace(/"/g, '&quot;') + '" data-prix="' + t.prix_final + '" onclick="choisirOption(this.dataset.formation, parseInt(this.dataset.tarif), this.dataset.niveau, parseFloat(this.dataset.prix))">';
           niveauxHtml += '<div class="niveau-marqueur"><span class="niveau-point">' + (i + 1) + '</span>' + trait + '</div>';
           niveauxHtml += '<div class="niveau-contenu"><div class="niveau-entete"><span class="niveau-nom">' + t.nom_option + '</span><span class="niveau-prix">' + promo + t.prix_final + ' €</span></div>' + detail + '</div></div>';
         }
