@@ -2,68 +2,65 @@
 {% block titre %}{{ formation.titre }} — Administration{% endblock %}
 {% block contenu %}
 <style>
-  .formation-layout { display:flex; gap:24px; align-items:flex-start; }
-  .sommaire-panel { width:280px; flex-shrink:0; background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
-  .sommaire-item-formation { padding:14px 16px; font-family:'EB Garamond',serif; font-weight:600; font-size:15px; cursor:pointer; border-bottom:1px solid var(--border); background:#FBF7EE; }
-  .sommaire-item-formation:hover { background:var(--cream); }
-  .sommaire-item-formation.actif { background:var(--ink); color:#F5EDD6; }
-  .sommaire-module { padding:10px 16px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; letter-spacing:.03em; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:6px; }
-  .sommaire-module:hover { background:var(--cream); }
-  .sommaire-module.actif { background:var(--ink); color:#F5EDD6; }
-  .sommaire-chapitre { padding:9px 16px 9px 30px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-  .sommaire-chapitre:hover { background:var(--cream); }
-  .sommaire-chapitre.actif { background:var(--ink); color:#F5EDD6; }
-  .sommaire-chapitre .puce { width:6px; height:6px; border-radius:50%; background:var(--grey); flex-shrink:0; }
-  .sommaire-add-chapitre { padding:8px 16px 8px 30px; font-size:12px; color:var(--gold); cursor:pointer; border-bottom:1px solid var(--border); }
-  .niveau-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; }
-  .niveau-1 { background:#EFEAE0; color:#6B6354; }
-  .niveau-2 { background:#F5E3D0; color:#95621E; }
-  .niveau-3 { background:#F5DCD3; color:#A1432A; }
-  .contenu-panel { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:24px; min-width:0; }
-  .contenu-panel h2 { font-family:'EB Garamond',serif; font-size:22px; margin:0 0 4px; }
-  .contenu-panel .sous-titre { font-size:13px; color:var(--grey); margin-bottom:18px; }
-  .presentation-display { background:#FBF7EE; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:14px; line-height:1.6; min-height:60px; margin-bottom:16px; }
-  .presentation-display.vide { color:var(--grey); font-style:italic; }
-
-  /* --- Styles du contenu importé depuis Word (word_to_web.py) --- */
-  .presentation-display .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
-  .presentation-display .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
-  .presentation-display .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
-  .presentation-display .gold-rule-thin { border:none; border-top:1.5px solid var(--gold); margin:20px 0; }
-  .presentation-display .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
-  .presentation-display .standard-list { padding-left:22px; margin:12px 0; }
-  .presentation-display .standard-list li { margin-bottom:6px; }
-  .presentation-display .pull-quote { background:linear-gradient(135deg,#FBF0DA,#F5E6C8); border:1px solid #E3C988; border-radius:10px; padding:20px 24px; margin:20px 0; text-align:center; }
-  .presentation-display .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
-  .presentation-display .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
-  .presentation-display .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
-  .presentation-display .compare-col { border-radius:10px; padding:16px 18px; }
-  .presentation-display .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
-  .presentation-display .compare-col.after { background:#EAF2EC; border:1px solid #C3DECB; }
-  .presentation-display .compare-col .ct-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.04em; margin-bottom:8px; }
-  .presentation-display .compare-col ul { margin:0; padding-left:18px; }
-  .import-zone { border:1.5px dashed var(--border); border-radius:8px; padding:20px; text-align:center; font-size:13px; color:var(--grey); margin-top:8px; }
-  .medias-liste { margin-top:6px; }
-  .media-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:6px; margin-bottom:6px; font-size:13px; }
-  .media-row button { border:none; background:none; cursor:pointer; color:var(--grey); }
-  .media-row button:hover { color:var(--danger); }
-  .move-select { font-size:12px; border:1px solid var(--border); border-radius:4px; padding:3px 4px; }
-
-  /* CORRECTION : boutons de déplacement ▲▼ */
-  .btns-ordre { display:flex; flex-direction:column; gap:1px; margin-right:2px; }
-  .btn-ordre { background:none; border:1px solid var(--border); color:var(--grey); border-radius:3px; padding:0 4px; cursor:pointer; font-size:10px; line-height:16px; }
-  .btn-ordre:hover { border-color:var(--gold); color:var(--gold); background:#FBF7EE; }
-  .sommaire-module.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
-  .sommaire-module.actif .btn-ordre:hover { border-color:white; color:white; }
-  .sommaire-chapitre.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
-  .sommaire-chapitre.actif .btn-ordre:hover { border-color:white; color:white; }
+.formation-layout { display:flex; gap:24px; align-items:flex-start; }
+.sommaire-panel { width:280px; flex-shrink:0; background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.sommaire-item-formation { padding:14px 16px; font-family:'EB Garamond',serif; font-weight:600; font-size:15px; cursor:pointer; border-bottom:1px solid var(--border); background:#FBF7EE; }
+.sommaire-item-formation:hover { background:var(--cream); }
+.sommaire-item-formation.actif { background:var(--ink); color:#F5EDD6; }
+.sommaire-module { padding:10px 16px; font-family:'League Spartan',sans-serif; font-weight:600; font-size:12px; letter-spacing:.03em; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; gap:6px; }
+.sommaire-module:hover { background:var(--cream); }
+.sommaire-module.actif { background:var(--ink); color:#F5EDD6; }
+.sommaire-chapitre { padding:9px 16px 9px 30px; font-size:13px; cursor:pointer; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+.sommaire-chapitre:hover { background:var(--cream); }
+.sommaire-chapitre.actif { background:var(--ink); color:#F5EDD6; }
+.sommaire-chapitre .puce { width:6px; height:6px; border-radius:50%; background:var(--grey); flex-shrink:0; }
+.sommaire-add-chapitre { padding:8px 16px 8px 30px; font-size:12px; color:var(--gold); cursor:pointer; border-bottom:1px solid var(--border); }
+.niveau-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; }
+.niveau-1 { background:#EFEAE0; color:#6B6354; }
+.niveau-2 { background:#F5E3D0; color:#95621E; }
+.niveau-3 { background:#F5DCD3; color:#A1432A; }
+.contenu-panel { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:24px; min-width:0; }
+.contenu-panel h2 { font-family:'EB Garamond',serif; font-size:22px; margin:0 0 4px; }
+.contenu-panel .sous-titre { font-size:13px; color:var(--grey); margin-bottom:18px; }
+.presentation-display { background:#FBF7EE; border:1px solid var(--border); border-radius:8px; padding:16px; font-size:14px; line-height:1.6; min-height:60px; margin-bottom:16px; }
+.presentation-display.vide { color:var(--grey); font-style:italic; }
+.presentation-display .chapter-title { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; text-align:center; }
+.presentation-display .section-title { font-family:'League Spartan',sans-serif; font-size:15px; font-weight:700; letter-spacing:.04em; color:var(--gold); margin:24px 0 10px; text-transform:uppercase; }
+.presentation-display .accent-line { font-style:italic; color:var(--rose); text-align:center; font-size:15px; margin:14px 0; }
+.presentation-display .gold-rule-thin { border:none; border-top:1.5px solid var(--gold); margin:20px 0; }
+.presentation-display .chapter-image { max-width:100%; border-radius:8px; margin:14px 0; display:block; }
+.presentation-display .standard-list { padding-left:22px; margin:12px 0; }
+.presentation-display .standard-list li { margin-bottom:6px; }
+.presentation-display .pull-quote { background:linear-gradient(135deg,#FBF0DA,#F5E6C8); border:1px solid #E3C988; border-radius:10px; padding:20px 24px; margin:20px 0; text-align:center; }
+.presentation-display .pull-quote .pq-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.06em; color:#95621E; margin-bottom:8px; }
+.presentation-display .pull-quote .pq-body { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--ink); }
+.presentation-display .compare-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+.presentation-display .compare-col { border-radius:10px; padding:16px 18px; }
+.presentation-display .compare-col.before { background:#F5EDE9; border:1px solid #E3CFC6; }
+.presentation-display .compare-col.after { background:#EAF2EC; border:1px solid #C3DECB; }
+.presentation-display .compare-col .ct-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; letter-spacing:.04em; margin-bottom:8px; }
+.presentation-display .compare-col ul { margin:0; padding-left:18px; }
+.import-zone { border:1.5px dashed var(--border); border-radius:8px; padding:20px; text-align:center; font-size:13px; color:var(--grey); margin-top:8px; }
+.medias-liste { margin-top:6px; }
+.media-row { display:flex; align-items:center; gap:10px; padding:8px 12px; background:var(--panel); border:1px solid var(--border); border-radius:6px; margin-bottom:6px; font-size:13px; }
+.media-row button { border:none; background:none; cursor:pointer; color:var(--grey); }
+.media-row button:hover { color:var(--danger); }
+.move-select { font-size:12px; border:1px solid var(--border); border-radius:4px; padding:3px 4px; }
+.btns-ordre { display:flex; flex-direction:column; gap:1px; margin-right:2px; }
+.btn-ordre { background:none; border:1px solid var(--border); color:var(--grey); border-radius:3px; padding:0 4px; cursor:pointer; font-size:10px; line-height:16px; }
+.btn-ordre:hover { border-color:var(--gold); color:var(--gold); background:#FBF7EE; }
+.sommaire-module.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
+.sommaire-module.actif .btn-ordre:hover { border-color:white; color:white; }
+.sommaire-chapitre.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
+.sommaire-chapitre.actif .btn-ordre:hover { border-color:white; color:white; }
+.coaching-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; background:#E4F0E8; color:#3B8C5A; margin-left:8px; }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/formations">Formations</a> / {{ formation.titre }}</div>
 <div class="topbar"><div><h1>{{ formation.titre }}</h1></div></div>
 <div class="formation-layout">
-  <div class="sommaire-panel" id="sommaire"></div>
-  <div class="contenu-panel" id="contenu">Chargement…</div>
+<div class="sommaire-panel" id="sommaire"></div>
+<div class="contenu-panel" id="contenu">Chargement…</div>
 </div>
 
 {% endblock %}
@@ -113,6 +110,7 @@ function renderSommaire() {
         </div>
         <span class="puce"></span>
         <span style="flex:1;" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">${ci+1}. ${esc(c.titre)}</span>
+        ${c.lien_coaching ? '📧' : ''}
       </div>`;
     });
 
@@ -122,7 +120,6 @@ function renderSommaire() {
   document.getElementById('sommaire').innerHTML = html;
 }
 
-// CORRECTION : déplacement module via route existante /admin/modules/{id}/deplacer
 async function deplacerModule(moduleId, direction) {
   const data = new FormData();
   data.append('direction', direction);
@@ -130,7 +127,6 @@ async function deplacerModule(moduleId, direction) {
   await charger();
 }
 
-// CORRECTION : déplacement chapitre via route existante /admin/chapitres/{id}/deplacer
 async function deplacerChapitre(chapId, direction) {
   const data = new FormData();
   data.append('direction', direction);
@@ -176,8 +172,11 @@ function renderContenu() {
     const c = getChapitre(noeudActif.moduleId, noeudActif.chapId);
     const autresModules = f.modules.filter(mm => mm.id !== m.id);
     zone.innerHTML = `
-      <h2>${esc(c.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${c.niveau_requis}">Niveau ${c.niveau_requis}</span>` : ''}</h2>
+      <h2>${esc(c.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${c.niveau_requis}">Niveau ${c.niveau_requis}</span>` : ''}
+        ${c.lien_coaching ? '<span class="coaching-badge">📧 Email coaching actif</span>' : ''}
+      </h2>
       <div class="sous-titre">Module : ${esc(m.titre)}</div>
+      ${c.lien_coaching ? `<div style="background:#F0F8F2; border:1px solid #C3DECB; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px;">🔗 Lien coaching : <a href="${esc(c.lien_coaching)}" target="_blank" style="color:var(--gold);">${esc(c.lien_coaching)}</a></div>` : ''}
       <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l\'instant.'}</div>
       ${zoneImport('chapitre', c.id, c.titre)}
       <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
@@ -199,10 +198,10 @@ function renderContenu() {
         <button class="btn" onclick="ouvrirModalEditerChapitre(${m.id}, ${c.id})">✎ Modifier</button>
         <button class="btn" onclick="dupliquerChapitre(${c.id})">⧉ Dupliquer</button>
         ${autresModules.length ? `
-          <select class="move-select" onchange="if(this.value) deplacerChapitreVersModule(${c.id}, parseInt(this.value)); this.value='';">
-            <option value="">↪ Déplacer vers…</option>
-            ${autresModules.map(am => `<option value="${am.id}">${esc(am.titre)}</option>`).join('')}
-          </select>` : ''}
+        <select class="move-select" onchange="if(this.value) deplacerChapitreVersModule(${c.id}, parseInt(this.value)); this.value='';">
+          <option value="">↪ Déplacer vers…</option>
+          ${autresModules.map(am => `<option value="${am.id}">${esc(am.titre)}</option>`).join('')}
+        </select>` : ''}
         <button class="btn btn-danger-outline" onclick="supprimerChapitre(${c.id})">Supprimer</button>
       </div>`;
   }
@@ -212,9 +211,9 @@ function zoneImport(type, id, nomActuel) {
   const inputId = `fichier-${type}-${id}`;
   return `
     <div class="import-zone" id="zone-${inputId}"
-         ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
-         ondragleave="this.style.borderColor='var(--border)';"
-         ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerWord('${type}', ${id}, event.dataTransfer.files[0]);">
+      ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
+      ondragleave="this.style.borderColor='var(--border)';"
+      ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerWord('${type}', ${id}, event.dataTransfer.files[0]);">
       📄 Glisser un fichier Word ici, ou
       <label for="${inputId}" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
       <input type="file" id="${inputId}" accept=".docx" style="display:none;" onchange="importerWord('${type}', ${id}, this.files[0])">
@@ -230,8 +229,8 @@ async function importerWord(type, id, fichier) {
   data.append('fichier', fichier);
   try {
     const url = type === 'formation' ? `/admin/formations/${id}/importer-word`
-      : type === 'module' ? `/admin/modules/${id}/importer-word`
-      : `/admin/chapitres/${id}/importer-word`;
+              : type === 'module' ? `/admin/modules/${id}/importer-word`
+              : `/admin/chapitres/${id}/importer-word`;
     const resultat = await appelApi(url, { method: 'POST', body: data });
     afficherToast(`Fichier "${resultat.fichier}" importé avec succès`);
     await charger();
@@ -274,7 +273,7 @@ function ouvrirModalEditerFormation() {
       <div id="zone-erreur-modal"></div>
       <label>Titre</label><input type="text" id="input-titre" value="${esc(f.titre)}">
       <label>Couleur</label><input type="color" id="input-couleur" value="${f.couleur}">
-      <label>Ordre d'affichage (les formations avec un chiffre plus petit apparaissent en premier)</label><input type="number" id="input-ordre-affichage" value="${f.ordre_affichage || 0}">
+      <label>Ordre d'affichage</label><input type="number" id="input-ordre-affichage" value="${f.ordre_affichage || 0}">
       <label>Nombre de niveaux</label>
       <select id="input-nb-niveaux" onchange="majChampsJours()">
         <option value="1" ${f.nb_niveaux===1?'selected':''}>1 niveau</option>
@@ -294,10 +293,7 @@ function majChampsJours() {
   const nb = parseInt(document.getElementById('input-nb-niveaux').value);
   const bloc = document.getElementById('bloc-jours');
   const existants = {};
-  bloc.querySelectorAll('input').forEach(inp => {
-    const n = inp.id.split('-').pop();
-    existants[n] = inp.value;
-  });
+  bloc.querySelectorAll('input').forEach(inp => { const n = inp.id.split('-').pop(); existants[n] = inp.value; });
   bloc.innerHTML = Array.from({length: nb}, (_, i) => i+1).map(n => `
     <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
       <span style="font-size:13px; width:70px;">Niveau ${n}</span>
@@ -308,15 +304,12 @@ function majChampsJours() {
 
 async function enregistrerFormation() {
   const titre = document.getElementById('input-titre').value.trim();
-  if (!titre) {
-    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>';
-    return;
-  }
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
   const nbNiveaux = parseInt(document.getElementById('input-nb-niveaux').value);
   const data = new FormData();
   data.append('titre', titre);
   data.append('couleur', document.getElementById('input-couleur').value);
-    data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
+  data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
@@ -438,6 +431,9 @@ function modalChapitreHtml(moduleId, c) {
       <label>Titre du chapitre</label>
       <input type="text" id="input-titre" value="${c ? esc(c.titre) : ''}">
       ${niveauOptions}
+      <label>Lien coaching Resalib <span style="font-weight:400; color:var(--grey);">(optionnel — déclenche un email automatique à la validation)</span></label>
+      <input type="url" id="input-lien-coaching" placeholder="https://www.resalib.fr/praticien/..." value="${c ? esc(c.lien_coaching || '') : ''}">
+      <div class="helper-text">Si renseigné, l'élève reçoit automatiquement un email avec ce lien dès qu'il valide ce chapitre.</div>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
         <button class="btn btn-primary" onclick="${c ? `enregistrerChapitre(${moduleId}, ${c.id})` : `creerChapitre(${moduleId})`}">${c ? 'Enregistrer' : 'Créer'}</button>
@@ -451,6 +447,7 @@ async function creerChapitre(moduleId) {
   const data = new FormData();
   data.append('titre', titre);
   data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  data.append('lien_coaching', document.getElementById('input-lien-coaching').value.trim());
   const c = await appelApi(`/admin/modules/${moduleId}/chapitres`, { method: 'POST', body: data });
   fermerModal();
   afficherToast('Chapitre créé');
@@ -464,6 +461,7 @@ async function enregistrerChapitre(moduleId, chapId) {
   const data = new FormData();
   data.append('titre', titre);
   data.append('niveau_requis', document.getElementById('input-niveau') ? document.getElementById('input-niveau').value : '1');
+  data.append('lien_coaching', document.getElementById('input-lien-coaching').value.trim());
   await appelApi(`/admin/chapitres/${chapId}`, { method: 'PUT', body: data });
   fermerModal();
   afficherToast('Chapitre modifié');
@@ -529,9 +527,9 @@ function majFormulaireMedia() {
     zone.innerHTML = `
       <label>Fichier</label>
       <div class="import-zone" id="zone-fichier-media"
-           ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
-           ondragleave="this.style.borderColor='var(--border)';"
-           ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; recevoirFichierMedia(event.dataTransfer.files[0]);">
+        ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
+        ondragleave="this.style.borderColor='var(--border)';"
+        ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; recevoirFichierMedia(event.dataTransfer.files[0]);">
         📎 Glisser le fichier ici, ou
         <label for="input-fichier-media" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
         <input type="file" id="input-fichier-media" accept="${accept}" style="display:none;" onchange="recevoirFichierMedia(this.files[0])">
