@@ -14,6 +14,7 @@ from ..models import (
 )
 from .auth import eleve_connecte
 from ..emails import email_coaching_rdv
+from .boutique_models import propositions_montee_niveau
 
 router = APIRouter(prefix="/api/eleve", dependencies=[Depends(eleve_connecte)])
 
@@ -214,3 +215,12 @@ def valider_chapitre_eleve(
     )
     nouvelle_progression = progression_pourcentage(session, eleve.id, formation, acces=acces)
     return {"ok": True, "progression": nouvelle_progression}
+
+@router.get("/montees-de-niveau")
+def montees_de_niveau(
+    eleve: Eleve = Depends(eleve_connecte),
+    session: Session = Depends(obtenir_session),
+):
+    """Retourne toutes les propositions de mont\u00e9e de niveau pour l'\u00e9l\u00e8ve connect\u00e9,
+    toutes formations confondues."""
+    return propositions_montee_niveau(session, eleve.id)
