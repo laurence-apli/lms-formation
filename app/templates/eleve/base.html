@@ -73,6 +73,14 @@
     if (ecran) ecran.style.display = 'none';
   }, 8000);
 </script>
+<script>
+// Heartbeat DB — réveille Neon dès le chargement de n'importe quelle page
+(function() {
+  function hb() { fetch('/api/heartbeat', { method: 'GET', cache: 'no-store' }).catch(function(){}); }
+  hb(); // immédiat au chargement
+  setInterval(hb, 45 * 1000); // puis toutes les 45s
+})();
+</script>
 
 </body>
 </html>
