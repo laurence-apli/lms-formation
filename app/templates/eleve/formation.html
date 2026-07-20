@@ -258,8 +258,26 @@ async function validerChapitre(chapId) {
     if (data.progression !== undefined) {
       mettreAJourProgression(data.progression);
     }
+    // Mettre à jour l'état en mémoire (valide courant + débloque suivant)
     marquerChapitreValideLocalement(chapId);
-    selectionner({ type: 'chapitre', moduleId: noeudActif.moduleId, chapId: chapId });
+    if (data.prochain_debloque) {
+      // Naviguer automatiquement vers le chapitre suivant
+      const nextId = data.prochain_debloque;
+      const nextEl = document.querySelector(`[data-chapid='${nextId}']`);
+      const nextModuleId = nextEl ? parseInt(nextEl.dataset.moduleid) : null;
+      if (nextModuleId) {
+        selectionnerChapitre(nextModuleId, nextId);
+        return;
+      }
+    }
+    // Pas de chapitre suivant ou moduleId introuvable : mise à jour locale du DOM
+    const currEl = document.querySelector(`[data-chapid='${chapId}']`);
+    if (currEl) {
+      currEl.classList.remove('en-cours');
+      currEl.classList.add('validé');
+      const btnValider = currEl.querySelector('.btn-valider');
+      if (btnValider) btnValider.remove();
+    }
   }
 }
 
