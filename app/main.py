@@ -2,14 +2,12 @@
 Point d'entrée principal du serveur de la plateforme de formation.
 """
 import logging
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import text
-from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
 from .config import SECRET_KEY
-from .database import initialiser_base, obtenir_session
+from .database import initialiser_base
 from .routes import auth, formations, import_word, eleves, espace_eleve, profil
 from . import pages
 from . import pages_admin
@@ -60,8 +58,7 @@ from .routes import cercle_femmes
 app.include_router(cercle_femmes.router)
 
 @app.get("/ping")
-def ping(db: Session = Depends(obtenir_session)):
-    db.execute(text("SELECT 1"))
+def ping():
     return {"ok": True}
 
 
