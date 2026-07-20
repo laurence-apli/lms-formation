@@ -133,6 +133,7 @@ const FORMATION_ID = {{ formation.id }};
 {% raw %}
 let noeudActif = { type: 'formation' };
 let donneesFormation = null;
+const _chapCache = {}; // cache contenu chapitres
 
 async function chargerFormation() {
   const resp = await fetch(`/api/eleve/formations/${FORMATION_ID}`);
@@ -251,6 +252,21 @@ function selectionner(noeud) {
 // l'état déjà en mémoire, ce qui est instantané. Un seul appel réseau au
 // lieu de deux, et plus aucune requête pour retélécharger tout le contenu
 // des chapitres déjà chargés.
+function prechargerSuivant(chapId) {
+  if (!donneesFormation) return;
+  const tous = [];
+  donneesFormation.modules.forEach(m => m.chapitres.forEach(c => tous.push(c)));
+  const idx = tous.findIndex(c => c.id === chapId);
+  if (idx === -1 || idx + 1 >= tous.length) return;
+  const suivant = tous[idx + 1];
+  if (!suivant.debloque && !suivant.valide) return;
+  if (_chapCache[suivant.id]) return;
+  fetch(`/api/eleve/chapitres/${suivant.id}`)
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d && d.contenu_html) _chapCache[suivant.id] = d.contenu_html; })
+    .catch(() => {});
+}
+
 async function validerChapitre(chapId) {
   const resp = await fetch(`/api/eleve/chapitres/${chapId}/valider`, { method: 'POST' });
   if (resp.ok) {
@@ -289,7 +305,7 @@ chargerFormation();
 // ~15 minutes sans aucune requête reçue -- ce signal reste bien en dessous).
 setInterval(() => {
   fetch('/ping', { method: 'GET', cache: 'no-store' }).catch(() => {});
-}, 4 * 60 * 1000);
+}, 90 * 1000);
 
 document.addEventListener('contextmenu', function(e) {
   e.preventDefault();
