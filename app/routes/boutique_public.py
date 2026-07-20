@@ -6,6 +6,7 @@ propositions de montée en niveau.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
@@ -83,3 +84,10 @@ def tarifs_site(session: Session = Depends(obtenir_session)):
                 "prix_barre": float(t.prix) if t.prix_final() < float(t.prix) else None,
             })
     return result
+
+
+@router.get("/api/heartbeat")
+def heartbeat(session: Session = Depends(obtenir_session)):
+    """Réveille Neon immédiatement — appelé par le frontend sur chaque page."""
+    session.execute(text("SELECT 1"))
+    return {"ok": True}
