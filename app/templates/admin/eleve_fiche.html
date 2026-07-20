@@ -2,40 +2,40 @@
 {% block titre %}Fiche élève — Administration{% endblock %}
 {% block contenu %}
 <style>
-  .fiche-eleve-header { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:22px; margin-bottom:20px; }
-  .fiche-eleve-header h2 { font-family:'EB Garamond',serif; font-size:20px; margin:0 0 4px; }
-  .fiche-eleve-header .email { font-size:13px; color:var(--grey); }
-  .acces-row { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 18px; margin-bottom:10px; }
-  .acces-row .ligne-haut { display:flex; align-items:center; justify-content:space-between; }
-  .acces-row .titre-formation { font-weight:600; font-size:14px; }
-  .niveau-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; margin-left:8px; }
-  .niveau-1 { background:#EFEAE0; color:#6B6354; }
-  .niveau-2 { background:#F5E3D0; color:#95621E; }
-  .niveau-3 { background:#F5DCD3; color:#A1432A; }
-  .progress-bar-mini { width:120px; height:6px; background:var(--cream); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:10px; }
-  .progress-bar-mini .fill { height:100%; background:var(--gold); }
-  .bloc-accompagnement { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
-  .statut-pill { font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
-  .statut-actif { background:#E4F0E8; color:var(--green); }
-  .statut-inactif { background:#F0ECE2; color:var(--grey); }
-  .statut-mdp-ok { background:#E4F0E8; color:var(--green); }
-  .statut-mdp-attente { background:#FEF3E2; color:#A05C00; }
+.fiche-eleve-header { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:22px; margin-bottom:20px; }
+.fiche-eleve-header h2 { font-family:'EB Garamond',serif; font-size:20px; margin:0 0 4px; }
+.fiche-eleve-header .email { font-size:13px; color:var(--grey); }
+.acces-row { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 18px; margin-bottom:10px; }
+.acces-row .ligne-haut { display:flex; align-items:center; justify-content:space-between; }
+.acces-row .titre-formation { font-weight:600; font-size:14px; }
+.niveau-badge { font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; margin-left:8px; }
+.niveau-1 { background:#EFEAE0; color:#6B6354; }
+.niveau-2 { background:#F5E3D0; color:#95621E; }
+.niveau-3 { background:#F5DCD3; color:#A1432A; }
+.progress-bar-mini { width:120px; height:6px; background:var(--cream); border-radius:3px; overflow:hidden; display:inline-block; vertical-align:middle; margin-left:10px; }
+.progress-bar-mini .fill { height:100%; background:var(--gold); }
+.bloc-accompagnement { margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.statut-pill { font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
+.statut-actif { background:#E4F0E8; color:var(--green); }
+.statut-inactif { background:#F0ECE2; color:var(--grey); }
+.statut-mdp-ok { background:#E4F0E8; color:var(--green); }
+.statut-mdp-attente { background:#FEF3E2; color:#A05C00; }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
 <div class="topbar">
-  <div><h1 id="titre-page"></h1></div>
-  <div style="display:flex; gap:8px;">
-    <button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
-    <button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
-    <button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">🔑 Réinitialiser le mot de passe</button>
-    <button class="btn btn-danger-outline" onclick="demanderSuppression()">Supprimer</button>
-  </div>
+<div><h1 id="titre-page"></h1></div>
+<div style="display:flex; gap:8px;">
+<button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
+<button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
+<button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">🔑 Réinitialiser le mot de passe</button>
+<button class="btn btn-danger-outline" onclick="demanderSuppression()">Supprimer</button>
+</div>
 </div>
 <div class="fiche-eleve-header" id="header-eleve"></div>
 <div class="topbar" style="margin-bottom:12px;">
-  <h1 style="font-size:16px;">Accès aux formations</h1>
-  <button class="btn btn-sm btn-primary" id="btn-donner-acces" onclick="ouvrirModalAcces(null)">+ Donner accès à une formation</button>
+<h1 style="font-size:16px;">Accès aux formations</h1>
+<button class="btn btn-sm btn-primary" id="btn-donner-acces" onclick="ouvrirModalAcces(null)">+ Donner accès à une formation</button>
 </div>
 <div id="liste-acces"></div>
 
@@ -47,227 +47,250 @@ let eleve = null;
 let toutesFormations = [];
 
 function esc(s) {
-  const div = document.createElement('div');
-  div.textContent = s == null ? '' : String(s);
-  return div.innerHTML;
+const div = document.createElement('div');
+div.textContent = s == null ? '' : String(s);
+return div.innerHTML;
 }
 
 function afficherOverlay(html) {
-  document.querySelectorAll('.overlay').forEach(el => el.remove());
-  const overlay = document.createElement('div');
-  overlay.className = 'overlay';
-  overlay.innerHTML = html;
-  overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
-  document.body.appendChild(overlay);
+document.querySelectorAll('.overlay').forEach(el => el.remove());
+const overlay = document.createElement('div');
+overlay.className = 'overlay';
+overlay.innerHTML = html;
+overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
+document.body.appendChild(overlay);
 }
 
 async function charger() {
-  eleve = await appelApi(`/admin/eleves/${ELEVE_ID}`);
-  toutesFormations = await appelApi('/admin/formations');
-  render();
+eleve = await appelApi(`/admin/eleves/${ELEVE_ID}`);
+toutesFormations = await appelApi('/admin/formations');
+render();
 }
 
 function render() {
-  document.title = `${eleve.prenom} ${eleve.nom} — Administration`;
-  document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve.nom}`;
-  document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
-  document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
+document.title = `${eleve.prenom} ${eleve.nom} — Administration`;
+document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve.nom}`;
+document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
+document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
 
-  const statutMdp = eleve.mot_de_passe_actif
-    ? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
-    : `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
+const statutMdp = eleve.mot_de_passe_actif
+? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
+: `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
 
-  document.getElementById('header-eleve').innerHTML = `
-    <h2>${esc(eleve.prenom)} ${esc(eleve.nom)}</h2>
-    <div class="email" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
-      ${esc(eleve.email)}
-      <span class="statut-pill ${eleve.actif ? 'statut-actif' : 'statut-inactif'}">${eleve.actif ? 'Actif' : 'Inactif'}</span>
-      ${statutMdp}
-    </div>
-  `;
+document.getElementById('header-eleve').innerHTML = `
+<h2>${esc(eleve.prenom)} ${esc(eleve.nom)}</h2>
+<div class="email" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
+${esc(eleve.email)}
+<span class="statut-pill ${eleve.actif ? 'statut-actif' : 'statut-inactif'}">${eleve.actif ? 'Actif' : 'Inactif'}</span>
+${statutMdp}
+</div>
+`;
 
-  const idsAcquis = eleve.acces.map(a => a.formation_id);
-  const formationsDisponibles = toutesFormations.filter(f => !idsAcquis.includes(f.id));
-  document.getElementById('btn-donner-acces').style.display = formationsDisponibles.length ? 'inline-flex' : 'none';
+const idsAcquis = eleve.acces.map(a => a.formation_id);
+const formationsDisponibles = toutesFormations.filter(f => !idsAcquis.includes(f.id));
+document.getElementById('btn-donner-acces').style.display = formationsDisponibles.length ? 'inline-flex' : 'none';
 
-  const liste = document.getElementById('liste-acces');
-  if (eleve.acces.length === 0) {
-    liste.innerHTML = `<div class="empty-state">Aucun accès pour l'instant.</div>`;
-    return;
-  }
-  liste.innerHTML = eleve.acces.map(a => {
-    const blocAccomp = a.jours_accompagnement_total > 0 ? `
-      <div class="bloc-accompagnement">
-        <div style="font-size:13px;">
-          <strong style="color:var(--gold); font-size:16px;">${a.jours_accompagnement_restants}</strong> / ${a.jours_accompagnement_total} jour(s) d'accompagnement restant(s)
-        </div>
-        <button class="btn btn-sm ${a.jours_accompagnement_restants <= 0 ? '' : 'btn-primary'}" ${a.jours_accompagnement_restants <= 0 ? 'disabled' : ''} onclick="enregistrerSeance(${a.formation_id})">
-          + Enregistrer une séance faite aujourd'hui
-        </button>
-      </div>` : '';
-    return `
-      <div class="acces-row">
-        <div class="ligne-haut">
-          <div>
-            <span class="titre-formation">${esc(a.formation_titre)}</span>
-            ${a.nb_niveaux_formation > 1 ? `<span class="niveau-badge niveau-${a.niveau}">Niveau ${a.niveau}</span>` : ''}
-            <span class="progress-bar-mini"><span class="fill" style="width:${a.progression}%"></span></span>
-            <span style="font-size:12px; color:var(--grey); margin-left:6px;">${a.progression}%</span>
-          </div>
-          <div>
-            ${a.nb_niveaux_formation > 1 ? `<button class="btn btn-sm" onclick="ouvrirModalAcces(${a.formation_id})">✎ Niveau</button>` : ''}
-            <button class="btn btn-sm btn-danger-outline" onclick="retirerAcces(${a.formation_id})">Retirer</button>
-          </div>
-        </div>
-        ${blocAccomp}
-      </div>`;
-  }).join('');
+const liste = document.getElementById('liste-acces');
+if (eleve.acces.length === 0) {
+liste.innerHTML = `<div class="empty-state">Aucun accès pour l'instant.</div>`;
+return;
+}
+liste.innerHTML = eleve.acces.map(a => {
+const blocAccomp = a.jours_accompagnement_total > 0 ? `
+<div class="bloc-accompagnement">
+<div style="font-size:13px;">
+<strong style="color:var(--gold); font-size:16px;">${a.jours_accompagnement_restants}</strong> / ${a.jours_accompagnement_total} jour(s) d'accompagnement restant(s)
+</div>
+<button class="btn btn-sm ${a.jours_accompagnement_restants <= 0 ? '' : 'btn-primary'}" ${a.jours_accompagnement_restants <= 0 ? 'disabled' : ''} onclick="enregistrerSeance(${a.formation_id})">
++ Enregistrer une séance faite aujourd'hui
+</button>
+</div>` : '';
+return `
+<div class="acces-row">
+<div class="ligne-haut">
+<div>
+<span class="titre-formation">${esc(a.formation_titre)}</span>
+${a.nb_niveaux_formation > 1 ? `<span class="niveau-badge niveau-${a.niveau}">Niveau ${a.niveau}</span>` : ''}
+<span class="progress-bar-mini"><span class="fill" style="width:${a.progression}%"></span></span>
+<span style="font-size:12px; color:var(--grey); margin-left:6px;">${a.progression}%</span>
+</div>
+<div style="display:flex; gap:6px; flex-wrap:wrap;">
+${a.nb_niveaux_formation > 1 ? `<button class="btn btn-sm" onclick="ouvrirModalAcces(${a.formation_id})">✎ Niveau</button>` : ''}
+<button class="btn btn-sm" onclick="demanderReinitialisation(${a.formation_id}, decodeURIComponent('${encodeURIComponent(a.formation_titre)}'))">↺ Réinitialiser</button>
+<button class="btn btn-sm btn-danger-outline" onclick="retirerAcces(${a.formation_id})">Retirer</button>
+</div>
+</div>
+${blocAccomp}
+</div>`;
+}).join('');
 }
 
 function ouvrirModalEditerEleve() {
-  afficherOverlay(`
-    <div class="modal">
-      <h3>Modifier l'élève</h3>
-      <div id="zone-erreur-modal"></div>
-      <label>Prénom *</label><input type="text" id="input-prenom" value="${esc(eleve.prenom)}">
-      <label>Nom *</label><input type="text" id="input-nom" value="${esc(eleve.nom)}">
-      <label>E-mail *</label><input type="email" id="input-email" value="${esc(eleve.email)}">
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="enregistrerEleve()">Enregistrer</button>
-      </div>
-    </div>`);
+afficherOverlay(`
+<div class="modal">
+<h3>Modifier l'élève</h3>
+<div id="zone-erreur-modal"></div>
+<label>Prénom *</label><input type="text" id="input-prenom" value="${esc(eleve.prenom)}">
+<label>Nom *</label><input type="text" id="input-nom" value="${esc(eleve.nom)}">
+<label>E-mail *</label><input type="email" id="input-email" value="${esc(eleve.email)}">
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn btn-primary" onclick="enregistrerEleve()">Enregistrer</button>
+</div>
+</div>`);
 }
 
 async function enregistrerEleve() {
-  const data = new FormData();
-  data.append('nom', document.getElementById('input-nom').value);
-  data.append('prenom', document.getElementById('input-prenom').value);
-  data.append('email', document.getElementById('input-email').value);
-  try {
-    await appelApi(`/admin/eleves/${ELEVE_ID}`, { method: 'PUT', body: data });
-    fermerModal();
-    afficherToast('Élève modifié');
-    await charger();
-  } catch (e) {
-    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
-  }
+const data = new FormData();
+data.append('nom', document.getElementById('input-nom').value);
+data.append('prenom', document.getElementById('input-prenom').value);
+data.append('email', document.getElementById('input-email').value);
+try {
+await appelApi(`/admin/eleves/${ELEVE_ID}`, { method: 'PUT', body: data });
+fermerModal();
+afficherToast('Élève modifié');
+await charger();
+} catch (e) {
+document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+}
 }
 
 async function toggleActif() {
-  await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-actif`, { method: 'POST' });
-  afficherToast('Statut mis à jour');
-  await charger();
+await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-actif`, { method: 'POST' });
+afficherToast('Statut mis à jour');
+await charger();
 }
 
 async function reinitialiserMotDePasse() {
-  afficherOverlay(`
-    <div class="modal">
-      <h3>Réinitialiser le mot de passe</h3>
-      <p style="font-size:13px; color:var(--grey);">Un email avec un lien de création de mot de passe sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="confirmerReinit()">Envoyer le lien</button>
-      </div>
-    </div>`);
+afficherOverlay(`
+<div class="modal">
+<h3>Réinitialiser le mot de passe</h3>
+<p style="font-size:13px; color:var(--grey);">Un email avec un lien de création de mot de passe sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn btn-primary" onclick="confirmerReinit()">Envoyer le lien</button>
+</div>
+</div>`);
 }
 
 async function confirmerReinit() {
-  try {
-    const data = new FormData();
-    data.append('email', eleve.email);
-    await appelApi('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
-    fermerModal();
-    afficherToast('Lien de réinitialisation envoyé à ' + eleve.email);
-  } catch (e) {
-    fermerModal();
-    afficherToast('Lien envoyé (ou compte inexistant)');
-  }
+try {
+const data = new FormData();
+data.append('email', eleve.email);
+await appelApi('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
+fermerModal();
+afficherToast('Lien de réinitialisation envoyé à ' + eleve.email);
+} catch (e) {
+fermerModal();
+afficherToast('Lien envoyé (ou compte inexistant)');
+}
 }
 
 function demanderSuppression() {
-  afficherOverlay(`
-    <div class="modal">
-      <h3>Supprimer ${esc(eleve.prenom)} ${esc(eleve.nom)} ?</h3>
-      <p style="font-size:13px; color:var(--grey);">Cette action est définitive.</p>
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppression()">Supprimer définitivement</button>
-      </div>
-    </div>`);
+afficherOverlay(`
+<div class="modal">
+<h3>Supprimer ${esc(eleve.prenom)} ${esc(eleve.nom)} ?</h3>
+<p style="font-size:13px; color:var(--grey);">Cette action est définitive.</p>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppression()">Supprimer définitivement</button>
+</div>
+</div>`);
 }
 
 async function confirmerSuppression() {
-  await appelApi(`/admin/eleves/${ELEVE_ID}`, { method: 'DELETE' });
-  window.location.href = '/admin/page/eleves';
+await appelApi(`/admin/eleves/${ELEVE_ID}`, { method: 'DELETE' });
+window.location.href = '/admin/page/eleves';
 }
 
 function ouvrirModalAcces(formationId) {
-  const accesExistant = formationId ? eleve.acces.find(a => a.formation_id === formationId) : null;
-  const idsAcquis = eleve.acces.map(a => a.formation_id);
-  const formationsDisponibles = formationId
-    ? [toutesFormations.find(f => f.id === formationId)]
-    : toutesFormations.filter(f => !idsAcquis.includes(f.id));
-  const formationInitiale = formationsDisponibles[0];
+const accesExistant = formationId ? eleve.acces.find(a => a.formation_id === formationId) : null;
+const idsAcquis = eleve.acces.map(a => a.formation_id);
+const formationsDisponibles = formationId
+? [toutesFormations.find(f => f.id === formationId)]
+: toutesFormations.filter(f => !idsAcquis.includes(f.id));
+const formationInitiale = formationsDisponibles[0];
 
-  afficherOverlay(`
-    <div class="modal">
-      <h3>${accesExistant ? "Modifier le niveau d'accès" : "Donner accès à une formation"}</h3>
-      <label>Formation</label>
-      <select id="input-formation" ${formationId ? 'disabled' : ''} onchange="majBlocNiveau()">
-        ${formationsDisponibles.map(f => `<option value="${f.id}" ${formationId === f.id ? 'selected' : ''}>${esc(f.titre)}</option>`).join('')}
-      </select>
-      <div id="bloc-niveau"></div>
-      <div class="helper-text">L'activation du niveau reste toujours manuelle, après réception du paiement.</div>
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="enregistrerAcces()">Enregistrer</button>
-      </div>
-    </div>`);
-  majBlocNiveau(accesExistant ? accesExistant.niveau : 1);
+afficherOverlay(`
+<div class="modal">
+<h3>${accesExistant ? "Modifier le niveau d'accès" : "Donner accès à une formation"}</h3>
+<label>Formation</label>
+<select id="input-formation" ${formationId ? 'disabled' : ''} onchange="majBlocNiveau()">
+${formationsDisponibles.map(f => `<option value="${f.id}" ${formationId === f.id ? 'selected' : ''}>${esc(f.titre)}</option>`).join('')}
+</select>
+<div id="bloc-niveau"></div>
+<div class="helper-text">L'activation du niveau reste toujours manuelle, après réception du paiement.</div>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn btn-primary" onclick="enregistrerAcces()">Enregistrer</button>
+</div>
+</div>`);
+majBlocNiveau(accesExistant ? accesExistant.niveau : 1);
 }
 
 function majBlocNiveau(niveauActuel) {
-  const formationId = parseInt(document.getElementById('input-formation').value);
-  const formation = toutesFormations.find(f => f.id === formationId);
-  const bloc = document.getElementById('bloc-niveau');
-  if (formation.nb_niveaux > 1) {
-    bloc.innerHTML = `
-      <label>Niveau d'accès</label>
-      <select id="input-niveau">
-        ${Array.from({length: formation.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${niveauActuel===n?'selected':''}>Niveau ${n}</option>`).join('')}
-      </select>`;
-  } else {
-    bloc.innerHTML = '';
-  }
+const formationId = parseInt(document.getElementById('input-formation').value);
+const formation = toutesFormations.find(f => f.id === formationId);
+const bloc = document.getElementById('bloc-niveau');
+if (formation.nb_niveaux > 1) {
+bloc.innerHTML = `
+<label>Niveau d'accès</label>
+<select id="input-niveau">
+${Array.from({length: formation.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${niveauActuel===n?'selected':''}>Niveau ${n}</option>`).join('')}
+</select>`;
+} else {
+bloc.innerHTML = '';
+}
 }
 
 async function enregistrerAcces() {
-  const formationId = parseInt(document.getElementById('input-formation').value);
-  const champNiveau = document.getElementById('input-niveau');
-  const data = new FormData();
-  data.append('formation_id', formationId);
-  data.append('niveau', champNiveau ? champNiveau.value : '1');
-  await appelApi(`/admin/eleves/${ELEVE_ID}/acces`, { method: 'POST', body: data });
-  fermerModal();
-  afficherToast('Accès mis à jour');
-  await charger();
+const formationId = parseInt(document.getElementById('input-formation').value);
+const champNiveau = document.getElementById('input-niveau');
+const data = new FormData();
+data.append('formation_id', formationId);
+data.append('niveau', champNiveau ? champNiveau.value : '1');
+await appelApi(`/admin/eleves/${ELEVE_ID}/acces`, { method: 'POST', body: data });
+fermerModal();
+afficherToast('Accès mis à jour');
+await charger();
 }
 
 async function retirerAcces(formationId) {
-  await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}`, { method: 'DELETE' });
-  afficherToast('Accès retiré');
-  await charger();
+await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}`, { method: 'DELETE' });
+afficherToast('Accès retiré');
+await charger();
 }
 
 async function enregistrerSeance(formationId) {
-  try {
-    await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/seance-accompagnement`, { method: 'POST' });
-    afficherToast("Séance d'accompagnement enregistrée");
-    await charger();
-  } catch (e) {
-    afficherToast(e.message);
-  }
+try {
+await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/seance-accompagnement`, { method: 'POST' });
+afficherToast("Séance d'accompagnement enregistrée");
+await charger();
+} catch (e) {
+afficherToast(e.message);
+}
+}
+
+// --- Réinitialisation de l'avancement ---
+
+function demanderReinitialisation(formationId, titreFormation) {
+afficherOverlay(`
+<div class="modal">
+<h3>Réinitialiser l'avancement ?</h3>
+<p style="font-size:13px; color:var(--grey);">Tous les chapitres validés de <strong>${titreFormation}</strong> seront remis à zéro pour cet élève.</p>
+<p style="font-size:13px; color:var(--grey);">L'accès à la formation et le niveau sont conservés.</p>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerReinitialisation(${formationId})">Réinitialiser</button>
+</div>
+</div>`);
+}
+
+async function confirmerReinitialisation(formationId) {
+await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/reinitialiser-avancement`, { method: 'POST' });
+fermerModal();
+afficherToast('Avancement réinitialisé');
+await charger();
 }
 
 charger();

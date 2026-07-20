@@ -2,19 +2,19 @@
 {% block titre %}Formations — Administration{% endblock %}
 {% block contenu %}
 <style>
-  .card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
-  .formation-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; transition:border-color .15s; }
-  .formation-card:hover { border-color:var(--gold); }
-  .formation-card .card-clickzone { cursor:pointer; }
-  .formation-card .swatch { width:36px; height:36px; border-radius:8px; margin-bottom:12px; }
-  .formation-card h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 6px; }
-  .formation-card .meta { font-size:12px; color:var(--grey); }
-  .formation-card .inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; margin-top:8px; }
-  .formation-card .card-footer { display:flex; justify-content:flex-end; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.formation-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; transition:border-color .15s; }
+.formation-card:hover { border-color:var(--gold); }
+.formation-card .card-clickzone { cursor:pointer; }
+.formation-card .swatch { width:36px; height:36px; border-radius:8px; margin-bottom:12px; }
+.formation-card h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 6px; }
+.formation-card .meta { font-size:12px; color:var(--grey); }
+.formation-card .inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; margin-top:8px; }
+.formation-card .card-footer { display:flex; justify-content:flex-end; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
 </style>
 
 <div class="topbar"><div><h1>Formations</h1></div>
-  <button class="btn btn-primary" onclick="ouvrirModalCreerFormation()">+ Nouvelle formation</button>
+<button class="btn btn-primary" onclick="ouvrirModalCreerFormation()">+ Nouvelle formation</button>
 </div>
 <div class="card-grid" id="liste-formations"><div class="empty-state">Chargement…</div></div>
 
@@ -22,110 +22,126 @@
 {% block scripts %}
 <script>
 async function chargerFormations() {
-  const formations = await appelApi('/admin/formations');
-  const conteneur = document.getElementById('liste-formations');
-  if (formations.length === 0) {
-    conteneur.innerHTML = `<div class="empty-state"><div class="big">📚</div>Aucune formation pour l'instant.<br>Crée ta première formation pour commencer.</div>`;
-    return;
-  }
-  conteneur.innerHTML = formations.map(f => `
-    <div class="formation-card">
-      <div class="card-clickzone" onclick="window.location.href='/admin/page/formations/${f.id}'">
-        <div class="swatch" style="background:${f.couleur}"></div>
-        <h3>${esc(f.titre)}</h3>
-        <div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}</div>
-        ${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
-      </div>
-      <div class="card-footer">
-        <button class="btn btn-sm btn-danger-outline" onclick="demanderSuppressionFormation(${f.id}, '${esc(f.titre)}')">Supprimer</button>
-      </div>
-    </div>
-  `).join('');
+const formations = await appelApi('/admin/formations');
+const conteneur = document.getElementById('liste-formations');
+if (formations.length === 0) {
+conteneur.innerHTML = `<div class="empty-state"><div class="big">📚</div>Aucune formation pour l'instant.<br>Crée ta première formation pour commencer.</div>`;
+return;
+}
+conteneur.innerHTML = formations.map(f => `
+<div class="formation-card">
+<div class="card-clickzone" onclick="window.location.href='/admin/page/formations/${f.id}'">
+<div class="swatch" style="background:${f.couleur}"></div>
+<h3>${esc(f.titre)}</h3>
+<div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}</div>
+${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
+</div>
+<div class="card-footer">
+<button class="btn btn-sm btn-danger-outline" onclick="demanderSuppressionFormation(${f.id}, '${esc(f.titre)}')">Supprimer</button>
+</div>
+</div>
+`).join('');
 }
 
 function esc(s) {
-  const div = document.createElement('div');
-  div.textContent = s == null ? '' : String(s);
-  return div.innerHTML;
+const div = document.createElement('div');
+div.textContent = s == null ? '' : String(s);
+return div.innerHTML;
 }
 
 function ouvrirModalCreerFormation() {
-  const html = `
-    <div class="modal">
-      <h3>Nouvelle formation</h3>
-      <div id="zone-erreur-modal"></div>
-      <label>Titre de la formation</label>
-      <input type="text" id="input-titre">
-      <label>Couleur d'accent</label>
-      <input type="color" id="input-couleur" value="#B8922A">
-      <label>Ordre d'affichage (facultatif, les plus petits chiffres apparaissent en premier)</label>
-      <input type="number" id="input-ordre-affichage" value="0">
-      <label>Nombre de niveaux d'accès</label>
-      <select id="input-nb-niveaux">
-        <option value="1">1 niveau (accès unique, pas de palier)</option>
-        <option value="2">2 niveaux</option>
-        <option value="3" selected>3 niveaux</option>
-      </select>
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="creerFormation()">Créer</button>
-      </div>
-    </div>`;
-  afficherOverlay(html);
+const html = `
+<div class="modal">
+<h3>Nouvelle formation</h3>
+<div id="zone-erreur-modal"></div>
+<label>Titre de la formation</label>
+<input type="text" id="input-titre">
+<label>Couleur d'accent</label>
+<input type="color" id="input-couleur" value="#B8922A">
+<label>Ordre d'affichage (facultatif, les plus petits chiffres apparaissent en premier)</label>
+<input type="number" id="input-ordre-affichage" value="0">
+<label>Nombre de niveaux d'accès</label>
+<select id="input-nb-niveaux">
+<option value="1">1 niveau (accès unique, pas de palier)</option>
+<option value="2">2 niveaux</option>
+<option value="3" selected>3 niveaux</option>
+</select>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn btn-primary" onclick="creerFormation()">Créer</button>
+</div>
+</div>`;
+afficherOverlay(html);
 }
 
 function afficherOverlay(html) {
-  fermerModal();
-  const overlay = document.createElement('div');
-  overlay.className = 'overlay';
-  overlay.innerHTML = html;
-  overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
-  document.body.appendChild(overlay);
+fermerModal();
+const overlay = document.createElement('div');
+overlay.className = 'overlay';
+overlay.innerHTML = html;
+overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
+document.body.appendChild(overlay);
 }
 
 async function creerFormation() {
-  const titre = document.getElementById('input-titre').value.trim();
-  if (!titre) {
-    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>';
-    return;
-  }
-  const data = new FormData();
-  data.append('titre', titre);
-  data.append('couleur', document.getElementById('input-couleur').value);
-  data.append('nb_niveaux', document.getElementById('input-nb-niveaux').value);
-  data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
-  try {
-    const formation = await appelApi('/admin/formations', { method: 'POST', body: data });
-    fermerModal();
-    afficherToast('Formation créée');
-    window.location.href = `/admin/page/formations/${formation.id}`;
-  } catch (e) {
-    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
-  }
+const titre = document.getElementById('input-titre').value.trim();
+if (!titre) {
+document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>';
+return;
+}
+const data = new FormData();
+data.append('titre', titre);
+data.append('couleur', document.getElementById('input-couleur').value);
+data.append('nb_niveaux', document.getElementById('input-nb-niveaux').value);
+data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
+try {
+const formation = await appelApi('/admin/formations', { method: 'POST', body: data });
+fermerModal();
+afficherToast('Formation créée');
+window.location.href = `/admin/page/formations/${formation.id}`;
+} catch (e) {
+document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+}
 }
 
+// --- Suppression en deux étapes ---
+
 function demanderSuppressionFormation(id, titre) {
-  const html = `
-    <div class="modal">
-      <h3>Supprimer "${titre}" ?</h3>
-      <p style="font-size:13px; color:var(--grey);">Cette action est définitive et ne peut pas être annulée.</p>
-      <div class="modal-actions">
-        <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppressionFormation(${id})">Supprimer définitivement</button>
-      </div>
-    </div>`;
-  afficherOverlay(html);
+const html = `
+<div class="modal">
+<h3>Supprimer "${titre}" ?</h3>
+<p style="font-size:13px; color:var(--grey);">⚠️ Cette action supprimera définitivement la formation, tous ses modules et chapitres.</p>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn" style="background:#f5edd6; border-color:#B8922A; color:#2E2210;" onclick="demanderSuppressionFormationEtape2(${id}, decodeURIComponent('${encodeURIComponent(titre)}'))">Oui, je veux supprimer</button>
+</div>
+</div>`;
+afficherOverlay(html);
+}
+
+function demanderSuppressionFormationEtape2(id, titre) {
+const html = `
+<div class="modal">
+<h3>Confirmation finale</h3>
+<p style="font-size:13px; color:var(--grey);">Tu es sur le point de supprimer <strong>${titre}</strong> de façon irréversible. Tous les accès élèves associés seront perdus.</p>
+<p style="font-size:13px; font-weight:600; color:var(--danger);">Cette action ne peut pas être annulée.</p>
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppressionFormation(${id})">Supprimer définitivement</button>
+</div>
+</div>`;
+afficherOverlay(html);
 }
 
 async function confirmerSuppressionFormation(id) {
-  const resultat = await appelApi(`/admin/formations/${id}`, { method: 'DELETE' });
-  fermerModal();
-  if (resultat.nb_eleves_concernes > 0) {
-    afficherToast(`Formation supprimée (${resultat.nb_eleves_concernes} élève(s) étaient concernés)`);
-  } else {
-    afficherToast('Formation supprimée');
-  }
-  chargerFormations();
+const resultat = await appelApi(`/admin/formations/${id}`, { method: 'DELETE' });
+fermerModal();
+if (resultat.nb_eleves_concernes > 0) {
+afficherToast(`Formation supprimée (${resultat.nb_eleves_concernes} élève(s) étaient concernés)`);
+} else {
+afficherToast('Formation supprimée');
+}
+chargerFormations();
 }
 
 chargerFormations();
