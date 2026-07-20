@@ -141,6 +141,7 @@ async function chargerFormation() {
   mettreAJourProgression(donneesFormation.progression || 0);
   afficherSommaire();
   afficherContenu();
+  prechargerTousChapitres(); // précharge tous les chapitres accessibles
 }
 
 function mettreAJourProgression(pct) {
@@ -252,6 +253,24 @@ function selectionner(noeud) {
 // l'état déjà en mémoire, ce qui est instantané. Un seul appel réseau au
 // lieu de deux, et plus aucune requête pour retélécharger tout le contenu
 // des chapitres déjà chargés.
+function prechargerTousChapitres() {
+  if (!donneesFormation) return;
+  const tous = [];
+  donneesFormation.modules.forEach(function(m) { m.chapitres.forEach(function(c) { tous.push(c); }); });
+  const accessibles = tous.filter(function(c) { return (c.debloque || c.valide) && !_chapCache[c.id]; });
+  var i = 0;
+  function chargerSuivantDuLot() {
+    if (i >= accessibles.length) return;
+    var chap = accessibles[i++];
+    fetch('/api/eleve/chapitres/' + chap.id)
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { if (d && d.contenu_html) _chapCache[chap.id] = d.contenu_html; })
+      .catch(function() {})
+      .finally(function() { setTimeout(chargerSuivantDuLot, 300); });
+  }
+  setTimeout(chargerSuivantDuLot, 1000); // démarre 1s après le chargement de la formation
+}
+
 function prechargerSuivant(chapId) {
   if (!donneesFormation) return;
   const tous = [];
@@ -304,7 +323,7 @@ chargerFormation();
 // page de formation sans cliquer nulle part (le plan gratuit s'endort après
 // ~15 minutes sans aucune requête reçue -- ce signal reste bien en dessous).
 setInterval(() => {
-  fetch('/ping', { method: 'GET', cache: 'no-store' }).catch(() => {});
+  fetch('/api/heartbeat', { method: 'GET', cache: 'no-store' }).catch(() => {});
 }, 90 * 1000);
 
 document.addEventListener('contextmenu', function(e) {
