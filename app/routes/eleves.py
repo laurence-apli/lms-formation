@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import (
     Eleve, Formation, AccesFormation, SeanceAccompagnement,
-    progression_pourcentage,
+    ValidationChapitre, progression_pourcentage,
 )
 from .auth import admin_connecte, creer_token_premiere_connexion
 from ..emails import email_coaching_rdv
@@ -20,7 +20,6 @@ from ..emails import email_coaching_rdv
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
 REGEX_EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
-
 
 def _valider_champs_eleve(nom: str, prenom: str, email: str) -> list:
     erreurs = []
@@ -34,7 +33,6 @@ def _valider_champs_eleve(nom: str, prenom: str, email: str) -> list:
         erreurs.append("un e-mail valide")
     return erreurs
 
-
 @router.get("/eleves")
 def lister_eleves(session: Session = Depends(obtenir_session)):
     eleves = session.query(Eleve).all()
@@ -45,7 +43,6 @@ def lister_eleves(session: Session = Depends(obtenir_session)):
         }
         for e in eleves
     ]
-
 
 @router.post("/eleves")
 def creer_eleve(
@@ -71,7 +68,6 @@ def creer_eleve(
         "lien_premiere_connexion": lien_premiere_connexion,
     }
 
-
 @router.put("/eleves/{eleve_id}")
 def modifier_eleve(
     eleve_id: int, nom: str = Form(...), prenom: str = Form(...), email: str = Form(...),
@@ -90,7 +86,6 @@ def modifier_eleve(
     session.commit()
     return {"id": eleve.id}
 
-
 @router.post("/eleves/{eleve_id}/toggle-actif")
 def toggle_actif_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
@@ -100,7 +95,6 @@ def toggle_actif_eleve(eleve_id: int, session: Session = Depends(obtenir_session
     session.commit()
     return {"id": eleve.id, "actif": eleve.actif}
 
-
 @router.delete("/eleves/{eleve_id}")
 def supprimer_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
@@ -109,7 +103,6 @@ def supprimer_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     session.delete(eleve)
     session.commit()
     return {"ok": True}
-
 
 @router.get("/eleves/{eleve_id}")
 def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
@@ -138,7 +131,6 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
         "acces": acces_detail,
     }
-
 
 # ---------- Accès aux formations ----------
 
@@ -170,7 +162,6 @@ def donner_acces_formation(
     session.commit()
     return {"ok": True}
 
-
 @router.delete("/eleves/{eleve_id}/acces/{formation_id}")
 def retirer_acces_formation(eleve_id: int, formation_id: int, session: Session = Depends(obtenir_session)):
     acces = (
@@ -184,6 +175,30 @@ def retirer_acces_formation(eleve_id: int, formation_id: int, session: Session =
     session.commit()
     return {"ok": True}
 
+# ---------- Réinitialisation de l'avancement ----------
+
+@router.post("/eleves/{eleve_id}/acces/{formation_id}/reinitialiser-avancement")
+def reinitialiser_avancement(
+    eleve_id: int, formation_id: int,
+    session: Session = Depends(obtenir_session),
+):
+    """Supprime toutes les validations de chapitres d'un élève pour une formation donnée."""
+    acces = (
+        session.query(AccesFormation)
+        .filter_by(eleve_id=eleve_id, formation_id=formation_id)
+        .first()
+    )
+    if acces is None:
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
+    formation = session.get(Formation, formation_id)
+    chapitre_ids = [c.id for m in formation.modules for c in m.chapitres]
+    if chapitre_ids:
+        session.query(ValidationChapitre).filter(
+            ValidationChapitre.eleve_id == eleve_id,
+            ValidationChapitre.chapitre_id.in_(chapitre_ids),
+        ).delete(synchronize_session=False)
+    session.commit()
+    return {"ok": True}
 
 # ---------- Accompagnement ----------
 
@@ -201,7 +216,6 @@ def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, session:
     session.add(SeanceAccompagnement(acces_id=acces.id))
     session.commit()
     return {"ok": True, "jours_restants": acces.jours_accompagnement_restants()}
-
 
 # ---------- Diplômes ----------
 
@@ -222,7 +236,6 @@ def lister_diplomes_en_attente(session: Session = Depends(obtenir_session)):
             })
     return candidats
 
-
 @router.post("/eleves/{eleve_id}/acces/{formation_id}/diplome-envoye")
 def marquer_diplome_envoye(eleve_id: int, formation_id: int, session: Session = Depends(obtenir_session)):
     acces = (
@@ -235,7 +248,6 @@ def marquer_diplome_envoye(eleve_id: int, formation_id: int, session: Session = 
     acces.diplome_envoye = True
     session.commit()
     return {"ok": True}
-
 
 @router.get("/statistiques")
 def lire_statistiques(session: Session = Depends(obtenir_session)):
@@ -269,7 +281,6 @@ def lire_statistiques(session: Session = Depends(obtenir_session)):
         "nb_parcours_termines": nb_parcours_termines,
         "par_formation": lignes_par_formation,
     }
-
 
 # ---------- Statistiques de connexion ----------
 
@@ -332,7 +343,6 @@ def coaching_envoyer_lien(
     )
     return {"ok": True, "seance_id": seance.id}
 
-
 @router.post("/eleves/{eleve_id}/seances/{seance_id}/realiser")
 def coaching_marquer_realise(
     eleve_id: int,
@@ -347,7 +357,6 @@ def coaching_marquer_realise(
     seance.date_realise = datetime.utcnow()
     session.commit()
     return {"ok": True}
-
 
 @router.get("/eleves/{eleve_id}/coaching/historique")
 def coaching_historique(
