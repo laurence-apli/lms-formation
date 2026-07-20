@@ -86,6 +86,18 @@ class CreerPaiementRequete(BaseModel):
     montee_tarif_ids: list[int] = []
     code_promo: str | None = None
 
+@router.post("/eleve/panier/apercu")
+def apercu_panier_eleve(
+    requete: CreerPaiementRequete,
+    eleve: Eleve = Depends(eleve_connecte),
+    session: Session = Depends(obtenir_session),
+):
+    """Aperçu du panier pour l'élève connecté -- même calcul que le paiement,
+    sans créer de commande ni lancer Stripe. Utilisé par le catalogue
+    pour afficher le total et valider le code promo en temps réel."""
+    return calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id, requete.montee_tarif_ids)
+
+
 @router.post("/eleve/panier/paiement")
 def creer_session_paiement(
     requete: CreerPaiementRequete,
