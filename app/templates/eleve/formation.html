@@ -298,8 +298,16 @@ async function validerChapitre(chapId) {
     if (data.prochain_debloque) {
       // Naviguer automatiquement vers le chapitre suivant
       const nextId = data.prochain_debloque;
-      const nextEl = document.querySelector(`[data-chapid='${nextId}']`);
-      const nextModuleId = nextEl ? parseInt(nextEl.dataset.moduleid) : null;
+      let nextModuleId = null;
+      if (donneesFormation) {
+        for (const m of donneesFormation.modules) {
+          if (m.chapitres.some(c => c.id === nextId)) { nextModuleId = m.id; break; }
+        }
+      }
+        for (const m of donneesFormation.modules) {
+          if (m.chapitres.some(c => c.id === nextId)) { nextModuleId = m.id; break; }
+        }
+      }
       if (nextModuleId) {
         selectionnerChapitre(nextModuleId, nextId);
         return;
