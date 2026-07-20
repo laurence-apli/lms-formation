@@ -154,7 +154,7 @@ async function chargerTout() {
                    onclick="choisirOption('${f.titre.replace(/'/g, "\\'")}', ${t.id}, '${(t.nom_option || '').replace(/'/g, "\\'")}', ${t.prix})">
                 <div class="f-check" id="check-opt-${t.id}"></div>
                 <span class="option-nom">${t.nom_option || f.titre}</span>
-                <span class="option-prix">${t.prix_barre ? `<span class="prix-barre">${t.prix_barre} €</span> ` : ''}${t.prix} €</span>
+                <span class="option-prix">${t.prix_barre ? '<span class="prix-barre">' + t.prix_barre + ' €</span> ' : ''}${t.prix} €</span>
               </div>
             `).join('')}
           </div>
