@@ -114,7 +114,7 @@ async function chargerTout() {
 
   const formationsAProposer = catalogue.filter(f => !idsDejaAcquis.has(f.id));
   const formationsAcquises = catalogue.filter(f => idsDejaAcquis.has(f.id));
-  const htmlAcquises = formationsAcquises.length ? formationsAcquises.map(f => `<div class="formation-achetee"><p class="f-titre">${f.titre}</p><a href="/eleve/formation/${f.id}" class="btn-acceder">Accéder à ma formation →</a></div>`).join('') : '';
+  const htmlAcquises = formationsAcquises.length ? formationsAcquises.map(f => `<div class="formation-achetee"><p class="f-titre">${f.titre}</p><a href="/eleve/voir-formation/${f.id}" class="btn-acceder">Accéder à ma formation →</a></div>`).join('') : '';
 
   if (formationsAProposer.length === 0) {
     document.getElementById('zone-formations').innerHTML = htmlAcquises + (montees.length
