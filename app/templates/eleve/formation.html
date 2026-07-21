@@ -151,10 +151,6 @@ function mettreAJourProgression(pct) {
   if (label) label.textContent = pct + '%';
 }
 
-// CORRECTION PERFORMANCE : met à jour l'état déjà chargé en mémoire (donneesFormation)
-// sans repasser par le serveur. Plus besoin de tout recharger après une validation --
-// on connaît déjà tout le contenu, on sait juste qu'un chapitre de plus est validé,
-// et que le chapitre suivant devient donc accessible.
 function marquerChapitreValideLocalement(chapId) {
   if (!donneesFormation) return;
   const tousChapitres = [];
@@ -204,9 +200,7 @@ function selectionnerChapitre(moduleId, chapId) { selectionner({ type: 'chapitre
 
 async function afficherContenu() {
   const zone = document.getElementById('contenu');
-
   window.scrollTo({ top: 0, behavior: 'smooth' });
-
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
       (donneesFormation.presentation_html ? `<p>${donneesFormation.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
@@ -248,16 +242,11 @@ function selectionner(noeud) {
   afficherContenu();
 }
 
-// CORRECTION PERFORMANCE : on ne recharge plus TOUTE la formation après
-// validation (await chargerFormation() supprimé) -- on met juste à jour
-// l'état déjà en mémoire, ce qui est instantané. Un seul appel réseau au
-// lieu de deux, et plus aucune requête pour retélécharger tout le contenu
-// des chapitres déjà chargés.
 function prechargerTousChapitres() {
   if (!donneesFormation) return;
   const tous = [];
   donneesFormation.modules.forEach(function(m) { m.chapitres.forEach(function(c) { tous.push(c); }); });
-  const accessibles = tous.filter(function(c) { return (c.debloque || c.valide) && !_chapCache[c.id]; });
+  const accessibles = tous.filter(function(c) { return (c.accessible || c.valide) && !_chapCache[c.id]; });
   var i = 0;
   function chargerSuivantDuLot() {
     if (i >= accessibles.length) return;
@@ -268,7 +257,7 @@ function prechargerTousChapitres() {
       .catch(function() {})
       .finally(function() { setTimeout(chargerSuivantDuLot, 300); });
   }
-  setTimeout(chargerSuivantDuLot, 1000); // démarre 1s après le chargement de la formation
+  setTimeout(chargerSuivantDuLot, 1000);
 }
 
 function prechargerSuivant(chapId) {
@@ -278,7 +267,7 @@ function prechargerSuivant(chapId) {
   const idx = tous.findIndex(c => c.id === chapId);
   if (idx === -1 || idx + 1 >= tous.length) return;
   const suivant = tous[idx + 1];
-  if (!suivant.debloque && !suivant.valide) return;
+  if (!suivant.accessible && !suivant.valide) return;
   if (_chapCache[suivant.id]) return;
   fetch(`/api/eleve/chapitres/${suivant.id}`)
     .then(r => r.ok ? r.json() : null)
@@ -293,17 +282,11 @@ async function validerChapitre(chapId) {
     if (data.progression !== undefined) {
       mettreAJourProgression(data.progression);
     }
-    // Mettre à jour l'état en mémoire (valide courant + débloque suivant)
     marquerChapitreValideLocalement(chapId);
     if (data.prochain_debloque) {
-      // Naviguer automatiquement vers le chapitre suivant
       const nextId = data.prochain_debloque;
       let nextModuleId = null;
       if (donneesFormation) {
-        for (const m of donneesFormation.modules) {
-          if (m.chapitres.some(c => c.id === nextId)) { nextModuleId = m.id; break; }
-        }
-      }
         for (const m of donneesFormation.modules) {
           if (m.chapitres.some(c => c.id === nextId)) { nextModuleId = m.id; break; }
         }
@@ -313,23 +296,12 @@ async function validerChapitre(chapId) {
         return;
       }
     }
-    // Pas de chapitre suivant ou moduleId introuvable : mise à jour locale du DOM
-    const currEl = document.querySelector(`[data-chapid='${chapId}']`);
-    if (currEl) {
-      currEl.classList.remove('en-cours');
-      currEl.classList.add('validé');
-      const btnValider = currEl.querySelector('.btn-valider');
-      if (btnValider) btnValider.remove();
-    }
+    afficherSommaire();
   }
 }
 
 chargerFormation();
 
-// CORRECTION : signal envoyé toutes les 4 minutes pour empêcher Render de
-// mettre le service en veille pendant qu'un élève reste longtemps sur une
-// page de formation sans cliquer nulle part (le plan gratuit s'endort après
-// ~15 minutes sans aucune requête reçue -- ce signal reste bien en dessous).
 setInterval(() => {
   fetch('/api/heartbeat', { method: 'GET', cache: 'no-store' }).catch(() => {});
 }, 90 * 1000);
