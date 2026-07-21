@@ -201,3 +201,121 @@ def page_inscription(request: Request):
 @router.get("/eleve/catalogue", response_class=HTMLResponse)
 def page_catalogue(request: Request):
     return templates.TemplateResponse(request, "eleve/catalogue.html", {})
+
+
+@router.get("/reveil", response_class=HTMLResponse)
+def page_reveil(request: Request, dest: str = "eleve"):
+    destinations = {
+        "eleve": "/eleve/connexion",
+        "admin": "/admin/connexion",
+    }
+    url_dest = destinations.get(dest, "/eleve/connexion")
+    html = f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chargement — Mon espace formation</title>
+  <style>
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: Georgia, serif;
+      background: #faf8f5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      text-align: center;
+    }}
+    .card {{
+      background: #fff;
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 4px 32px rgba(0,0,0,0.07);
+    }}
+    .label {{
+      font-size: 0.85rem;
+      letter-spacing: 0.12em;
+      color: #aaa;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }}
+    h1 {{
+      font-size: 1.4rem;
+      font-weight: normal;
+      color: #2d2d2d;
+      margin-bottom: 0.75rem;
+    }}
+    p {{
+      font-size: 0.95rem;
+      color: #777;
+      line-height: 1.65;
+      margin-bottom: 2rem;
+    }}
+    .dots {{
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 1.75rem;
+    }}
+    .dot {{
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: #c4a882;
+      animation: pulse 1.4s ease-in-out infinite;
+    }}
+    .dot:nth-child(2) {{ animation-delay: 0.2s; }}
+    .dot:nth-child(3) {{ animation-delay: 0.4s; }}
+    @keyframes pulse {{
+      0%, 80%, 100% {{ opacity: 0.25; transform: scale(0.8); }}
+      40% {{ opacity: 1; transform: scale(1); }}
+    }}
+    .status {{
+      font-size: 0.85rem;
+      color: #bbb;
+      min-height: 1.2em;
+    }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="label">Laurence Mermet-Bijon · Formation</div>
+    <h1>Préparation de votre espace…</h1>
+    <p>Le serveur s'éveille, cela prend quelques secondes.<br>
+       Vous serez redirigée automatiquement.</p>
+    <div class="dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
+    </div>
+    <div class="status" id="status">Connexion en cours…</div>
+  </div>
+  <script>
+    var dest = "{{url_dest}}";
+    var tries = 0;
+    function ping() {{
+      tries++;
+      fetch("/ping", {{ cache: "no-store" }})
+        .then(function(r) {{
+          if (r.ok) {{
+            document.getElementById("status").textContent = "\u2713 Prêt — redirection en cours…";
+            setTimeout(function() {{ window.location.href = dest; }}, 500);
+          }} else {{
+            retry();
+          }}
+        }})
+        .catch(function() {{ retry(); }});
+    }}
+    function retry() {{
+      document.getElementById("status").textContent = "Démarrage… (" + tries + "s)";
+      setTimeout(ping, 1000);
+    }}
+    setTimeout(ping, 800);
+  </script>
+</body>
+</html>"""
+    return HTMLResponse(content=html)
