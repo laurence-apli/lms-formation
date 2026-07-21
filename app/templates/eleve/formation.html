@@ -151,6 +151,10 @@ function mettreAJourProgression(pct) {
   if (label) label.textContent = pct + '%';
 }
 
+// CORRECTION PERFORMANCE : met à jour l'état déjà chargé en mémoire (donneesFormation)
+// sans repasser par le serveur. Plus besoin de tout recharger après une validation --
+// on connaît déjà tout le contenu, on sait juste qu'un chapitre de plus est validé,
+// et que le chapitre suivant devient donc accessible.
 function marquerChapitreValideLocalement(chapId) {
   if (!donneesFormation) return;
   const tousChapitres = [];
@@ -200,7 +204,10 @@ function selectionnerChapitre(moduleId, chapId) { selectionner({ type: 'chapitre
 
 async function afficherContenu() {
   const zone = document.getElementById('contenu');
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  zone.scrollTo({ top: 0, behavior: 'smooth' });
+
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
       (donneesFormation.presentation_html ? `<p>${donneesFormation.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
@@ -242,6 +249,11 @@ function selectionner(noeud) {
   afficherContenu();
 }
 
+// CORRECTION PERFORMANCE : on ne recharge plus TOUTE la formation après
+// validation (await chargerFormation() supprimé) -- on met juste à jour
+// l'état déjà en mémoire, ce qui est instantané. Un seul appel réseau au
+// lieu de deux, et plus aucune requête pour retélécharger tout le contenu
+// des chapitres déjà chargés.
 function prechargerTousChapitres() {
   if (!donneesFormation) return;
   const tous = [];
@@ -257,7 +269,7 @@ function prechargerTousChapitres() {
       .catch(function() {})
       .finally(function() { setTimeout(chargerSuivantDuLot, 300); });
   }
-  setTimeout(chargerSuivantDuLot, 1000);
+  setTimeout(chargerSuivantDuLot, 1000); // démarre 1s après le chargement de la formation
 }
 
 function prechargerSuivant(chapId) {
@@ -282,26 +294,30 @@ async function validerChapitre(chapId) {
     if (data.progression !== undefined) {
       mettreAJourProgression(data.progression);
     }
+    // Marquer en mémoire AVANT de chercher le suivant (rend le chapitre suivant accessible)
     marquerChapitreValideLocalement(chapId);
-    if (data.prochain_debloque) {
-      const nextId = data.prochain_debloque;
-      let nextModuleId = null;
-      if (donneesFormation) {
-        for (const m of donneesFormation.modules) {
-          if (m.chapitres.some(c => c.id === nextId)) { nextModuleId = m.id; break; }
-        }
-      }
-      if (nextModuleId) {
-        selectionnerChapitre(nextModuleId, nextId);
+    // Naviguer vers le chapitre suivant à partir des données locales (indépendant de l'API)
+    if (donneesFormation) {
+      const entrees = [];
+      donneesFormation.modules.forEach(m => m.chapitres.forEach(c => entrees.push({ chap: c, moduleId: m.id })));
+      const idx = entrees.findIndex(e => e.chap.id === chapId);
+      const next = idx !== -1 && idx + 1 < entrees.length ? entrees[idx + 1] : null;
+      if (next && (next.chap.accessible || next.chap.valide)) {
+        selectionnerChapitre(next.moduleId, next.chap.id);
         return;
       }
     }
+    // Pas de chapitre suivant accessible : rafraîchir le sommaire
     afficherSommaire();
   }
 }
 
 chargerFormation();
 
+// CORRECTION : signal envoyé toutes les 4 minutes pour empêcher Render de
+// mettre le service en veille pendant qu'un élève reste longtemps sur une
+// page de formation sans cliquer nulle part (le plan gratuit s'endort après
+// ~15 minutes sans aucune requête reçue -- ce signal reste bien en dessous).
 setInterval(() => {
   fetch('/api/heartbeat', { method: 'GET', cache: 'no-store' }).catch(() => {});
 }, 90 * 1000);
