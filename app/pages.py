@@ -191,16 +191,25 @@ def page_paiement_confirme(
     )
 
 @router.get("/portail", response_class=HTMLResponse)
-def page_portail(request: Request):
-    return templates.TemplateResponse(request, "eleve/portail.html", {})
+def page_portail(request: Request, session: Session = Depends(obtenir_session)):
+    return templates.TemplateResponse(request, "eleve/portail.html", {
+        "profil": _profil_pour_affichage(session),
+        "url_site_vitrine": URL_SITE_VITRINE,
+    })
 
 @router.get("/eleve/inscription", response_class=HTMLResponse)
-def page_inscription(request: Request):
-    return templates.TemplateResponse(request, "eleve/inscription.html", {})
+def page_inscription(request: Request, session: Session = Depends(obtenir_session)):
+    return templates.TemplateResponse(request, "eleve/inscription.html", {
+        "profil": _profil_pour_affichage(session),
+        "url_site_vitrine": URL_SITE_VITRINE,
+    })
 
 @router.get("/eleve/catalogue", response_class=HTMLResponse)
-def page_catalogue(request: Request):
-    return templates.TemplateResponse(request, "eleve/catalogue.html", {})
+def page_catalogue(request: Request, session: Session = Depends(obtenir_session)):
+    return templates.TemplateResponse(request, "eleve/catalogue.html", {
+        "profil": _profil_pour_affichage(session),
+        "url_site_vitrine": URL_SITE_VITRINE,
+    })
 
 
 @router.get("/reveil", response_class=HTMLResponse)
