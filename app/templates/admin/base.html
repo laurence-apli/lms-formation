@@ -9,6 +9,7 @@
   :root {
     --gold:#B8922A; --cream:#F5EDD6; --rose:#C47B6E; --ink:#2E2210; --bg:#FAF7F0;
     --panel:#FFFFFF; --border:#E5DCC3; --green:#3B8C5A; --grey:#9B968A; --danger:#B3503D;
+    --cream-light:#F0E9D6;
   }
   * { box-sizing: border-box; }
   body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); display:flex; min-height:100vh; }
@@ -61,12 +62,17 @@
   <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes <span id="badge-diplomes" style="display:none; background:#B8922A; color:#2E2210; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
   <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">📊 Statistiques</a>
   <a class="nav-item {% if page_active == 'cercle-femmes' %}active{% endif %}" href="/admin/page/cercle-femmes">Cercle de Femmes</a>
-  <a class="nav-item {% if page_active == 'catalogue-tarifs' %}active{% endif %}" <a href="/admin/page/catalogue-tarifs">Catalogue & Tarifs</a>
-  <a class="nav-item {% if page_active == 'codes-promo' %}active{% endif %}" <a href="/admin/page/codes-promo">Codes promo</a>
+  <a class="nav-item {% if page_active == 'catalogue-tarifs' %}active{% endif %}" href="/admin/page/catalogue-tarifs">Catalogue & Tarifs</a>
+  <a class="nav-item {% if page_active == 'codes-promo' %}active{% endif %}" href="/admin/page/codes-promo">Codes promo</a>
   <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">🪪 Mon profil</a>
   {% if url_site_vitrine %}
   <a class="nav-item" href="{{ url_site_vitrine }}" target="_blank" rel="noopener" style="margin-top:auto; border-top:1px solid rgba(245,237,214,0.15); padding-top:14px;">← Retour au site</a>
+  {% else %}
+  <div style="margin-top:auto;"></div>
   {% endif %}
+  <form action="/admin/deconnexion" method="post" style="margin:0; border-top:1px solid rgba(245,237,214,0.15); padding-top:8px;">
+    <button type="submit" class="nav-item" style="width:100%; background:none; border:none; cursor:pointer; color:#D8CBA0; font-family:inherit; font-size:14px; text-align:left;">🚪 Déconnexion</button>
+  </form>
 </div>
 
 <div class="main">{% block contenu %}{% endblock %}</div>
@@ -92,13 +98,8 @@ async function appelApi(url, options = {}) {
     try {
       const corps = await resp.json();
       if (typeof corps.detail === "string") {
-        // Erreur "normale", levée volontairement par nos propres routes (ex: HTTPException)
         detail = corps.detail;
       } else if (Array.isArray(corps.detail)) {
-        // Erreur de validation automatique de FastAPI : une liste de champs en
-        // erreur, chacun avec son propre message -- jamais un texte simple.
-        // Sans ce cas, l'erreur s'affichait comme "[object Object]" (bug trouvé
-        // et corrigé : on reconstruit un message lisible à partir de la liste).
         detail = corps.detail.map(d => d.msg || JSON.stringify(d)).join(" — ");
       }
     } catch (e) {}
@@ -107,10 +108,6 @@ async function appelApi(url, options = {}) {
   try { return await resp.json(); } catch (e) { return {}; }
 }
 
-// Badge de notification sur "Diplômes" : affiche le nombre d'élèves ayant
-// atteint 100% sans diplôme encore marqué envoyé. Présent sur TOUTES les
-// pages admin (ce script vit dans le template de base, partagé partout),
-// pour que Laurence le voie où qu'elle se trouve dans l'administration.
 (async function chargerBadgeDiplomes() {
   try {
     const diplomesEnAttente = await appelApi('/admin/diplomes');
@@ -119,10 +116,7 @@ async function appelApi(url, options = {}) {
       badge.textContent = diplomesEnAttente.length;
       badge.style.display = 'inline-block';
     }
-  } catch (e) {
-    // Échec silencieux : un badge de notification qui ne s'affiche pas
-    // n'est jamais grave au point de perturber le reste de la page.
-  }
+  } catch (e) {}
 })();
 </script>
 {% block scripts %}{% endblock %}
