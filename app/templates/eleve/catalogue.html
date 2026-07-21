@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Choisir mes formations — Laurence Mermet-Bijon</title>
+<title>Choisir mes formations — {{ profil.prenom }} {{ profil.nom }}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -47,7 +47,7 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 .f-option.has-trait { border-bottom:1px solid var(--sable-lt); }
 .f-option:hover .f-check { border-color:var(--or); }
 .option-nom { flex:1; font-size:14px; }
-.option-prix { font-size:14px; font-weight:600; color:var(--encre); white-space:nowrap; }
+.option-prix { font-size:14px; font-weight:600; color:var(--ink); white-space:nowrap; }
 .f-row { display:flex; align-items:flex-start; gap:14px; }
 .f-visuel { width:64px; height:64px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--sable-lt); }
 .f-visuel img { width:100%; height:100%; object-fit:cover; }
@@ -83,7 +83,7 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 <body>
 
 <div class="topbar">
-  <span>Formation proposée par Laurence Mermet-Bijon</span>
+  <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
   <a class="retour" href="/eleve/tableau-de-bord">← Retour à mon espace</a>
 </div>
 
