@@ -20,6 +20,10 @@
 .statut-inactif { background:#F0ECE2; color:var(--grey); }
 .statut-mdp-ok { background:#E4F0E8; color:var(--green); }
 .statut-mdp-attente { background:#FEF3E2; color:#A05C00; }
+.coaching-row { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:12px 16px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.coaching-row .coaching-info { font-size:13px; }
+.coaching-pill-realise { background:#E4F0E8; color:var(--green); font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
+.coaching-pill-attente { background:#FEF3E2; color:#A05C00; font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
@@ -38,6 +42,12 @@
 <button class="btn btn-sm btn-primary" id="btn-donner-acces" onclick="ouvrirModalAcces(null)">+ Donner accès à une formation</button>
 </div>
 <div id="liste-acces"></div>
+
+<div class="topbar" style="margin-bottom:12px; margin-top:28px;">
+  <h1 style="font-size:16px;">Séances coaching</h1>
+  <button class="btn btn-sm btn-primary" onclick="ouvrirModalCoaching()">+ Envoyer un lien coaching</button>
+</div>
+<div id="liste-coaching"></div>
 
 {% endblock %}
 {% block scripts %}
@@ -293,6 +303,76 @@ afficherToast('Avancement réinitialisé');
 await charger();
 }
 
+// --- Coaching ---
+
+async function chargerCoaching() {
+const zone = document.getElementById('liste-coaching');
+try {
+const data = await appelApi(`/admin/eleves/${ELEVE_ID}/coaching/historique`);
+if (data.seances.length === 0) {
+zone.innerHTML = `<div class="empty-state" style="padding:20px;">Aucune séance coaching pour l'instant.</div>`;
+return;
+}
+zone.innerHTML = data.seances.map(s => {
+const date = new Date(s.date_seance).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+const statut = s.statut === 'realise'
+? `<span class="coaching-pill-realise">✓ Réalisée${s.date_realise ? ' · ' + new Date(s.date_realise).toLocaleDateString('fr-FR') : ''}</span>`
+: `<span class="coaching-pill-attente">⏳ En attente</span>`;
+const lien = s.lien_resalib ? `<a href="${esc(s.lien_resalib)}" target="_blank" style="font-size:12px; color:var(--gold);">Voir le lien →</a>` : '';
+const btnRealise = s.statut !== 'realise' ? `<button class="btn btn-sm" onclick="marquerRealise(${s.id})">✓ Marquer réalisée</button>` : '';
+return `<div class="coaching-row">
+<div class="coaching-info">
+<div style="font-weight:600;">${esc(s.formation)} — ${date}</div>
+<div style="margin-top:4px; display:flex; gap:10px; align-items:center;">${statut} ${lien}</div>
+</div>
+<div>${btnRealise}</div>
+</div>`;
+}).join('');
+} catch (e) {
+zone.innerHTML = `<div class="empty-state" style="padding:20px;">Erreur lors du chargement.</div>`;
+}
+}
+
+function ouvrirModalCoaching() {
+afficherOverlay(`
+<div class="modal">
+<h3>Envoyer un lien coaching</h3>
+<p style="font-size:13px; color:var(--grey);">Un email avec le lien de réservation sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
+<label>Lien Résalib (URL de prise de rendez-vous)</label>
+<input type="url" id="input-resalib" placeholder="https://...">
+<div class="modal-actions">
+<button class="btn" onclick="fermerModal()">Annuler</button>
+<button class="btn btn-primary" onclick="envoyerLienCoaching()">Envoyer</button>
+</div>
+</div>`);
+}
+
+async function envoyerLienCoaching() {
+const lien = document.getElementById('input-resalib').value.trim();
+if (!lien) { afficherToast('Merci de saisir un lien.'); return; }
+try {
+const data = new FormData();
+data.append('lien_resalib', lien);
+await appelApi(`/admin/eleves/${ELEVE_ID}/coaching/envoyer`, { method: 'POST', body: data });
+fermerModal();
+afficherToast('Lien coaching envoyé à ' + eleve.email);
+chargerCoaching();
+} catch (e) {
+afficherToast(e.message);
+}
+}
+
+async function marquerRealise(seanceId) {
+try {
+await appelApi(`/admin/eleves/${ELEVE_ID}/seances/${seanceId}/realiser`, { method: 'POST' });
+afficherToast('Séance marquée comme réalisée');
+chargerCoaching();
+} catch (e) {
+afficherToast(e.message);
+}
+}
+
 charger();
+chargerCoaching();
 </script>
 {% endblock %}
