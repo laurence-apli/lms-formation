@@ -44,6 +44,8 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 .f-prix { display:flex; align-items:baseline; gap:10px; margin-top:8px; }
 .f-final { font-family:var(--serif); font-size:20px; font-weight:600; }
 .prix-barre { text-decoration:line-through; color:var(--leger); font-size:14px; font-weight:400; }
+.prix-remise { font-size:11px; font-weight:700; color:#fff; background:var(--or); padding:2px 7px; border-radius:10px; margin-left:4px; vertical-align:middle; }
+.prix-base-seul { font-size:14px; color:var(--encre); }
 .opt-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--sable-dk); border-radius:8px; cursor:pointer; margin-top:8px; }
 .opt-row.selected { border-color:var(--or); background:var(--or-lt); }
   .niveaux-liste { margin-top:14px; } .niveau-row.opt-row { border:none; border-radius:10px; padding:10px 12px; margin-top:0; align-items:flex-start; } .niveau-row.opt-row.selected { background:var(--or-lt); } .niveau-marqueur { display:flex; flex-direction:column; align-items:center; flex-shrink:0; } .niveau-point { width:24px; height:24px; border-radius:50%; border:2px solid var(--sable-dk); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; color:var(--doux); background:#fff; flex-shrink:0; } .niveau-row.opt-row.selected .niveau-point { background:var(--or); border-color:var(--or); color:#fff; } .niveau-trait { width:2px; flex:1; min-height:18px; background:var(--sable-dk); margin-top:2px; } .niveau-contenu { flex:1; padding-bottom:4px; } .niveau-entete { display:flex; justify-content:space-between; align-items:baseline; gap:10px; } .niveau-nom { font-family:var(--serif); font-size:16px; font-weight:600; } .niveau-row.opt-row.selected .niveau-nom { color:var(--or); } .niveau-prix { font-family:var(--serif); font-size:16px; font-weight:600; white-space:nowrap; } .niveau-detail { font-size:12px; color:var(--doux); margin:3px 0 0; line-height:1.5; }
@@ -125,14 +127,14 @@ async function chargerTout() {
       if (f.tarifs.length === 1) {
         const t = f.tarifs[0];
         return `
-        <div class="formation-bloc" onclick="toggleSimple(${t.id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix})">
+        <div class="formation-bloc" onclick="toggleSimple(${t.id}, '${f.titre.replace(/'/g, "\\'")}', ${t.prix_base}, ${t.remise_montant}, ${t.prix_final})">
           <div class="f-row">
             <div class="f-visuel">${f.image_url ? `<img src="${f.image_url}">` : ''}</div>
             <div class="f-check" id="check-${t.id}"></div>
             <div>
               <p class="f-titre">${f.titre}</p>
               <p class="f-desc-courte">${f.description_courte || ''}</p>
-              <div class="f-prix">${t.prix_barre ? `<span class="prix-barre">${t.prix_barre} €</span>` : ''}<span class="f-final">${t.prix} €</span></div>
+              <div class="f-prix">${t.remise_montant > 0 ? `<span class="prix-barre">${t.prix_base} €</span><span class="prix-remise">−${t.remise_pourcent}%</span>` : `<span class="prix-base-seul">${t.prix_base} €</span>`}<span class="f-final">${t.prix_final} €</span></div>
             </div>
           </div>
         </div>`;
@@ -162,13 +164,13 @@ async function chargerTout() {
       }}).join('');
   }
 }
-function toggleSimple(tarifId, nom, prix) {
+function toggleSimple(tarifId, nom, prix_base, remise_montant, prix_final) {
   const check = document.getElementById(`check-${tarifId}`);
   if (selection[tarifId] && !selection[tarifId].montee) {
     delete selection[tarifId];
     check.classList.remove('checked'); check.innerHTML = '';
   } else {
-    selection[tarifId] = { nom, prix };
+    selection[tarifId] = { nom, prix_base, remise_montant, prix_final };
     check.classList.add('checked'); check.innerHTML = '✓';
   }
   majRecap();
