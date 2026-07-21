@@ -20,11 +20,25 @@ body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--p
 h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; }
 .sous-titre { color:var(--doux); font-size:14px; margin-bottom:20px; }
 
-.bloc-montee { background:var(--rose-lt); border:1px solid var(--rose); border-radius:10px; padding:16px 20px; margin-bottom:20px; cursor:pointer; }
-.bloc-montee-row { display:flex; align-items:flex-start; gap:12px; }
-.bloc-montee h3 { font-family:var(--serif); font-size:16px; margin:0 0 6px; }
-.bloc-montee p { font-size:13px; color:var(--doux); margin:0; }
-.bloc-montee .f-check { border-color:var(--rose); }
+/* Formations déjà acquises */
+.formation-achetee { background:#fff; border:1px solid var(--sable-dk); border-left:4px solid var(--or); border-radius:12px; padding:18px 20px; margin-bottom:12px; display:flex; align-items:center; gap:16px; }
+.f-acquis-visuel { width:56px; height:56px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--sable-lt); }
+.f-acquis-visuel img { width:100%; height:100%; object-fit:cover; }
+.f-acquis-info { flex:1; min-width:0; }
+.f-acquis-titre { font-family:var(--serif); font-size:18px; font-weight:600; margin:0 0 3px; }
+.f-acquis-desc { font-size:12px; color:var(--doux); margin:0 0 6px; line-height:1.45; }
+.badge-acquis { display:inline-block; font-size:11px; font-weight:600; color:var(--or); background:var(--or-lt); border:1px solid var(--or); border-radius:20px; padding:2px 10px; letter-spacing:.3px; }
+.btn-acceder { display:inline-block; font-size:12.5px; color:var(--or); text-decoration:none; font-weight:600; border:1.5px solid var(--or); border-radius:20px; padding:8px 18px; white-space:nowrap; flex-shrink:0; transition:background .15s,color .15s; }
+.btn-acceder:hover { background:var(--or); color:#fff; }
+
+/* Montées de niveau */
+.bloc-montee { background:#fff; border:1px solid var(--rose); border-left:4px solid var(--rose); border-radius:12px; padding:18px 20px; margin-bottom:12px; cursor:pointer; display:flex; align-items:center; gap:16px; }
+.bloc-montee-icone { width:40px; height:40px; border-radius:50%; background:var(--rose-lt); border:1.5px solid var(--rose); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.bloc-montee-info { flex:1; }
+.bloc-montee h3 { font-family:var(--serif); font-size:17px; font-weight:600; margin:0 0 4px; color:var(--profond); }
+.bloc-montee p { font-size:12.5px; color:var(--doux); margin:0 0 6px; }
+.badge-montee { display:inline-block; font-size:11px; font-weight:600; color:var(--rose); background:var(--rose-lt); border:1px solid var(--rose); border-radius:20px; padding:2px 10px; }
+.bloc-montee .f-check { border-color:var(--rose); flex-shrink:0; }
 .bloc-montee .f-check.checked { background:var(--rose); border-color:var(--rose); }
 
 .formation-bloc { background:#fff; border:1px solid var(--sable-dk); border-radius:12px; padding:22px 24px; margin-bottom:16px; }
@@ -129,19 +143,29 @@ async function chargerTout() {
 
   document.getElementById('zone-montees').innerHTML = montees.map(m => `
     <div class="bloc-montee" id="montee-${m.tarif_id}" onclick="toggleMontee(${m.tarif_id}, '${m.formation_titre.replace(/'/g, "\\'")} — ${m.nom_option.replace(/'/g, "\\'")}', ${m.difference_a_payer})">
-      <div class="bloc-montee-row">
-        <div class="f-check" id="check-montee-${m.tarif_id}"></div>
-        <div>
-          <h3>Aller plus loin dans "${m.formation_titre}"</h3>
-          <p>Passe au niveau "${m.nom_option}" pour seulement ${m.difference_a_payer} € de plus (au lieu du prix plein).</p>
-        </div>
+      <div class="bloc-montee-icone">↑</div>
+      <div class="bloc-montee-info">
+        <h3>Aller plus loin dans « ${m.formation_titre} »</h3>
+        <p>Accède au niveau « ${m.nom_option} » en payant uniquement la différence.</p>
+        <span class="badge-montee">+ ${m.difference_a_payer} € seulement</span>
       </div>
+      <div class="f-check" id="check-montee-${m.tarif_id}"></div>
     </div>
   `).join('');
 
   const formationsAProposer = catalogue.filter(f => !idsDejaAcquis.has(f.id));
   const formationsAcquises = catalogue.filter(f => idsDejaAcquis.has(f.id));
-  const htmlAcquises = formationsAcquises.length ? formationsAcquises.map(f => `<div class="formation-achetee"><p class="f-titre">${f.titre}</p><a href="/eleve/voir-formation/${f.id}" class="btn-acceder">Accéder à ma formation →</a></div>`).join('') : '';
+  const htmlAcquises = formationsAcquises.length ? formationsAcquises.map(f => `
+    <div class="formation-achetee">
+      <div class="f-acquis-visuel">${f.image_url ? `<img src="${f.image_url}" alt="${f.titre}">` : ''}</div>
+      <div class="f-acquis-info">
+        <p class="f-acquis-titre">${f.titre}</p>
+        ${f.description_courte ? `<p class="f-acquis-desc">${f.description_courte}</p>` : ''}
+        <span class="badge-acquis">✓ Formation acquise</span>
+      </div>
+      <a href="/eleve/voir-formation/${f.id}" class="btn-acceder">Accéder →</a>
+    </div>
+  `).join('') : '';
 
   if (formationsAProposer.length === 0) {
     document.getElementById('zone-formations').innerHTML = htmlAcquises + (montees.length
