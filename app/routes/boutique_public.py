@@ -34,8 +34,10 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
                 {
                     "id": t.id,
                     "nom_option": t.nom_option,
-                    "prix": float(t.prix_final()),
-                    "prix_barre": float(t.prix) if t.prix_final() < float(t.prix) else None,
+                    "prix_base": float(t.prix),
+                    "remise_pourcent": t.promo_pourcentage if t.promo_active else 0,
+                    "remise_montant": round(float(t.prix) - float(t.prix_final()), 2),
+                    "prix_final": float(t.prix_final()),
                 }
                 for t in tarifs
             ],
