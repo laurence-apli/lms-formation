@@ -295,7 +295,7 @@ def page_reveil(request: Request, dest: str = "eleve"):
     <div class="status" id="status">Connexion en cours…</div>
   </div>
   <script>
-    var dest = "{{url_dest}}";
+    var dest = "{url_dest}";
     var tries = 0;
     function ping() {{
       tries++;
