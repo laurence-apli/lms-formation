@@ -63,6 +63,7 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 .promo-input-row { display:flex; gap:8px; margin-top:10px; }
 .promo-input-row input { flex:1; padding:9px 12px; border:1px solid var(--sable-dk); border-radius:8px; }
 .promo-input-row button { background:var(--profond); color:var(--creme); border:none; border-radius:8px; padding:9px 16px; cursor:pointer; }
+.recap-remise { color:var(--rose); font-style:italic; }
 </style>
 </head>
 <body>
@@ -242,9 +243,25 @@ async function majRecap() {
     body: JSON.stringify({ tarif_ids: tarifIds, montee_tarif_ids: monteeIds, code_promo: codeApplique }),
   }).then(r => r.json());
 
+  // Chaque formation affichée à son prix plein (prix_original)
   let html = apercu.lignes.map(l => `
-    <div class="recap-item"><span>${l.nom}</span><span>${l.prix_final} €</span></div>
+    <div class="recap-item"><span>${l.nom}</span><span>${l.prix_original} €</span></div>
   `).join('');
+
+  // Remise globale : on regroupe par source (promo intégrée / code promo)
+  const remisePromo = apercu.lignes
+    .filter(l => l.reduction_appliquee === 'promo')
+    .reduce((acc, l) => acc + (l.prix_original - l.prix_final), 0);
+  const remiseCode = apercu.lignes
+    .filter(l => l.reduction_appliquee === 'code')
+    .reduce((acc, l) => acc + (l.prix_original - l.prix_final), 0);
+
+  if (remisePromo > 0) {
+    html += `<div class="recap-item recap-remise"><span>Remise</span><span>−${Math.round(remisePromo * 100) / 100} €</span></div>`;
+  }
+  if (remiseCode > 0) {
+    html += `<div class="recap-item recap-remise"><span>Code promo : ${apercu.code_applique}</span><span>−${Math.round(remiseCode * 100) / 100} €</span></div>`;
+  }
 
   html += `<div class="promo-input-row">
     <input type="text" id="code-input" placeholder="Code promo">
