@@ -216,6 +216,8 @@ def page_catalogue(request: Request, session: Session = Depends(obtenir_session)
 def page_reveil(request: Request, dest: str = "eleve"):
     destinations = {
         "eleve": "/eleve/connexion",
+        "connexion": "/eleve/connexion",
+        "inscription": "/eleve/inscription",
         "admin": "/admin/connexion",
     }
     url_dest = destinations.get(dest, "/eleve/connexion")
@@ -326,5 +328,5 @@ def page_reveil(request: Request, dest: str = "eleve"):
     setTimeout(ping, 800);
   </script>
 </body>
-</html>""";
+</html>"""
     return HTMLResponse(content=html)
