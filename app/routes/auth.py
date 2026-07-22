@@ -20,7 +20,7 @@ from ..models import (
     Eleve, Administrateur, TokenAuthEleve, TokenAuthAdmin,
     generer_token_reinitialisation,
 )
-from ..emails import email_reinitialisation_mot_de_passe
+from ..emails import email_reinitialisation_mot_de_passe, email_nouveau_utilisateur
 from ..config import URL_PLATEFORME, DUREE_VALIDITE_TOKEN_HEURES
 
 router = APIRouter()
@@ -58,9 +58,13 @@ def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str 
         raise HTTPException(status_code=403, detail="Votre compte est actuellement inactif. Merci de contacter votre formatrice.")
 
     # NOUVEAU : mise à jour des statistiques de connexion
+    is_premier = (eleve.nb_connexions is None or eleve.nb_connexions == 0)
     eleve.derniere_connexion = datetime.utcnow()
     eleve.nb_connexions = (eleve.nb_connexions or 0) + 1
     session.commit()
+
+    if is_premier:
+        email_nouveau_utilisateur(eleve.prenom, eleve.nom, eleve.email)
 
     request.session["eleve_id"] = eleve.id
     return RedirectResponse(url="/eleve/tableau-de-bord", status_code=303)
