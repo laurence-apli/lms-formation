@@ -198,7 +198,7 @@ async function chargerTout() {
             </div>
           </div>
           <div class="f-options">
-            ${f.tarifs.map((t, idx) => `
+            ${f.tarifs.slice().sort((a, b) => a.prix_final - b.prix_final).map((t, idx) => `
               <div class="f-option${idx < f.tarifs.length - 1 ? ' has-trait' : ''}"
                    id="opt-${t.id}"
                    data-formation="${f.titre.replace(/"/g, '&amp;quot;')}"
