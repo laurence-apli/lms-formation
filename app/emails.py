@@ -270,3 +270,42 @@ def email_coaching_rdv(
         '</div></div>'
     )
     return _envoyer_email(destinataire, sujet, corps)
+
+
+def email_nouveau_utilisateur(prenom: str, nom: str, email_eleve: str) -> bool:
+    """
+    Notifie Laurence qu'un nouvel eleve vient de se connecter pour la premiere fois.
+    Appelee automatiquement au premier login depuis auth.py.
+    """
+    EMAIL_LAURENCE = "laurencemb42@gmail.com"
+    sujet = f"Nouvel eleve connecte : {prenom} {nom}"
+    corps = f"""
+    <div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;
+                background:#FDFAF5;border-radius:12px;border:1px solid #e8dfc8;">
+      <h2 style="color:#B8922A;margin-top:0;font-size:22px;">Nouveau membre connecte</h2>
+      <p style="color:#2E2210;margin-bottom:20px;">
+        Un nouvel eleve vient de se connecter pour la <strong>premiere fois</strong>
+        sur la plateforme de formation.
+      </p>
+      <table style="width:100%;border-collapse:collapse;background:#fff;
+                    border-radius:8px;overflow:hidden;border:1px solid #e8dfc8;">
+        <tr style="background:#faf5e8;">
+          <td style="padding:10px 14px;color:#888;font-size:14px;width:120px;">Prenom</td>
+          <td style="padding:10px 14px;font-weight:600;color:#2E2210;">{prenom}</td>
+        </tr>
+        <tr>
+          <td style="padding:10px 14px;color:#888;font-size:14px;">Nom</td>
+          <td style="padding:10px 14px;font-weight:600;color:#2E2210;">{nom}</td>
+        </tr>
+        <tr style="background:#faf5e8;">
+          <td style="padding:10px 14px;color:#888;font-size:14px;">Email</td>
+          <td style="padding:10px 14px;color:#2E2210;">{email_eleve}</td>
+        </tr>
+      </table>
+      <p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #e8dfc8;
+                padding-top:16px;">
+        Notification automatique — Plateforme de formation laurence-mermet-bijon.fr
+      </p>
+    </div>
+    """
+    return _envoyer_email(EMAIL_LAURENCE, sujet, corps)
