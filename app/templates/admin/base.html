@@ -59,6 +59,7 @@
   <div class="brand">{{ profil.prenom }} {{ profil.nom }}<small>ADMINISTRATION FORMATIONS</small></div>
   <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">📚 Formations</a>
   <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">👤 Élèves</a>
+  <a class="nav-item {% if page_active == 'coaching' %}active{% endif %}" href="/admin/page/coaching">🤝 Coaching</a>
   <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes <span id="badge-diplomes" style="display:none; background:#B8922A; color:#2E2210; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
   <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">📊 Statistiques</a>
   <a class="nav-item {% if page_active == 'cercle-femmes' %}active{% endif %}" href="/admin/page/cercle-femmes">Cercle de Femmes</a>
@@ -98,8 +99,13 @@ async function appelApi(url, options = {}) {
     try {
       const corps = await resp.json();
       if (typeof corps.detail === "string") {
+        // Erreur "normale", levée volontairement par nos propres routes (ex: HTTPException)
         detail = corps.detail;
       } else if (Array.isArray(corps.detail)) {
+        // Erreur de validation automatique de FastAPI : une liste de champs en
+        // erreur, chacun avec son propre message -- jamais un texte simple.
+        // Sans ce cas, l'erreur s'affichait comme "[object Object]" (bug trouvé
+        // et corrigé : on reconstruit un message lisible à partir de la liste).
         detail = corps.detail.map(d => d.msg || JSON.stringify(d)).join(" — ");
       }
     } catch (e) {}
@@ -108,6 +114,10 @@ async function appelApi(url, options = {}) {
   try { return await resp.json(); } catch (e) { return {}; }
 }
 
+// Badge de notification sur "Diplômes" : affiche le nombre d'élèves ayant
+// atteint 100% sans diplôme encore marqué envoyé. Présent sur TOUTES les
+// pages admin (ce script vit dans le template de base, partagé partout),
+// pour que Laurence le voie où qu'elle se trouve dans l'administration.
 (async function chargerBadgeDiplomes() {
   try {
     const diplomesEnAttente = await appelApi('/admin/diplomes');
@@ -116,7 +126,10 @@ async function appelApi(url, options = {}) {
       badge.textContent = diplomesEnAttente.length;
       badge.style.display = 'inline-block';
     }
-  } catch (e) {}
+  } catch (e) {
+    // Échec silencieux : un badge de notification qui ne s'affiche pas
+    // n'est jamais grave au point de perturber le reste de la page.
+  }
 })();
 </script>
 {% block scripts %}{% endblock %}
