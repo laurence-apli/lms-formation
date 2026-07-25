@@ -1,0 +1,198 @@
+{% extends "admin/base.html" %}
+{% block titre %}Coaching — Administration{% endblock %}
+{% block contenu %}
+<style>
+  .coaching-section-titre {
+    font-family: var(--serif); font-size: 15px; font-weight: 600;
+    color: var(--grey); text-transform: uppercase; letter-spacing: .06em;
+    margin: 28px 0 12px; padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .coaching-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px 18px; margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+  }
+  .coaching-card .infos { font-size: 14px; flex: 1; min-width: 200px; }
+  .coaching-card .nom { font-weight: 600; margin-bottom: 2px; }
+  .coaching-card .meta { color: var(--grey); font-size: 12px; }
+  .pill {
+    font-size: 11px; font-weight: 600; padding: 2px 10px;
+    border-radius: 10px; white-space: nowrap;
+  }
+  .pill-attente { background: #FEF3E2; color: #A05C00; }
+  .pill-realise { background: #E4F0E8; color: #2A7A3A; }
+  .pill-auto    { background: #EAE4F5; color: #5B3EA0; }
+  .pill-manuel  { background: #E8EEF5; color: #2A4A7A; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat-bar {
+    display: flex; gap: 20px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 16px 24px; margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .stat-item { text-align: center; }
+  .stat-item .val { font-size: 28px; font-weight: 700; color: var(--gold); }
+  .stat-item .lbl { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: .05em; }
+  .empty-coaching { text-align: center; padding: 32px; color: var(--grey); font-size: 14px; }
+</style>
+
+<div class="topbar">
+  <div><h1>🤝 Suivi Coaching</h1></div>
+  <div>
+    <button class="btn btn-sm btn-primary" onclick="ouvrirModalEnvoi()">+ Envoyer un lien coaching</button>
+  </div>
+</div>
+
+<!-- Statistiques -->
+<div class="stat-bar" id="stats-bar">
+  <div class="stat-item"><div class="val" id="stat-attente">—</div><div class="lbl">En attente</div></div>
+  <div class="stat-item"><div class="val" id="stat-realise">—</div><div class="lbl">Réalisées</div></div>
+  <div class="stat-item"><div class="val" id="stat-total">—</div><div class="lbl">Total</div></div>
+</div>
+
+<!-- Séances en attente -->
+<div class="coaching-section-titre">⏳ En attente d'action</div>
+<div id="liste-attente"><div class="empty-coaching">Chargement…</div></div>
+
+<!-- Séances réalisées -->
+<div class="coaching-section-titre">✓ Réalisées</div>
+<div id="liste-realises"><div class="empty-coaching">Chargement…</div></div>
+
+<!-- Modal envoi manuel -->
+<div id="modal-envoi" style="display:none; position:fixed; inset:0; background:rgba(46,34,16,.6); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:var(--panel); border-radius:12px; padding:28px 24px; max-width:420px; width:90%; position:relative;">
+    <button onclick="fermerModal()" style="position:absolute; top:10px; right:14px; background:none; border:none; font-size:1.3rem; cursor:pointer; color:var(--grey);">×</button>
+    <h3 style="font-family:var(--serif); margin:0 0 18px;">Envoyer un lien coaching</h3>
+    <label style="font-size:13px; color:var(--grey);">Élève</label>
+    <select id="select-eleve" style="width:100%; padding:9px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:inherit; margin:4px 0 14px; font-size:14px;">
+      <option value="">— choisir une élève —</option>
+    </select>
+    <label style="font-size:13px; color:var(--grey);">Lien Resalib (optionnel)</label>
+    <input id="input-lien" type="url" placeholder="https://resalib.com/..." style="width:100%; padding:9px; border:1px solid var(--border); border-radius:6px; background:var(--bg); color:inherit; margin:4px 0 18px; box-sizing:border-box; font-size:14px;">
+    <button class="btn btn-primary" style="width:100%;" onclick="envoyerLienCoaching()">Envoyer</button>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s == null ? '' : String(s);
+  return d.innerHTML;
+}
+
+function formatDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('fr-FR', { day:'2-digit', month:'long', year:'numeric' });
+}
+
+function carteSeance(s, avecAction) {
+  const pills = `
+    <span class="pill ${s.statut === 'en_attente' ? 'pill-attente' : 'pill-realise'}">
+      ${s.statut === 'en_attente' ? '⏳ En attente' : '✓ Réalisée'}
+    </span>
+    <span class="pill ${s.type_envoi === 'auto' ? 'pill-auto' : 'pill-manuel'}">
+      ${s.type_envoi === 'auto' ? '⚡ Auto' : '✋ Manuel'}
+    </span>
+  `;
+  const dateInfo = s.statut === 'realise'
+    ? `Envoyée le ${formatDate(s.date_seance)} · Réalisée le ${formatDate(s.date_realise)}`
+    : `Envoyée le ${formatDate(s.date_seance)}`;
+
+  const actions = avecAction ? `
+    <div class="actions">
+      <a class="btn btn-sm" href="/admin/page/eleves/${s.eleve_id}" target="_blank">Fiche élève</a>
+      <button class="btn btn-sm btn-primary" onclick="marquerRealise(${s.id})">✓ Marquer réalisée</button>
+    </div>
+  ` : `
+    <div class="actions">
+      <a class="btn btn-sm" href="/admin/page/eleves/${s.eleve_id}" target="_blank">Fiche élève</a>
+    </div>
+  `;
+
+  return `
+    <div class="coaching-card">
+      <div class="infos">
+        <div class="nom">${esc(s.eleve_nom)} <span style="font-weight:400;color:var(--grey);font-size:12px;">${esc(s.eleve_email)}</span></div>
+        <div class="meta">${esc(s.formation)} · ${dateInfo}</div>
+        <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">${pills}</div>
+      </div>
+      ${actions}
+    </div>
+  `;
+}
+
+let tousEleves = [];
+
+async function charger() {
+  const data = await appelApi('/admin/coaching/global');
+
+  document.getElementById('stat-attente').textContent = data.en_attente.length;
+  document.getElementById('stat-realise').textContent = data.realises.length;
+  document.getElementById('stat-total').textContent = data.total;
+
+  const zoneAttente = document.getElementById('liste-attente');
+  if (data.en_attente.length === 0) {
+    zoneAttente.innerHTML = `<div class="empty-coaching">🎉 Aucune séance en attente — tout est à jour !</div>`;
+  } else {
+    zoneAttente.innerHTML = data.en_attente.map(s => carteSeance(s, true)).join('');
+  }
+
+  const zoneRealise = document.getElementById('liste-realises');
+  if (data.realises.length === 0) {
+    zoneRealise.innerHTML = `<div class="empty-coaching">Aucune séance réalisée pour l'instant.</div>`;
+  } else {
+    // Afficher les 20 plus récentes
+    zoneRealise.innerHTML = data.realises.slice(0, 20).map(s => carteSeance(s, false)).join('');
+    if (data.realises.length > 20) {
+      zoneRealise.innerHTML += `<div class="empty-coaching" style="font-size:12px;">(${data.realises.length - 20} séances plus anciennes non affichées)</div>`;
+    }
+  }
+}
+
+async function marquerRealise(seanceId) {
+  // On doit trouver l'eleve_id pour la route
+  const data = await appelApi('/admin/coaching/global');
+  const seance = [...data.en_attente, ...data.realises].find(s => s.id === seanceId);
+  if (!seance) return;
+  await appelApi(`/admin/eleves/${seance.eleve_id}/seances/${seanceId}/realiser`, { method: 'POST' });
+  afficherToast('Séance marquée comme réalisée');
+  await charger();
+}
+
+async function ouvrirModalEnvoi() {
+  // Charger la liste des élèves si pas encore fait
+  if (tousEleves.length === 0) {
+    const data = await appelApi('/admin/eleves');
+    tousEleves = data.eleves || data;
+  }
+  const sel = document.getElementById('select-eleve');
+  sel.innerHTML = '<option value="">— choisir une élève —</option>' +
+    tousEleves.map(e => `<option value="${e.id}">${esc(e.prenom)} ${esc(e.nom)} — ${esc(e.email)}</option>`).join('');
+  document.getElementById('modal-envoi').style.display = 'flex';
+}
+
+function fermerModal() {
+  document.getElementById('modal-envoi').style.display = 'none';
+}
+
+async function envoyerLienCoaching() {
+  const eleveId = document.getElementById('select-eleve').value;
+  const lien = document.getElementById('input-lien').value.trim();
+  if (!eleveId) { afficherToast('Choisis une élève', 'erreur'); return; }
+  const body = new URLSearchParams({ lien_coaching: lien });
+  await appelApi(`/admin/eleves/${eleveId}/coaching/envoyer`, { method: 'POST', body });
+  fermerModal();
+  afficherToast('Lien coaching envoyé');
+  await charger();
+}
+
+document.getElementById('modal-envoi').addEventListener('click', function(e) {
+  if (e.target === this) fermerModal();
+});
+
+charger();
+</script>
+{% endblock %}
