@@ -358,6 +358,41 @@ def coaching_marquer_realise(
     session.commit()
     return {"ok": True}
 
+@router.get("/coaching/global")
+def coaching_global(session: Session = Depends(obtenir_session)):
+    """Toutes les séances coaching, toutes élèves confondues — pour la page admin globale."""
+    from sqlalchemy.orm import joinedload
+    seances_db = (
+        session.query(SeanceAccompagnement)
+        .options(
+            joinedload(SeanceAccompagnement.acces).joinedload(AccesFormation.eleve),
+            joinedload(SeanceAccompagnement.acces).joinedload(AccesFormation.formation),
+        )
+        .order_by(SeanceAccompagnement.date_seance.desc())
+        .all()
+    )
+    seances = []
+    for s in seances_db:
+        acces = s.acces
+        eleve = acces.eleve
+        formation = acces.formation
+        seances.append({
+            "id": s.id,
+            "eleve_id": eleve.id,
+            "eleve_nom": f"{eleve.prenom} {eleve.nom}",
+            "eleve_email": eleve.email,
+            "formation": formation.titre,
+            "date_seance": s.date_seance.isoformat(),
+            "type_envoi": s.type_envoi or "manuel",
+            "statut": s.statut,
+            "date_realise": s.date_realise.isoformat() if s.date_realise else None,
+            "lien_resalib": s.lien_resalib or "",
+        })
+    en_attente = [s for s in seances if s["statut"] == "en_attente"]
+    realises = [s for s in seances if s["statut"] == "realise"]
+    return {"en_attente": en_attente, "realises": realises, "total": len(seances)}
+
+
 @router.get("/eleves/{eleve_id}/coaching/historique")
 def coaching_historique(
     eleve_id: int,
