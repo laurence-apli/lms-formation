@@ -115,4 +115,12 @@ def page_codes_promo(request: Request, admin: Administrateur = Depends(admin_con
         request, "admin/codes_promo.html",
         {"profil": _profil_admin(admin), "page_active": "codes_promo"},
     )
-    
+
+
+@router.get("/coaching", response_class=HTMLResponse)
+def page_coaching(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(
+        request, "admin/coaching.html",
+        {"profil": _profil_admin(admin), "page_active": "coaching"},
+    )
+
