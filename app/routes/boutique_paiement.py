@@ -33,17 +33,17 @@ from .auth import eleve_connecte
 from ..emails import email_notification_paiement_reussi, email_notification_paiement_echoue
 router = APIRouter()
 
-MODE_SIMULATION_PAIEMENT = True  # ⚠️ Repasser à False une fois Stripe configuré
+MODE_SIMULATION_PAIEMENT = False # ✅ Stripe actif — paiements réels
 
 # Tant que MODE_SIMULATION_PAIEMENT est actif, seuls ces comptes de test
 # peuvent valider un paiement simulé. Tous les autres reçoivent un message
 # "paiement indisponible" -- évite que n'importe quel élève obtienne un
 # accès gratuit pendant la phase de test des solutions de paiement.
 EMAILS_TEST_PAIEMENT = {
-    "laurencemb42@gmail.com",
-    "chatagnon_fab@hotmail.com",
-    "maresonance42@gmail.com",
-    "n.chatagnon2804@gmail.com",
+"laurencemb42@gmail.com",
+"chatagnon_fab@hotmail.com",
+"maresonance42@gmail.com",
+"n.chatagnon2804@gmail.com",
 }
 
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
@@ -96,7 +96,6 @@ def apercu_panier_eleve(
     sans créer de commande ni lancer Stripe. Utilisé par le catalogue
     pour afficher le total et valider le code promo en temps réel."""
     return calculer_panier(session, requete.tarif_ids, requete.code_promo, eleve.id, requete.montee_tarif_ids)
-
 
 @router.post("/eleve/panier/paiement")
 def creer_session_paiement(
@@ -155,8 +154,8 @@ def creer_session_paiement(
     ]
 
     payment_method_types = ["card"]
-    if panier["trois_x_disponible"]:
-        payment_method_types.append("alma")
+    if panier["total"] >= 180:
+        payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
         mode="payment", payment_method_types=payment_method_types, line_items=line_items,
@@ -171,7 +170,7 @@ def creer_session_paiement(
     return {"checkout_url": checkout_session.url}
 
 class MonteeNiveauRequete(BaseModel):
-    tarif_id: int  # le tarif du NOUVEAU niveau souhaité
+    tarif_id: int # le tarif du NOUVEAU niveau souhaité
 
 @router.post("/eleve/montee-de-niveau/paiement")
 def creer_session_paiement_montee_niveau(
@@ -216,8 +215,8 @@ def creer_session_paiement_montee_niveau(
         return {"checkout_url": f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={commande.stripe_session_id}"}
 
     payment_method_types = ["card"]
-    if tarif.autoriser_3x:
-        payment_method_types.append("alma")
+    if montant >= 180:
+        payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
         mode="payment", payment_method_types=payment_method_types,
