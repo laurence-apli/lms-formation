@@ -43,7 +43,10 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
                 for t in tarifs
             ],
         })
-    return resultat
+    return JSONResponse(
+        content=result,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 class ArticlesPanier(BaseModel):
