@@ -5,6 +5,7 @@ propositions de montée en niveau.
 À placer dans app/routes/boutique_public.py
 """
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.orm import Session
