@@ -89,7 +89,10 @@ def tarifs_site(session: Session = Depends(obtenir_session)):
                 "prix": float(t.prix_final()),
                 "prix_barre": float(t.prix) if t.prix_final() < float(t.prix) else None,
             })
-    return result
+    return JSONResponse(
+        content=result,
+        headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
+    )
 
 
 @router.get("/api/heartbeat")
