@@ -243,27 +243,21 @@ async function importerWord(type, id, fichier) {
   }
 }
 
-function importerHtml(type, id, fichier) {
+async function importerHtml(type, id, fichier) {
   if (!fichier) return;
   const zoneRecu = document.getElementById(`recu-fichier-html-${type}-${id}`);
   if (zoneRecu) zoneRecu.textContent = "Import en cours…";
   const data = new FormData();
   data.append('fichier', fichier);
   try {
-    const url = `/admin/${type}s/${id}/importer-html`;
-    fetch(url, { method: 'POST', body: data, credentials: 'include' })
-      .then(r => r.json())
-      .then(res => {
-        if (res.ok) {
-          if (zoneRecu) zoneRecu.textContent = '✔ ' + fichier.name;
-          chargerDonnees();
-        } else {
-          if (zoneRecu) zoneRecu.textContent = res.detail || 'Erreur import HTML';
-        }
-      })
-      .catch(() => { if (zoneRecu) zoneRecu.textContent = 'Erreur réseau'; });
+    const url = type === 'formation' ? `/admin/formations/${id}/importer-html`
+               : type === 'module'   ? `/admin/modules/${id}/importer-html`
+               :                       `/admin/chapitres/${id}/importer-html`;
+    const resultat = await appelApi(url, { method: 'POST', body: data });
+    afficherToast(`Fichier "${resultat.fichier}" importé avec succès`);
+    await charger();
   } catch(e) {
-    if (zoneRecu) zoneRecu.textContent = 'Erreur : ' + e.message;
+    if (zoneRecu) zoneRecu.textContent = e.message || 'Erreur import HTML';
   }
 }
 
