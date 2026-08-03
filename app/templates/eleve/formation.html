@@ -231,14 +231,20 @@ async function afficherContenu() {
   zone.scrollTo({ top: 0, behavior: 'smooth' });
 
   if (noeudActif.type === 'formation') {
+    const _fHtml = donneesFormation.presentation_html;
+    const _fEstPage = _fHtml && (_fHtml.trimStart().toLowerCase().startsWith('<!doctype') || _fHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
-      (donneesFormation.presentation_html ? `<p>${donneesFormation.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
+      (_fEstPage ? '<div id="slot-iframe-html"></div>' : (_fHtml ? `<p>${_fHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
+    if (_fEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;min-height:80vh;'; _if.srcdoc = _fHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'module') {
     const resp = await fetch(`/api/eleve/modules/${noeudActif.moduleId}`);
     if (!resp.ok) { zone.innerHTML = `<div class="verrouille-message">Ce module n'est pas accessible.</div>`; return; }
     const m = await resp.json();
+    const _mHtml = m.presentation_html;
+    const _mEstPage = _mHtml && (_mHtml.trimStart().toLowerCase().startsWith('<!doctype') || _mHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${m.titre}</h1>` +
-      (m.presentation_html ? `<p>${m.presentation_html}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`);
+      (_mEstPage ? '<div id="slot-iframe-html"></div>' : (_mHtml ? `<p>${_mHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
+    if (_mEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;min-height:80vh;'; _if.srcdoc = _mHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'chapitre') {
     const resp = await fetch(`/api/eleve/chapitres/${noeudActif.chapId}`);
     if (!resp.ok) {
@@ -266,10 +272,14 @@ async function afficherContenu() {
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
     }
-    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${c.contenu_html || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>'}${mediasHtml}` +
+    const _cHtml = c.contenu_html;
+    const _cEstPage = _cHtml && (_cHtml.trimStart().toLowerCase().startsWith('<!doctype') || _cHtml.trimStart().toLowerCase().startsWith('<html'));
+    const _cContenuBlock = _cEstPage ? '<div id="slot-iframe-html"></div>' : (_cHtml || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>');
+    zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${_cContenuBlock}${mediasHtml}` +
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
+    if (_cEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;min-height:80vh;'; _if.srcdoc = _cHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
   }
 }
 
