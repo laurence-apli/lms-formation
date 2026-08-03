@@ -231,7 +231,7 @@ async function afficherContenu() {
         const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
         const extensions = { pdf: '.pdf', audio: '.mp3' };
         const nomFichier = (media.titre || 'fichier') + (extensions[media.type] || '');
-        return media.telechargeable
+        
           ? `<a class="media-eleve-row" href="${media.url}" download="${nomFichier}" target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
