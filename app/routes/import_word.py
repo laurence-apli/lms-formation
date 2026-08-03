@@ -90,3 +90,32 @@ async def importer_word_chapitre(
     chapitre.fichier_recu_nom = fichier.filename
     session.commit()
     return {"ok": True, "fichier": fichier.filename, "taille_html": len(html_resultat)}
+
+
+async def _lire_html(fichier: UploadFile) -> str:
+    """Lit un fichier .html et extrait styles + contenu body pour stockage inline."""
+    if not fichier.filename.lower().endswith(".html"):
+        raise HTTPException(status_code=400, detail="Seuls les fichiers .html sont acceptés.")
+    contenu = await fichier.read()
+    if len(contenu) > TAILLE_MAX_OCTETS:
+        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (4 Mo max).")
+    import re
+    html = contenu.decode("utf-8", errors="replace")
+    styles = "".join(re.findall(r"<style[^>]*>.*?</style>", html, re.DOTALL | re.IGNORECASE))
+    body = re.search(r"<body[^>]*>(.*?)</body>", html, re.DOTALL | re.IGNORECASE)
+    body_content = body.group(1) if body else html
+    return styles + body_content
+
+
+@router.post("/chapitres/{chapitre_id}/importer-html")
+async def importer_html_chapitre(
+    chapitre_id: int, fichier: UploadFile = File(...), session: Session = Depends(obtenir_session)
+):
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    html_resultat = await _lire_html(fichier)
+    chapitre.contenu_html = html_resultat
+    chapitre.fichier_recu_nom = fichier.filename
+    session.commit()
+    return {"ok": True, "fichier": fichier.filename, "taille_html": len(html_resultat)}
