@@ -119,3 +119,31 @@ async def importer_html_chapitre(
     chapitre.fichier_recu_nom = fichier.filename
     session.commit()
     return {"ok": True, "fichier": fichier.filename, "taille_html": len(html_resultat)}
+
+
+@router.post("/formations/{formation_id}/importer-html")
+async def importer_html_formation(
+    formation_id: int, fichier: UploadFile = File(...), session: Session = Depends(obtenir_session)
+):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    html_resultat = await _lire_html(fichier)
+    formation.presentation_html = html_resultat
+    formation.fichier_recu_nom = fichier.filename
+    session.commit()
+    return {"ok": True, "fichier": fichier.filename, "taille_html": len(html_resultat)}
+
+
+@router.post("/modules/{module_id}/importer-html")
+async def importer_html_module(
+    module_id: int, fichier: UploadFile = File(...), session: Session = Depends(obtenir_session)
+):
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    html_resultat = await _lire_html(fichier)
+    module.presentation_html = html_resultat
+    module.fichier_recu_nom = fichier.filename
+    session.commit()
+    return {"ok": True, "fichier": fichier.filename, "taille_html": len(html_resultat)}
