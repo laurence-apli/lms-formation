@@ -123,7 +123,7 @@ def page_tableau_de_bord(
     formations_acquises = []
     for acces in eleve.acces_formations:
         formation = acces.formation
-        if not formation.actif:
+        if not formation.actif and not eleve.compte_test:
             continue
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
