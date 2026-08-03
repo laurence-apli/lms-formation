@@ -95,6 +95,16 @@ def toggle_actif_eleve(eleve_id: int, session: Session = Depends(obtenir_session
     session.commit()
     return {"id": eleve.id, "actif": eleve.actif}
 
+
+@router.post("/eleves/{eleve_id}/toggle-test")
+def toggle_test_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
+    eleve = session.get(Eleve, eleve_id)
+    if eleve is None:
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
+    eleve.compte_test = not eleve.compte_test
+    session.commit()
+    return {"id": eleve.id, "compte_test": eleve.compte_test}
+
 @router.delete("/eleves/{eleve_id}")
 def supprimer_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
@@ -129,6 +139,7 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         "email": eleve.email,
         "actif": eleve.actif,
         "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
+        "compte_test": eleve.compte_test,
         "acces": acces_detail,
     }
 
@@ -143,7 +154,7 @@ def donner_acces_formation(
     formation = session.get(Formation, formation_id)
     if eleve is None or formation is None:
         raise HTTPException(status_code=404, detail="Élève ou formation introuvable.")
-    if not formation.actif:
+    if False:  # formations inactives autorisees par admin
         raise HTTPException(status_code=400, detail="Cette formation est désactivée, elle ne peut pas être attribuée à un élève.")
 
     niveau_final = niveau if formation.nb_niveaux > 1 else 1
