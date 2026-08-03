@@ -124,7 +124,12 @@
       </div>
       {% endif %}
     </div>
-    <div class="contenu-eleve" id="contenu">Chargement…</div>
+    <div class="contenu-eleve" id="contenu">
+  <div id="barre-chargement" style="padding:60px 20px;text-align:center">
+    <p id="msg-chargement" style="color:#6b7280;font-size:14px;margin-bottom:16px">Connexion au serveur…</p>
+    <div style="background:#e5e7eb;border-radius:8px;height:8px;overflow:hidden;max-width:400px;margin:0 auto"><div id="fill-chargement" style="background:linear-gradient(90deg,#7C3AED,#a78bfa);height:100%;width:5%;border-radius:8px;transition:width 0.4s ease"></div></div>
+    <p id="pct-chargement" style="color:#9ca3af;font-size:12px;margin-top:8px">5%</p>
+  </div></div>
   </div>
 </div>
 
@@ -135,11 +140,23 @@ let noeudActif = { type: 'formation' };
 let donneesFormation = null;
 const _chapCache = {}; // cache contenu chapitres
 
+function setChargement(pct, msg) {
+  const fill = document.getElementById('fill-chargement');
+  const label = document.getElementById('msg-chargement');
+  const pctEl = document.getElementById('pct-chargement');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = msg;
+  if (pctEl) pctEl.textContent = pct + '%';
+}
+
 async function chargerFormation() {
+  setChargement(10, 'Connexion au serveur…');
   const resp = await fetch(`/api/eleve/formations/${FORMATION_ID}`);
   donneesFormation = await resp.json();
+  setChargement(50, 'Données reçues, rendu en cours…');
   mettreAJourProgression(donneesFormation.progression || 0);
   afficherSommaire();
+  setChargement(80, 'Chargement du contenu…');
   afficherContenu();
   prechargerTousChapitres(); // précharge tous les chapitres accessibles
 }
@@ -231,7 +248,7 @@ async function afficherContenu() {
         const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
         const extensions = { pdf: '.pdf', audio: '.mp3' };
         const nomFichier = (media.titre || 'fichier') + (extensions[media.type] || '');
-        
+        return media.telechargeable
           ? `<a class="media-eleve-row" href="${media.url}" download="${nomFichier}" target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
           : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
       }).join('') + '</div>';
