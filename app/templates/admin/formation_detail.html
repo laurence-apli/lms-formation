@@ -148,6 +148,7 @@ function renderContenu() {
       ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l\'ont déjà ne peuvent plus y accéder.</div>' : ''}
       <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
       ${zoneImport('formation', FORMATION_ID, f.titre)}
+      ${zoneImportHtml('formation', FORMATION_ID, f.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
         <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
         <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
@@ -162,6 +163,7 @@ function renderContenu() {
       <div class="sous-titre">Présentation du module — affichée à l'élève avant ses chapitres</div>
       <div class="presentation-display ${!m.presentation_html ? 'vide' : ''}">${m.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
       ${zoneImport('module', m.id, m.titre)}
+      ${zoneImportHtml('module', m.id, m.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
         <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">✎ Modifier le module</button>
         <button class="btn btn-danger-outline" onclick="supprimerModule(${m.id})">Supprimer le module</button>
@@ -249,7 +251,7 @@ function importerHtml(type, id, fichier) {
   data.append('fichier', fichier);
   try {
     const url = `/admin/${type}s/${id}/importer-html`;
-    fetch(url, { method: 'POST', body: data })
+    fetch(url, { method: 'POST', body: data, credentials: 'include' })
       .then(r => r.json())
       .then(res => {
         if (res.ok) {
