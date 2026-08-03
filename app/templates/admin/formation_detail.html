@@ -146,7 +146,7 @@ function renderContenu() {
       <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span></h2>
       <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
       ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l\'ont déjà ne peuvent plus y accéder.</div>' : ''}
-      <div class="presentation-display ${!f.presentation_html ? 'vide' : ''}">${f.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
+      ${(function(){const h=f.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const enc=h.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{var d=f.contentDocument,bw=d.body.scrollWidth,iw=f.offsetWidth;if(bw>iw&&iw>0){var sc=iw/bw;d.body.style.cssText+=';transform-origin:top left;transform:scale('+sc+');width:'+bw+'px;';f.style.height=Math.ceil(d.body.scrollHeight*sc+20)+'px';}else{f.style.height=(d.body.scrollHeight+20)+'px';}}catch(e){}}).call(this, this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('formation', FORMATION_ID, f.titre)}
       ${zoneImportHtml('formation', FORMATION_ID, f.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
@@ -161,7 +161,7 @@ function renderContenu() {
     zone.innerHTML = `
       <h2>${esc(m.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">Niveau ${m.niveau_requis}</span>` : ''}</h2>
       <div class="sous-titre">Présentation du module — affichée à l'élève avant ses chapitres</div>
-      <div class="presentation-display ${!m.presentation_html ? 'vide' : ''}">${m.presentation_html || 'Aucun contenu de présentation pour l\'instant.'}</div>
+      ${(function(){const h=m.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const enc=h.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{var d=f.contentDocument,bw=d.body.scrollWidth,iw=f.offsetWidth;if(bw>iw&&iw>0){var sc=iw/bw;d.body.style.cssText+=';transform-origin:top left;transform:scale('+sc+');width:'+bw+'px;';f.style.height=Math.ceil(d.body.scrollHeight*sc+20)+'px';}else{f.style.height=(d.body.scrollHeight+20)+'px';}}catch(e){}}).call(this, this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('module', m.id, m.titre)}
       ${zoneImportHtml('module', m.id, m.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
@@ -179,7 +179,7 @@ function renderContenu() {
       </h2>
       <div class="sous-titre">Module : ${esc(m.titre)}</div>
       ${c.lien_coaching ? `<div style="background:#F0F8F2; border:1px solid #C3DECB; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px;">🔗 Lien coaching : <a href="${esc(c.lien_coaching)}" target="_blank" style="color:var(--gold);">${esc(c.lien_coaching)}</a></div>` : ''}
-      <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l\'instant.'}</div>
+      ${(function(){const h=c.contenu_html;if(!h)return '<div class="presentation-display vide">Aucun contenu importé pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const enc=h.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{var d=f.contentDocument,bw=d.body.scrollWidth,iw=f.offsetWidth;if(bw>iw&&iw>0){var sc=iw/bw;d.body.style.cssText+=';transform-origin:top left;transform:scale('+sc+');width:'+bw+'px;';f.style.height=Math.ceil(d.body.scrollHeight*sc+20)+'px';}else{f.style.height=(d.body.scrollHeight+20)+'px';}}catch(e){}}).call(this, this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('chapitre', c.id, c.titre)}
       ${zoneImportHtml('chapitre', c.id, c.fichier_recu_nom)}
       <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
