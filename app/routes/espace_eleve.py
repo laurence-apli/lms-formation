@@ -24,7 +24,7 @@ def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = D
     formations_acquises = []
     for acces in eleve.acces_formations:
         formation = acces.formation
-        if not formation.actif:
+        if not formation.actif and not eleve.compte_test:
             continue  # formation désactivée : invisible côté élève, même si l'accès existe toujours en base
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
@@ -56,7 +56,7 @@ def _verifier_acces_formation(eleve: Eleve, formation: Formation, session: Sessi
     )
     if acces is None:
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
-    if not formation.actif:
+    if not formation.actif and not eleve.compte_test:
         # Vérification de sécurité même si l'élève a déjà l'onglet ouvert ou
         # connaît l'adresse exacte -- une formation désactivée doit rester
         # inaccessible à tout moment, pas seulement absente du tableau de bord.
@@ -188,7 +188,7 @@ def valider_chapitre_eleve(
     )
     if acces is None:
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
-    if not formation.actif:
+    if not formation.actif and not eleve.compte_test:
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
 
     ok, raison = chapitre_est_accessible(session, eleve.id, chapitre, acces=acces)
