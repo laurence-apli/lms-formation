@@ -44,7 +44,7 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
             ],
         })
     return JSONResponse(
-        content=result,
+        content=resultat,
         headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
     )
 
