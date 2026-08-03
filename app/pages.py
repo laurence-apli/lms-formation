@@ -164,7 +164,7 @@ def page_formation(
     )
     if acces is None:
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
-    if not formation.actif:
+    if not formation.actif and not eleve.compte_test:
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
     return templates.TemplateResponse(
         request, "eleve/formation.html",
