@@ -125,6 +125,7 @@ class Eleve(Base):
     email = Column(String(200), nullable=False, unique=True)
     mot_de_passe_hash = Column(String(255))
     actif = Column(Boolean, default=True)
+    compte_test = Column(Boolean, default=False)
     cree_le = Column(DateTime, default=datetime.utcnow)
     # Statistiques de connexion (colonnes ajoutées via migration Neon)
     nb_connexions = Column(Integer, default=0)
