@@ -316,7 +316,7 @@ def ajouter_media(
     session.commit()
     return {"id": media.id}
 
-TAILLE_MAX_MEDIA_OCTETS = 8 * 1024 * 1024
+TAILLE_MAX_MEDIA_OCTETS = 25 * 1024 * 1024
 
 EXTENSIONS_AUTORISEES = {
     "pdf": {".pdf"},
