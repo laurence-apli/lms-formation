@@ -24,6 +24,9 @@
 .coaching-row .coaching-info { font-size:13px; }
 .coaching-pill-realise { background:#E4F0E8; color:var(--green); font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
 .coaching-pill-attente { background:#FEF3E2; color:#A05C00; font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
+.btn-compte-test-off { background:transparent; border:2px dashed #bbb; color:#999; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; }
+.btn-compte-test-on { background:#7C3AED; color:#fff !important; border:2px solid #5B21B6; font-weight:700; font-size:13px; padding:4px 14px; border-radius:6px; box-shadow:0 2px 10px rgba(124,58,237,.4); animation:pulse-test .6s ease; cursor:pointer; }
+@keyframes pulse-test { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
 </style>
 
 <div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
@@ -84,7 +87,9 @@ document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve
 document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
 document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
 
-document.getElementById('btn-toggle-test').textContent = eleve.compte_test ? '🧪 Désactiver test' : '🧪 Compte test';
+      const btnTest = document.getElementById('btn-toggle-test');
+      btnTest.textContent = eleve.compte_test ? '🧪 TEST ACTIF' : '🧪 Compte test';
+      btnTest.className = eleve.compte_test ? 'btn btn-compte-test-on' : 'btn btn-compte-test-off';
   const statutMdp = eleve.mot_de_passe_actif
 ? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
 : `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
