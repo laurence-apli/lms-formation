@@ -32,6 +32,7 @@
 <div style="display:flex; gap:8px;">
 <button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
 <button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
+<button class="btn" onclick="toggleTest()" id="btn-toggle-test"></button>
 <button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">🔑 Réinitialiser le mot de passe</button>
 <button class="btn btn-danger-outline" onclick="demanderSuppression()">Supprimer</button>
 </div>
@@ -83,7 +84,8 @@ document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve
 document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
 document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
 
-const statutMdp = eleve.mot_de_passe_actif
+document.getElementById('btn-toggle-test').textContent = eleve.compte_test ? '🧪 Désactiver test' : '🧪 Compte test';
+  const statutMdp = eleve.mot_de_passe_actif
 ? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
 : `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
 
@@ -169,6 +171,12 @@ async function toggleActif() {
 await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-actif`, { method: 'POST' });
 afficherToast('Statut mis à jour');
 await charger();
+}
+
+async function toggleTest() {
+  await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-test`, { method: 'POST' });
+  afficherToast('Compte test mis à jour');
+  await charger();
 }
 
 async function reinitialiserMotDePasse() {
