@@ -179,6 +179,7 @@ function renderContenu() {
       ${c.lien_coaching ? `<div style="background:#F0F8F2; border:1px solid #C3DECB; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px;">🔗 Lien coaching : <a href="${esc(c.lien_coaching)}" target="_blank" style="color:var(--gold);">${esc(c.lien_coaching)}</a></div>` : ''}
       <div class="presentation-display ${!c.contenu_html ? 'vide' : ''}">${c.contenu_html || 'Aucun contenu importé pour l\'instant.'}</div>
       ${zoneImport('chapitre', c.id, c.titre)}
+      ${zoneImportHtml('chapitre', c.id, c.fichier_recu_nom)}
       <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
       <div class="medias-liste">
         ${c.medias.map(media => `
@@ -238,6 +239,48 @@ async function importerWord(type, id, fichier) {
     zoneRecu.textContent = e.message;
     zoneRecu.style.color = 'var(--danger)';
   }
+}
+
+function importerHtml(type, id, fichier) {
+  if (!fichier) return;
+  const zoneRecu = document.getElementById(`recu-fichier-html-${type}-${id}`);
+  if (zoneRecu) zoneRecu.textContent = "Import en cours…";
+  const data = new FormData();
+  data.append('fichier', fichier);
+  try {
+    const url = `/admin/${type}s/${id}/importer-html`;
+    fetch(url, { method: 'POST', body: data })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok) {
+          if (zoneRecu) zoneRecu.textContent = '✔ ' + fichier.name;
+          chargerDonnees();
+        } else {
+          if (zoneRecu) zoneRecu.textContent = res.detail || 'Erreur import HTML';
+        }
+      })
+      .catch(() => { if (zoneRecu) zoneRecu.textContent = 'Erreur réseau'; });
+  } catch(e) {
+    if (zoneRecu) zoneRecu.textContent = 'Erreur : ' + e.message;
+  }
+}
+
+function zoneImportHtml(type, id, nomActuel) {
+  const inputId = `fichier-html-${type}-${id}`;
+  return `
+    <div class="import-zone" id="zone-html-${inputId}"
+      ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
+      ondragleave="this.style.borderColor='var(--border)';"
+      ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerHtml('${type}', ${id}, event.dataTransfer.files[0]);"
+      style="margin-top:8px; border-color: #6d9eeb;">
+      🌐 Glisser un fichier HTML ici, ou
+      <label for="${inputId}" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
+      <input type="file" id="${inputId}" accept=".html" style="display:none"
+        onchange="importerHtml('${type}', ${id}, this.files[0])">
+      <div style="font-size:11px; color:#888; margin-top:4px;">Seuls les fichiers .html sont acceptés.</div>
+      <div id="recu-fichier-html-${type}-${id}" style="font-size:12px; color:green; margin-top:4px;">${nomActuel ? '✔ ' + nomActuel : ''}</div>
+    </div>
+  `;
 }
 
 function selectionner(noeud) { noeudActif = noeud; render(); }
