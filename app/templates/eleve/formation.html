@@ -235,7 +235,7 @@ async function afficherContenu() {
     const _fEstPage = _fHtml && (_fHtml.trimStart().toLowerCase().startsWith('<!doctype') || _fHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
       (_fEstPage ? '<div id="slot-iframe-html"></div>' : (_fHtml ? `<p>${_fHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
-    if (_fEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ var d=_if.contentDocument,bw=d.body.scrollWidth,iw=_if.offsetWidth; if(bw>iw&&iw>0){var sc=iw/bw;d.documentElement.style.zoom=sc;} setTimeout(function(){_if.style.height=(d.body.scrollHeight+20)+'px';},80);}catch(e){_if.style.height='80vh';} }; _if.srcdoc = _fHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
+    if (_fEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _fHtml.replace(/<\/head>/i,'<style>html,body{zoom:0.9;max-width:100%!important;box-sizing:border-box;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'module') {
     const resp = await fetch(`/api/eleve/modules/${noeudActif.moduleId}`);
     if (!resp.ok) { zone.innerHTML = `<div class="verrouille-message">Ce module n'est pas accessible.</div>`; return; }
@@ -244,7 +244,7 @@ async function afficherContenu() {
     const _mEstPage = _mHtml && (_mHtml.trimStart().toLowerCase().startsWith('<!doctype') || _mHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${m.titre}</h1>` +
       (_mEstPage ? '<div id="slot-iframe-html"></div>' : (_mHtml ? `<p>${_mHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
-    if (_mEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ var d=_if.contentDocument,bw=d.body.scrollWidth,iw=_if.offsetWidth; if(bw>iw&&iw>0){var sc=iw/bw;d.documentElement.style.zoom=sc;} setTimeout(function(){_if.style.height=(d.body.scrollHeight+20)+'px';},80);}catch(e){_if.style.height='80vh';} }; _if.srcdoc = _mHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
+    if (_mEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _mHtml.replace(/<\/head>/i,'<style>html,body{zoom:0.9;max-width:100%!important;box-sizing:border-box;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'chapitre') {
     const resp = await fetch(`/api/eleve/chapitres/${noeudActif.chapId}`);
     if (!resp.ok) {
@@ -279,7 +279,7 @@ async function afficherContenu() {
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
-    if (_cEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ var d=_if.contentDocument,bw=d.body.scrollWidth,iw=_if.offsetWidth; if(bw>iw&&iw>0){var sc=iw/bw;d.documentElement.style.zoom=sc;} setTimeout(function(){_if.style.height=(d.body.scrollHeight+20)+'px';},80);}catch(e){_if.style.height='80vh';} }; _if.srcdoc = _cHtml; document.getElementById('slot-iframe-html').replaceWith(_if); }
+    if (_cEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _cHtml.replace(/<\/head>/i,'<style>html,body{zoom:0.9;max-width:100%!important;box-sizing:border-box;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   }
 }
 
