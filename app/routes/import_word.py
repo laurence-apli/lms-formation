@@ -93,18 +93,13 @@ async def importer_word_chapitre(
 
 
 async def _lire_html(fichier: UploadFile) -> str:
-    """Lit un fichier .html et extrait styles + contenu body pour stockage inline."""
+    """Lit un fichier .html et retourne le contenu brut -- affiché en iframe isolée côté élève."""
     if not fichier.filename.lower().endswith(".html"):
         raise HTTPException(status_code=400, detail="Seuls les fichiers .html sont acceptés.")
     contenu = await fichier.read()
     if len(contenu) > TAILLE_MAX_OCTETS:
         raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (4 Mo max).")
-    import re
-    html = contenu.decode("utf-8", errors="replace")
-    styles = "".join(re.findall(r"<style[^>]*>.*?</style>", html, re.DOTALL | re.IGNORECASE))
-    body = re.search(r"<body[^>]*>(.*?)</body>", html, re.DOTALL | re.IGNORECASE)
-    body_content = body.group(1) if body else html
-    return styles + body_content
+    return contenu.decode("utf-8", errors="replace")
 
 
 @router.post("/chapitres/{chapitre_id}/importer-html")
