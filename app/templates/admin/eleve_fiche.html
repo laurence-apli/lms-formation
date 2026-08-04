@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% block titre %}Fiche Ã©lÃ¨ve â Administration{% endblock %}
+{% block titre %}Fiche élève — Administration{% endblock %}
 {% block contenu %}
 <style>
 .fiche-eleve-header { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:22px; margin-bottom:20px; }
@@ -29,26 +29,26 @@
 @keyframes pulse-test { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
 </style>
 
-<div class="breadcrumb"><a href="/admin/page/eleves">ÃlÃ¨ves</a> / <span id="fil-ariane-nom"></span></div>
+<div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
 <div class="topbar">
 <div><h1 id="titre-page"></h1></div>
 <div style="display:flex; gap:8px;">
-<button class="btn" onclick="ouvrirModalEditerEleve()">â Modifier</button>
+<button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
 <button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
 <button class="btn" onclick="toggleTest()" id="btn-toggle-test"></button>
-<button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">ð RÃ©initialiser le mot de passe</button>
+<button class="btn" onclick="reinitialiserMotDePasse()" id="btn-reinit-mdp" style="background:#F5EDD6; border-color:#B8922A; color:#2E2210;">🔑 Réinitialiser le mot de passe</button>
 <button class="btn btn-danger-outline" onclick="demanderSuppression()">Supprimer</button>
 </div>
 </div>
 <div class="fiche-eleve-header" id="header-eleve"></div>
 <div class="topbar" style="margin-bottom:12px;">
-<h1 style="font-size:16px;">AccÃ¨s aux formations</h1>
-<button class="btn btn-sm btn-primary" id="btn-donner-acces" onclick="ouvrirModalAcces(null)">+ Donner accÃ¨s Ã  une formation</button>
+<h1 style="font-size:16px;">Accès aux formations</h1>
+<button class="btn btn-sm btn-primary" id="btn-donner-acces" onclick="ouvrirModalAcces(null)">+ Donner accès à une formation</button>
 </div>
 <div id="liste-acces"></div>
 
 <div class="topbar" style="margin-bottom:12px; margin-top:28px;">
-  <h1 style="font-size:16px;">SÃ©ances coaching</h1>
+  <h1 style="font-size:16px;">Séances coaching</h1>
   <button class="btn btn-sm btn-primary" onclick="ouvrirModalCoaching()">+ Envoyer un lien coaching</button>
 </div>
 <div id="liste-coaching"></div>
@@ -82,17 +82,17 @@ render();
 }
 
 function render() {
-document.title = `${eleve.prenom} ${eleve.nom} â Administration`;
+document.title = `${eleve.prenom} ${eleve.nom} — Administration`;
 document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve.nom}`;
 document.getElementById('titre-page').textContent = `${eleve.prenom} ${eleve.nom}`;
-document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'RÃ©activer';
+document.getElementById('btn-toggle-actif').textContent = eleve.actif ? 'Marquer inactif' : 'Réactiver';
 
       const btnTest = document.getElementById('btn-toggle-test');
-      btnTest.textContent = eleve.compte_test ? 'ð§ª TEST ACTIF' : 'ð§ª Compte test';
+      btnTest.textContent = eleve.compte_test ? '🧪 TEST ACTIF' : '🧪 Compte test';
       btnTest.className = eleve.compte_test ? 'btn btn-compte-test-on' : 'btn btn-compte-test-off';
   const statutMdp = eleve.mot_de_passe_actif
-? `<span class="statut-pill statut-mdp-ok">â Compte activÃ©</span>`
-: `<span class="statut-pill statut-mdp-attente">â³ En attente d'activation</span>`;
+? `<span class="statut-pill statut-mdp-ok">✓ Compte activé</span>`
+: `<span class="statut-pill statut-mdp-attente">⏳ En attente d'activation</span>`;
 
 document.getElementById('header-eleve').innerHTML = `
 <h2>${esc(eleve.prenom)} ${esc(eleve.nom)}</h2>
@@ -109,12 +109,12 @@ document.getElementById('btn-donner-acces').style.display = formationsDisponible
 
 const liste = document.getElementById('liste-acces');
 if (eleve.acces.length === 0) {
-liste.innerHTML = `<div class="empty-state">Aucun accÃ¨s pour l'instant.</div>`;
+liste.innerHTML = `<div class="empty-state">Aucun accès pour l'instant.</div>`;
 return;
 }
 liste.innerHTML = eleve.acces.map(a => {
-const blocCabinet = (a.jours_cabinet_total > 0) ? `<div style="margin-top:10px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_cabinet_restants}</strong> / ${a.jours_cabinet_total} sÃ©ance(s) cabinet restante(s)</span><button class="btn btn-sm ${a.jours_cabinet_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'cabinet')" ${a.jours_cabinet_restants <= 0 ? 'disabled' : ''}>+ SÃ©ance cabinet faite aujourd'hui</button></div>` : '';
-const blocVisio = (a.jours_visio_total > 0) ? `<div style="margin-top:6px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_visio_restants}</strong> / ${a.jours_visio_total} sÃ©ance(s) visio restante(s)</span><button class="btn btn-sm ${a.jours_visio_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'visio')" ${a.jours_visio_restants <= 0 ? 'disabled' : ''}>+ SÃ©ance visio faite aujourd'hui</button></div>` : '';
+const blocCabinet = (a.jours_cabinet_total > 0) ? `<div style="margin-top:10px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_cabinet_restants}</strong> / ${a.jours_cabinet_total} séance(s) cabinet restante(s)</span><button class="btn btn-sm ${a.jours_cabinet_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'cabinet')" ${a.jours_cabinet_restants <= 0 ? 'disabled' : ''}>+ Séance cabinet faite aujourd'hui</button></div>` : '';
+const blocVisio = (a.jours_visio_total > 0) ? `<div style="margin-top:6px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_visio_restants}</strong> / ${a.jours_visio_total} séance(s) visio restante(s)</span><button class="btn btn-sm ${a.jours_visio_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'visio')" ${a.jours_visio_restants <= 0 ? 'disabled' : ''}>+ Séance visio faite aujourd'hui</button></div>` : '';
 const blocAccomp = blocCabinet + blocVisio;
 return `
 <div class="acces-row">
@@ -126,8 +126,8 @@ ${a.nb_niveaux_formation > 1 ? `<span class="niveau-badge niveau-${a.niveau}">Ni
 <span style="font-size:12px; color:var(--grey); margin-left:6px;">${a.progression}%</span>
 </div>
 <div style="display:flex; gap:6px; flex-wrap:wrap;">
-${a.nb_niveaux_formation > 1 ? `<button class="btn btn-sm" onclick="ouvrirModalAcces(${a.formation_id})">â Niveau</button>` : ''}
-<button class="btn btn-sm" onclick="demanderReinitialisation(${a.formation_id}, decodeURIComponent('${encodeURIComponent(a.formation_titre)}'))">âº RÃ©initialiser</button>
+${a.nb_niveaux_formation > 1 ? `<button class="btn btn-sm" onclick="ouvrirModalAcces(${a.formation_id})">✎ Niveau</button>` : ''}
+<button class="btn btn-sm" onclick="demanderReinitialisation(${a.formation_id}, decodeURIComponent('${encodeURIComponent(a.formation_titre)}'))">↺ Réinitialiser</button>
 <button class="btn btn-sm btn-danger-outline" onclick="retirerAcces(${a.formation_id})">Retirer</button>
 </div>
 </div>
@@ -139,14 +139,14 @@ ${blocAccomp}
 function ouvrirModalEditerEleve() {
 afficherOverlay(`
 <div class="modal">
-<h3>Modifier l'Ã©lÃ¨ve</h3>
+<h3>Modifier l'élève</h3>
 <div id="zone-erreur-modal"></div>
-<label>PrÃ©nom *</label><input type="text" id="input-prenom" value="${esc(eleve.prenom)}">
+<label>Prénom *</label><input type="text" id="input-prenom" value="${esc(eleve.prenom)}">
 <label>Nom *</label><input type="text" id="input-nom" value="${esc(eleve.nom)}">
 <label>E-mail *</label><input type="email" id="input-email" value="${esc(eleve.email)}">
 
-<label>Lien Résalib cabinet (URL RDV)</label><input type="url" id="input-lien-resalib-cabinet" value="${esc(eleve.lien_resalib || '')}" placeholder="https://resalib.fr/...">
-<label>Lien Résalib visio (URL RDV)</label><input type="url" id="input-lien-resalib-visio" value="${esc(eleve.lien_resalib_visio || '')}" placeholder="https://resalib.fr/...">
+<label>Lien R�salib cabinet (URL RDV)</label><input type="url" id="input-lien-resalib-cabinet" value="${esc(eleve.lien_resalib || '')}" placeholder="https://resalib.fr/...">
+<label>Lien R�salib visio (URL RDV)</label><input type="url" id="input-lien-resalib-visio" value="${esc(eleve.lien_resalib_visio || '')}" placeholder="https://resalib.fr/...">
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
 <button class="btn btn-primary" onclick="enregistrerEleve()">Enregistrer</button>
@@ -164,7 +164,7 @@ data.append('lien_resalib_visio', document.getElementById('input-lien-resalib-vi
 try {
 await appelApi(`/admin/eleves/${ELEVE_ID}`, { method: 'PUT', body: data });
 fermerModal();
-afficherToast('ÃlÃ¨ve modifiÃ©');
+afficherToast('Élève modifié');
 await charger();
 } catch (e) {
 document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
@@ -173,21 +173,21 @@ document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-er
 
 async function toggleActif() {
 await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-actif`, { method: 'POST' });
-afficherToast('Statut mis Ã  jour');
+afficherToast('Statut mis à jour');
 await charger();
 }
 
 async function toggleTest() {
   await appelApi(`/admin/eleves/${ELEVE_ID}/toggle-test`, { method: 'POST' });
-  afficherToast('Compte test mis Ã  jour');
+  afficherToast('Compte test mis à jour');
   await charger();
 }
 
 async function reinitialiserMotDePasse() {
 afficherOverlay(`
 <div class="modal">
-<h3>RÃ©initialiser le mot de passe</h3>
-<p style="font-size:13px; color:var(--grey);">Un email avec un lien de crÃ©ation de mot de passe sera envoyÃ© Ã  <strong>${esc(eleve.email)}</strong>.</p>
+<h3>Réinitialiser le mot de passe</h3>
+<p style="font-size:13px; color:var(--grey);">Un email avec un lien de création de mot de passe sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
 <button class="btn btn-primary" onclick="confirmerReinit()">Envoyer le lien</button>
@@ -201,10 +201,10 @@ const data = new FormData();
 data.append('email', eleve.email);
 await appelApi('/eleve/mot-de-passe-oublie', { method: 'POST', body: data });
 fermerModal();
-afficherToast('Lien de rÃ©initialisation envoyÃ© Ã  ' + eleve.email);
+afficherToast('Lien de réinitialisation envoyé à ' + eleve.email);
 } catch (e) {
 fermerModal();
-afficherToast('Lien envoyÃ© (ou compte inexistant)');
+afficherToast('Lien envoyé (ou compte inexistant)');
 }
 }
 
@@ -212,10 +212,10 @@ function demanderSuppression() {
 afficherOverlay(`
 <div class="modal">
 <h3>Supprimer ${esc(eleve.prenom)} ${esc(eleve.nom)} ?</h3>
-<p style="font-size:13px; color:var(--grey);">Cette action est dÃ©finitive.</p>
+<p style="font-size:13px; color:var(--grey);">Cette action est définitive.</p>
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
-<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppression()">Supprimer dÃ©finitivement</button>
+<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppression()">Supprimer définitivement</button>
 </div>
 </div>`);
 }
@@ -235,13 +235,13 @@ const formationInitiale = formationsDisponibles[0];
 
 afficherOverlay(`
 <div class="modal">
-<h3>${accesExistant ? "Modifier le niveau d'accÃ¨s" : "Donner accÃ¨s Ã  une formation"}</h3>
+<h3>${accesExistant ? "Modifier le niveau d'accès" : "Donner accès à une formation"}</h3>
 <label>Formation</label>
 <select id="input-formation" ${formationId ? 'disabled' : ''} onchange="majBlocNiveau()">
 ${formationsDisponibles.map(f => `<option value="${f.id}" ${formationId === f.id ? 'selected' : ''}>${esc(f.titre)}</option>`).join('')}
 </select>
 <div id="bloc-niveau"></div>
-<div class="helper-text">L'activation du niveau reste toujours manuelle, aprÃ¨s rÃ©ception du paiement.</div>
+<div class="helper-text">L'activation du niveau reste toujours manuelle, après réception du paiement.</div>
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
 <button class="btn btn-primary" onclick="enregistrerAcces()">Enregistrer</button>
@@ -256,7 +256,7 @@ const formation = toutesFormations.find(f => f.id === formationId);
 const bloc = document.getElementById('bloc-niveau');
 if (formation.nb_niveaux > 1) {
 bloc.innerHTML = `
-<label>Niveau d'accÃ¨s</label>
+<label>Niveau d'accès</label>
 <select id="input-niveau">
 ${Array.from({length: formation.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${niveauActuel===n?'selected':''}>Niveau ${n}</option>`).join('')}
 </select>`;
@@ -273,13 +273,13 @@ data.append('formation_id', formationId);
 data.append('niveau', champNiveau ? champNiveau.value : '1');
 await appelApi(`/admin/eleves/${ELEVE_ID}/acces`, { method: 'POST', body: data });
 fermerModal();
-afficherToast('AccÃ¨s mis Ã  jour');
+afficherToast('Accès mis à jour');
 await charger();
 }
 
 async function retirerAcces(formationId) {
 await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}`, { method: 'DELETE' });
-afficherToast('AccÃ¨s retirÃ©');
+afficherToast('Accès retiré');
 await charger();
 }
 
@@ -295,17 +295,17 @@ async function enregistrerSeance(formationId, type) {
   }
 }
 
-// --- RÃ©initialisation de l'avancement ---
+// --- Réinitialisation de l'avancement ---
 
 function demanderReinitialisation(formationId, titreFormation) {
 afficherOverlay(`
 <div class="modal">
-<h3>RÃ©initialiser l'avancement ?</h3>
-<p style="font-size:13px; color:var(--grey);">Tous les chapitres validÃ©s de <strong>${titreFormation}</strong> seront remis Ã  zÃ©ro pour cet Ã©lÃ¨ve.</p>
-<p style="font-size:13px; color:var(--grey);">L'accÃ¨s Ã  la formation et le niveau sont conservÃ©s.</p>
+<h3>Réinitialiser l'avancement ?</h3>
+<p style="font-size:13px; color:var(--grey);">Tous les chapitres validés de <strong>${titreFormation}</strong> seront remis à zéro pour cet élève.</p>
+<p style="font-size:13px; color:var(--grey);">L'accès à la formation et le niveau sont conservés.</p>
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
-<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerReinitialisation(${formationId})">RÃ©initialiser</button>
+<button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerReinitialisation(${formationId})">Réinitialiser</button>
 </div>
 </div>`);
 }
@@ -313,7 +313,7 @@ afficherOverlay(`
 async function confirmerReinitialisation(formationId) {
 await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/reinitialiser-avancement`, { method: 'POST' });
 fermerModal();
-afficherToast('Avancement rÃ©initialisÃ©');
+afficherToast('Avancement réinitialisé');
 await charger();
 }
 
@@ -324,19 +324,19 @@ const zone = document.getElementById('liste-coaching');
 try {
 const data = await appelApi(`/admin/eleves/${ELEVE_ID}/coaching/historique`);
 if (data.seances.length === 0) {
-zone.innerHTML = `<div class="empty-state" style="padding:20px;">Aucune sÃ©ance coaching pour l'instant.</div>`;
+zone.innerHTML = `<div class="empty-state" style="padding:20px;">Aucune séance coaching pour l'instant.</div>`;
 return;
 }
 zone.innerHTML = data.seances.map(s => {
 const date = new Date(s.date_seance).toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
 const statut = s.statut === 'realise'
-? `<span class="coaching-pill-realise">â RÃ©alisÃ©e${s.date_realise ? ' Â· ' + new Date(s.date_realise).toLocaleDateString('fr-FR') : ''}</span>`
-: `<span class="coaching-pill-attente">â³ En attente</span>`;
-const lien = s.lien_resalib ? `<a href="${esc(s.lien_resalib)}" target="_blank" style="font-size:12px; color:var(--gold);">Voir le lien â</a>` : '';
-const btnRealise = s.statut !== 'realise' ? `<button class="btn btn-sm" onclick="marquerRealise(${s.id})">â Marquer rÃ©alisÃ©e</button>` : '';
+? `<span class="coaching-pill-realise">✓ Réalisée${s.date_realise ? ' · ' + new Date(s.date_realise).toLocaleDateString('fr-FR') : ''}</span>`
+: `<span class="coaching-pill-attente">⏳ En attente</span>`;
+const lien = s.lien_resalib ? `<a href="${esc(s.lien_resalib)}" target="_blank" style="font-size:12px; color:var(--gold);">Voir le lien →</a>` : '';
+const btnRealise = s.statut !== 'realise' ? `<button class="btn btn-sm" onclick="marquerRealise(${s.id})">✓ Marquer réalisée</button>` : '';
 return `<div class="coaching-row">
 <div class="coaching-info">
-<div style="font-weight:600;">${esc(s.formation)} â ${date}</div>
+<div style="font-weight:600;">${esc(s.formation)} — ${date}</div>
 <div style="margin-top:4px; display:flex; gap:10px; align-items:center;">${statut} ${lien}</div>
 </div>
 <div>${btnRealise}</div>
@@ -351,8 +351,8 @@ function ouvrirModalCoaching() {
 afficherOverlay(`
 <div class="modal">
 <h3>Envoyer un lien coaching</h3>
-<p style="font-size:13px; color:var(--grey);">Un email avec le lien de rÃ©servation sera envoyÃ© Ã  <strong>${esc(eleve.email)}</strong>.</p>
-<label>Lien RÃ©salib (URL de prise de rendez-vous)</label>
+<p style="font-size:13px; color:var(--grey);">Un email avec le lien de réservation sera envoyé à <strong>${esc(eleve.email)}</strong>.</p>
+<label>Lien Résalib (URL de prise de rendez-vous)</label>
 <input type="url" id="input-resalib" placeholder="https://...">
 <div class="modal-actions">
 <button class="btn" onclick="fermerModal()">Annuler</button>
@@ -369,7 +369,7 @@ const data = new FormData();
 data.append('lien_resalib', lien);
 await appelApi(`/admin/eleves/${ELEVE_ID}/coaching/envoyer`, { method: 'POST', body: data });
 fermerModal();
-afficherToast('Lien coaching envoyÃ© Ã  ' + eleve.email);
+afficherToast('Lien coaching envoyé à ' + eleve.email);
 chargerCoaching();
 } catch (e) {
 afficherToast(e.message);
@@ -379,7 +379,7 @@ afficherToast(e.message);
 async function marquerRealise(seanceId) {
 try {
 await appelApi(`/admin/eleves/${ELEVE_ID}/seances/${seanceId}/realiser`, { method: 'POST' });
-afficherToast('SÃ©ance marquÃ©e comme rÃ©alisÃ©e');
+afficherToast('Séance marquée comme réalisée');
 chargerCoaching();
 } catch (e) {
 afficherToast(e.message);
