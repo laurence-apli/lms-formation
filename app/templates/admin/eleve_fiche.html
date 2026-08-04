@@ -113,15 +113,9 @@ liste.innerHTML = `<div class="empty-state">Aucun accès pour l'instant.</div>`;
 return;
 }
 liste.innerHTML = eleve.acces.map(a => {
-const blocAccomp = a.jours_accompagnement_total > 0 ? `
-<div class="bloc-accompagnement">
-<div style="font-size:13px;">
-<strong style="color:var(--gold); font-size:16px;">${a.jours_accompagnement_restants}</strong> / ${a.jours_accompagnement_total} jour(s) d'accompagnement restant(s)
-</div>
-<button class="btn btn-sm ${a.jours_accompagnement_restants <= 0 ? '' : 'btn-primary'}" ${a.jours_accompagnement_restants <= 0 ? 'disabled' : ''} onclick="enregistrerSeance(${a.formation_id})">
-+ Enregistrer une séance faite aujourd'hui
-</button>
-</div>` : '';
+const blocCabinet = (a.jours_cabinet_total > 0) ? `<div style="margin-top:10px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_cabinet_restants}</strong> / ${a.jours_cabinet_total} séance(s) cabinet restante(s)</span><button class="btn btn-sm ${a.jours_cabinet_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'cabinet')" ${a.jours_cabinet_restants <= 0 ? 'disabled' : ''}>+ Séance cabinet faite aujourd'hui</button></div>` : '';
+const blocVisio = (a.jours_visio_total > 0) ? `<div style="margin-top:6px;padding:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;"><span><strong>${a.jours_visio_restants}</strong> / ${a.jours_visio_total} séance(s) visio restante(s)</span><button class="btn btn-sm ${a.jours_visio_restants <= 0 ? '' : 'btn-primary'}" onclick="enregistrerSeance(${a.formation_id}, 'visio')" ${a.jours_visio_restants <= 0 ? 'disabled' : ''}>+ Séance visio faite aujourd'hui</button></div>` : '';
+const blocAccomp = blocCabinet + blocVisio;
 return `
 <div class="acces-row">
 <div class="ligne-haut">
@@ -284,14 +278,16 @@ afficherToast('Accès retiré');
 await charger();
 }
 
-async function enregistrerSeance(formationId) {
-try {
-await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/seance-accompagnement`, { method: 'POST' });
-afficherToast("Séance d'accompagnement enregistrée");
-await charger();
-} catch (e) {
-afficherToast(e.message);
-}
+async function enregistrerSeance(formationId, type) {
+  try {
+    const fd = new FormData();
+    fd.append('type_accompagnement', type || 'cabinet');
+    const r = await fetch(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/seance-accompagnement`, {method: 'POST', body: fd});
+    if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'Erreur'); }
+    await charger();
+  } catch (e) {
+    afficherToast(e.message);
+  }
 }
 
 // --- Réinitialisation de l'avancement ---
