@@ -55,6 +55,12 @@ class Formation(Base):
                 return j.jours
         return 0
 
+    def jours_visio_pour_niveau(self, niveau: int) -> int:
+        for j in self.jours_par_niveau:
+            if j.niveau == niveau:
+                return j.jours_visio
+        return 0
+
 class JoursAccompagnementNiveau(Base):
     __tablename__ = "jours_accompagnement_niveau"
     __table_args__ = (UniqueConstraint("formation_id", "niveau", name="uniq_formation_niveau"),)
@@ -63,6 +69,7 @@ class JoursAccompagnementNiveau(Base):
     formation_id = Column(Integer, ForeignKey("formations.id"), nullable=False)
     niveau = Column(Integer, nullable=False)
     jours = Column(Integer, nullable=False, default=0)
+    jours_visio = Column(Integer, nullable=False, default=0)
 
     formation = relationship("Formation", back_populates="jours_par_niveau")
 
@@ -217,11 +224,23 @@ class AccesFormation(Base):
     seances_accompagnement = relationship("SeanceAccompagnement", back_populates="acces",
                                          cascade="all, delete-orphan")
 
-    def jours_accompagnement_restants(self) -> int:
+    def jours_cabinet_utilises(self) -> int:
+        return sum(1 for s in self.seances_accompagnement if s.statut == "realise" and s.type_accompagnement == "cabinet")
+
+    def jours_visio_utilises(self) -> int:
+        return sum(1 for s in self.seances_accompagnement if s.statut == "realise" and s.type_accompagnement == "visio")
+
+    def jours_cabinet_restants(self) -> int:
         total = self.formation.jours_pour_niveau(self.niveau)
-        # On ne compte que les séances effectivement réalisées (marquées par l'admin)
-        utilises = sum(1 for s in self.seances_accompagnement if s.statut == "realise")
-        return max(0, total - utilises)
+        return max(0, total - self.jours_cabinet_utilises())
+
+    def jours_visio_restants(self) -> int:
+        total = self.formation.jours_visio_pour_niveau(self.niveau)
+        return max(0, total - self.jours_visio_utilises())
+
+    def jours_accompagnement_restants(self) -> int:
+        """Compatibilité ascendante — retourne les jours cabinet restants."""
+        return self.jours_cabinet_restants()
 
 class SeanceAccompagnement(Base):
     __tablename__ = "seances_accompagnement"
@@ -235,6 +254,8 @@ class SeanceAccompagnement(Base):
     type_envoi = Column(String(20), nullable=True)      # "auto" ou "manuel"
     statut = Column(String(20), nullable=False, default="en_attente")  # "en_attente" | "realise"
     date_realise = Column(DateTime, nullable=True)      # renseigné par l'admin quand la séance a eu lieu
+
+    type_accompagnement = Column(String(20), nullable=False, default="cabinet")  # "cabinet" | "visio"
 
     acces = relationship("AccesFormation", back_populates="seances_accompagnement")
 
