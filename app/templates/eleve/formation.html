@@ -209,18 +209,43 @@ function afficherSommaire() {
   });
   document.getElementById('sommaire').innerHTML = html;
 
+  window.demanderRdv = async function(e, type) {
+    const btn = e.currentTarget; btn.disabled = true;
+    const orig = btn.textContent; btn.textContent = '...';
+    try {
+      const resp = await fetch('/api/eleve/formations/' + FORMATION_ID + '/demander-rdv', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type})
+      });
+      const data = await resp.json();
+      if (data.lien) window.open(data.lien, '_blank');
+      const toast = document.createElement('div');
+      toast.textContent = 'Email de confirmation envoyé !';
+      toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#4a7c59;color:white;padding:12px 20px;border-radius:8px;z-index:9999;font-size:14px;';
+      document.body.appendChild(toast);
+      setTimeout(function(){ toast.remove(); }, 3000);
+    } catch(err) { console.error('Erreur RDV', err); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  };
+
   const zoneAccomp = document.getElementById('bloc-accompagnement-zone');
   if (f.accompagnement_cabinet || f.accompagnement_visio) {
     let _html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
     if (f.accompagnement_cabinet) {
-      const _cab = f.accompagnement_cabinet;
-      const _rdvCab = f.lien_resalib ? `<a href="${f.lien_resalib}" target="_blank" class="btn-rdv-cab" style="display:inline-block;margin-top:8px;padding:6px 12px;background:var(--gold);color:white;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer;">📅 Prendre RDV cabinet</a>` : '';
-      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_cab.restants}</div><div class="bloc-accompagnement-label">jour${_cab.restants > 1 ? 's' : ''} cabinet<br>sur ${_cab.total}</div>${_cab.restants > 0 ? _rdvCab : ''}</div>`;
+      const _c = f.accompagnement_cabinet;
+      _html += '<div class="bloc-accompagnement-eleve">'
+        + '<div class="bloc-accompagnement-valeur">' + _c.restants + '</div>'
+        + '<div class="bloc-accompagnement-label">jours cabinet<br>sur ' + _c.total + '</div>'
+        + '<button onclick="demanderRdv(event,\'cabinet\')" style="display:inline-block;margin-top:8px;padding:6px 14px;border:none;border-radius:6px;font-size:12px;cursor:pointer;color:white;background:var(--gold);">Prendre RDV cabinet</button>'
+        + '</div>';
     }
     if (f.accompagnement_visio) {
-      const _vis = f.accompagnement_visio;
-      const _rdvVis = f.lien_resalib ? `<a href="${f.lien_resalib}" target="_blank" style="display:inline-block;margin-top:8px;padding:6px 12px;background:var(--gold);color:white;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer;">📅 Prendre RDV visio</a>` : '';
-      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_vis.restants}</div><div class="bloc-accompagnement-label">jour${_vis.restants > 1 ? 's' : ''} visio<br>sur ${_vis.total}</div>${_vis.restants > 0 ? _rdvVis : ''}</div>`;
+      const _v = f.accompagnement_visio;
+      _html += '<div class="bloc-accompagnement-eleve">'
+        + '<div class="bloc-accompagnement-valeur">' + _v.restants + '</div>'
+        + '<div class="bloc-accompagnement-label">jours visio<br>sur ' + _v.total + '</div>'
+        + '<button onclick="demanderRdv(event,\'visio\')" style="display:inline-block;margin-top:8px;padding:6px 14px;border:none;border-radius:6px;font-size:12px;cursor:pointer;color:white;background:var(--green);">Prendre RDV visio</button>'
+        + '</div>';
     }
     _html += '</div>';
     zoneAccomp.innerHTML = _html;
