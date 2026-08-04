@@ -2,7 +2,7 @@
 Routes cÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂ¨ve -- toutes dÃÂÃÂÃÂÃÂ©pendent de eleve_connecte (un ÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂ¨ve doit ÃÂÃÂÃÂÃÂªtre
 authentifiÃÂÃÂÃÂÃÂ© pour voir quoi que ce soit ici).
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
 
 from ..database import obtenir_session
