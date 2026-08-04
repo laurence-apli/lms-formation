@@ -128,9 +128,13 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
             "nb_niveaux_formation": acces.formation.nb_niveaux,
             "progression": progression_pourcentage(session, eleve_id, acces.formation),
             "diplome_envoye": acces.diplome_envoye,
-            "jours_accompagnement_restants": acces.jours_accompagnement_restants(),
-            "jours_accompagnement_total": acces.formation.jours_pour_niveau(acces.niveau),
-            "historique_seances": [s.date_seance.isoformat() for s in acces.seances_accompagnement],
+            "jours_cabinet_total": acces.formation.jours_pour_niveau(acces.niveau),
+            "jours_cabinet_utilises": acces.jours_cabinet_utilises(),
+            "jours_cabinet_restants": acces.jours_cabinet_restants(),
+            "jours_visio_total": acces.formation.jours_visio_pour_niveau(acces.niveau),
+            "jours_visio_utilises": acces.jours_visio_utilises(),
+            "jours_visio_restants": acces.jours_visio_restants(),
+            "historique_seances": [{"date": s.date_seance.isoformat(), "type": s.type_accompagnement, "statut": s.statut} for s in acces.seances_accompagnement],
         })
     return {
         "id": eleve.id,
@@ -214,7 +218,7 @@ def reinitialiser_avancement(
 # ---------- Accompagnement ----------
 
 @router.post("/eleves/{eleve_id}/acces/{formation_id}/seance-accompagnement")
-def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, session: Session = Depends(obtenir_session)):
+def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, type_accompagnement: str = Form("cabinet"), session: Session = Depends(obtenir_session)):
     acces = (
         session.query(AccesFormation)
         .filter_by(eleve_id=eleve_id, formation_id=formation_id)
@@ -222,11 +226,19 @@ def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, session:
     )
     if acces is None:
         raise HTTPException(status_code=404, detail="Accès introuvable.")
-    if acces.jours_accompagnement_restants() <= 0:
-        raise HTTPException(status_code=400, detail="Aucune séance d'accompagnement restante pour ce niveau.")
-    session.add(SeanceAccompagnement(acces_id=acces.id))
+    if type_accompagnement == "visio":
+        if acces.jours_visio_restants() <= 0:
+            raise HTTPException(status_code=400, detail="Aucune séance visio restante pour ce niveau.")
+    else:
+        if acces.jours_cabinet_restants() <= 0:
+            raise HTTPException(status_code=400, detail="Aucune séance cabinet restante pour ce niveau.")
+    session.add(SeanceAccompagnement(acces_id=acces.id, type_accompagnement=type_accompagnement))
     session.commit()
-    return {"ok": True, "jours_restants": acces.jours_accompagnement_restants()}
+    return {
+        "ok": True,
+        "jours_cabinet_restants": acces.jours_cabinet_restants(),
+        "jours_visio_restants": acces.jours_visio_restants(),
+    }
 
 # ---------- Diplômes ----------
 
