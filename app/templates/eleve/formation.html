@@ -210,11 +210,18 @@ function afficherSommaire() {
   document.getElementById('sommaire').innerHTML = html;
 
   const zoneAccomp = document.getElementById('bloc-accompagnement-zone');
-  if (f.accompagnement) {
-    zoneAccomp.innerHTML = `<div class="bloc-accompagnement-eleve">
-      <div class="bloc-accompagnement-valeur">${f.accompagnement.restants}</div>
-      <div class="bloc-accompagnement-label">accompagnement${f.accompagnement.restants > 1 ? 's' : ''} disponible${f.accompagnement.restants > 1 ? 's' : ''}<br>sur ${f.accompagnement.total} au total</div>
-    </div>`;
+  if (f.accompagnement_cabinet || f.accompagnement_visio) {
+    let _html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+    if (f.accompagnement_cabinet) {
+      const _cab = f.accompagnement_cabinet;
+      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_cab.restants}</div><div class="bloc-accompagnement-label">jour${_cab.restants > 1 ? 's' : ''} cabinet<br>sur ${_cab.total}</div></div>`;
+    }
+    if (f.accompagnement_visio) {
+      const _vis = f.accompagnement_visio;
+      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_vis.restants}</div><div class="bloc-accompagnement-label">jour${_vis.restants > 1 ? 's' : ''} visio<br>sur ${_vis.total}</div></div>`;
+    }
+    _html += '</div>';
+    zoneAccomp.innerHTML = _html;
   } else {
     zoneAccomp.innerHTML = '';
   }
