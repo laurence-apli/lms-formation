@@ -138,6 +138,7 @@ class Eleve(Base):
     nb_connexions = Column(Integer, default=0)
     derniere_connexion = Column(DateTime, nullable=True)
     lien_resalib = Column(String(500), nullable=True)  # lien Resalib de l'élève
+    lien_resalib_visio = Column(String(500), nullable=True)  # lien Resalib visio
 
     acces_formations = relationship("AccesFormation", back_populates="eleve",
                                    cascade="all, delete-orphan")
