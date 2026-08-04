@@ -13,7 +13,7 @@ from ..models import (
     SeanceAccompagnement,
 )
 from .auth import eleve_connecte
-from ..emails import email_coaching_rdv
+from ..emails import email_coaching_rdv, email_demande_rdv_coach
 from .boutique_models import propositions_montee_niveau
 
 router = APIRouter(prefix="/api/eleve", dependencies=[Depends(eleve_connecte)])
@@ -117,6 +117,7 @@ def detail_formation(
             'restants': acces.jours_visio_restants(),
         } if jours_visio_total > 0 else None,
         'lien_resalib': eleve.lien_resalib,
+        'lien_resalib_visio': eleve.lien_resalib_visio,
     }
 
 
@@ -233,3 +234,35 @@ def montees_de_niveau(
     """Retourne toutes les propositions de mont\u00e9e de niveau pour l'\u00e9l\u00e8ve connect\u00e9,
     toutes formations confondues."""
     return propositions_montee_niveau(session, eleve.id)
+
+@router.post("/formations/{formation_id}/demander-rdv")
+async def demander_rdv(
+    formation_id: int,
+    request: Request,
+    eleve: Eleve = Depends(eleve_connecte),
+    session: Session = Depends(obtenir_session),
+):
+    """Envoie un email de confirmation RDV à l’élève et à Laurence."""
+    donnees = await request.json()
+    type_rdv = donnees.get("type", "cabinet")
+    acces = session.query(AccesFormation).filter_by(
+        eleve_id=eleve.id, formation_id=formation_id
+    ).first()
+    if not acces:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    formation = acces.formation
+    lien = eleve.lien_resalib if type_rdv == "cabinet" else (eleve.lien_resalib_visio or eleve.lien_resalib or "")
+    email_coaching_rdv(
+        destinataire=eleve.email,
+        prenom=eleve.prenom,
+        lien_resalib=lien or "",
+        titre_formation=formation.titre,
+    )
+    email_demande_rdv_coach(
+        prenom_eleve=eleve.prenom,
+        nom_eleve=eleve.nom,
+        email_eleve=eleve.email,
+        type_rdv=type_rdv,
+        titre_formation=formation.titre,
+    )
+    return {"ok": True, "lien": lien}
