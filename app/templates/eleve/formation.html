@@ -214,11 +214,13 @@ function afficherSommaire() {
     let _html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
     if (f.accompagnement_cabinet) {
       const _cab = f.accompagnement_cabinet;
-      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_cab.restants}</div><div class="bloc-accompagnement-label">jour${_cab.restants > 1 ? 's' : ''} cabinet<br>sur ${_cab.total}</div></div>`;
+      const _rdvCab = f.lien_resalib ? `<a href="${f.lien_resalib}" target="_blank" class="btn-rdv-cab" style="display:inline-block;margin-top:8px;padding:6px 12px;background:var(--gold);color:white;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer;">📅 Prendre RDV cabinet</a>` : '';
+      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_cab.restants}</div><div class="bloc-accompagnement-label">jour${_cab.restants > 1 ? 's' : ''} cabinet<br>sur ${_cab.total}</div>${_cab.restants > 0 ? _rdvCab : ''}</div>`;
     }
     if (f.accompagnement_visio) {
       const _vis = f.accompagnement_visio;
-      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_vis.restants}</div><div class="bloc-accompagnement-label">jour${_vis.restants > 1 ? 's' : ''} visio<br>sur ${_vis.total}</div></div>`;
+      const _rdvVis = f.lien_resalib ? `<a href="${f.lien_resalib}" target="_blank" style="display:inline-block;margin-top:8px;padding:6px 12px;background:var(--gold);color:white;border-radius:6px;font-size:12px;text-decoration:none;cursor:pointer;">📅 Prendre RDV visio</a>` : '';
+      _html += `<div class="bloc-accompagnement-eleve" style="flex:1;min-width:120px;"><div class="bloc-accompagnement-valeur">${_vis.restants}</div><div class="bloc-accompagnement-label">jour${_vis.restants > 1 ? 's' : ''} visio<br>sur ${_vis.total}</div>${_vis.restants > 0 ? _rdvVis : ''}</div>`;
     }
     _html += '</div>';
     zoneAccomp.innerHTML = _html;
