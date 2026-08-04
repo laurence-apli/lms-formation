@@ -309,3 +309,21 @@ def email_nouveau_utilisateur(prenom: str, nom: str, email_eleve: str) -> bool:
     </div>
     """
     return _envoyer_email(EMAIL_LAURENCE, sujet, corps)
+
+
+def email_demande_rdv_coach(
+    prenom_eleve: str,
+    nom_eleve: str,
+    email_eleve: str,
+    type_rdv: str,
+    titre_formation: str,
+) -> bool:
+    """Notification envoyée à Laurence quand un élève demande un RDV accompagnement."""
+    type_label = "cabinet" if type_rdv == "cabinet" else "visio"
+    sujet = f"Demande de RDV {type_label} — {prenom_eleve} {nom_eleve}"
+    corps = (
+        f"<p><strong>{prenom_eleve} {nom_eleve}</strong> ({email_eleve}) a demandé un RDV "
+        f"<strong>{type_label}</strong> pour la formation <em>{titre_formation}</em>.</p>"
+        f"<p>Un email avec le lien Resalib lui a été envoyé automatiquement.</p>"
+    )
+    return _envoyer_email(EMAIL_EXPEDITEUR, sujet, corps)
