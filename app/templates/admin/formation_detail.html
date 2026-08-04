@@ -301,10 +301,18 @@ function afficherOverlay(html) {
 function ouvrirModalEditerFormation() {
   const f = donnees;
   const joursHtml = Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
-      <span style="font-size:13px; width:70px;">Niveau ${n}</span>
-      <input type="number" min="0" id="jours-niveau-${n}" value="${f.jours_par_niveau[n] || 0}" style="width:80px;">
-      <span style="font-size:12px; color:var(--grey);">jour(s)</span>
+    <div style="margin-bottom:10px; padding:8px; border:1px solid var(--border); border-radius:6px;">
+      <div style="font-size:13px; font-weight:600; margin-bottom:6px;">Niveau ${n}</div>
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <span style="font-size:12px; width:55px; color:var(--grey);">Cabinet</span>
+        <input type="number" min="0" id="jours-niveau-${n}" value="${f.jours_par_niveau[n] || 0}" style="width:70px;">
+        <span style="font-size:12px; color:var(--grey);">jour(s)</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:12px; width:55px; color:var(--grey);">Visio</span>
+        <input type="number" min="0" id="jours-visio-niveau-${n}" value="${f.jours_visio_par_niveau[n] || 0}" style="width:70px;">
+        <span style="font-size:12px; color:var(--grey);">jour(s)</span>
+      </div>
     </div>`).join('');
   afficherOverlay(`
     <div class="modal">
@@ -319,7 +327,7 @@ function ouvrirModalEditerFormation() {
         <option value="2" ${f.nb_niveaux===2?'selected':''}>2 niveaux</option>
         <option value="3" ${f.nb_niveaux===3?'selected':''}>3 niveaux</option>
       </select>
-      <label>Jours d'accompagnement par niveau</label>
+      <label>Jours d'accompagnement par niveau (Cabinet &amp; Visio)</label>
       <div id="bloc-jours">${joursHtml}</div>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
@@ -355,6 +363,7 @@ async function enregistrerFormation() {
     const dataJours = new URLSearchParams();
     for (let n = 1; n <= nbNiveaux; n++) {
       dataJours.append(`niveau_${n}`, document.getElementById(`jours-niveau-${n}`).value || '0');
+      dataJours.append(`visio_niveau_${n}`, document.getElementById(`jours-visio-niveau-${n}`)?.value || '0');
     }
     await appelApi(`/admin/formations/${FORMATION_ID}/jours-accompagnement`, { method: 'PUT', body: dataJours });
     fermerModal();
