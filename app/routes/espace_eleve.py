@@ -98,16 +98,24 @@ def detail_formation(
                 "id": module.id, "titre": module.titre, "chapitres": chapitres_visibles,
             })
 
-    jours_total = formation.jours_pour_niveau(acces.niveau)
+    jours_cabinet_total = formation.jours_pour_niveau(acces.niveau)
+    jours_visio_total = formation.jours_visio_pour_niveau(acces.niveau)
     return {
-        "id": formation.id, "titre": formation.titre,
-        "presentation_html": formation.presentation_html,
-        "progression": progression_pourcentage(session, eleve.id, formation),
-        "modules": modules_visibles,
-        "accompagnement": {
-            "total": jours_total,
-            "restants": acces.jours_accompagnement_restants(),
-        } if jours_total > 0 else None,
+        'id': formation.id, 'titre': formation.titre,
+        'presentation_html': formation.presentation_html,
+        'progression': progression_pourcentage(session, eleve.id, formation),
+        'modules': modules_visibles,
+        'accompagnement_cabinet': {
+            'total': jours_cabinet_total,
+            'utilises': acces.jours_cabinet_utilises(),
+            'restants': acces.jours_cabinet_restants(),
+        } if jours_cabinet_total > 0 else None,
+        'accompagnement_visio': {
+            'total': jours_visio_total,
+            'utilises': acces.jours_visio_utilises(),
+            'restants': acces.jours_visio_restants(),
+        } if jours_visio_total > 0 else None,
+        'lien_resalib': eleve.lien_resalib,
     }
 
 
