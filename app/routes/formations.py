@@ -41,6 +41,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "actif": formation.actif, "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage,
         "presentation_html": formation.presentation_html or "",
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
+        "jours_visio_par_niveau": {j.niveau: j.jours_visio for j in formation.jours_par_niveau},
         "modules": [
             {
                 "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
