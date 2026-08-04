@@ -24,6 +24,7 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_connexion TIMESTAMP",
     "ALTER TABLE chapitres ADD COLUMN IF NOT EXISTS lien_coaching VARCHAR(500)",
     "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS lien_resalib VARCHAR(500)",
+        "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS lien_resalib_visio VARCHAR(500)",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS lien_resalib VARCHAR(500)",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS type_envoi VARCHAR(20)",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS statut VARCHAR(20) DEFAULT 'en_attente'",
