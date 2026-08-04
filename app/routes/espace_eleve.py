@@ -1,6 +1,6 @@
 """
-Routes cÃ´tÃ© Ã©lÃ¨ve -- toutes dÃ©pendent de eleve_connecte (un Ã©lÃ¨ve doit Ãªtre
-authentifiÃ© pour voir quoi que ce soit ici).
+Routes cÃÂ´tÃÂ© ÃÂ©lÃÂ¨ve -- toutes dÃÂ©pendent de eleve_connecte (un ÃÂ©lÃÂ¨ve doit ÃÂªtre
+authentifiÃÂ© pour voir quoi que ce soit ici).
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, selectinload
@@ -25,7 +25,7 @@ def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = D
     for acces in eleve.acces_formations:
         formation = acces.formation
         if not formation.actif and not eleve.compte_test:
-            continue  # formation dÃ©sactivÃ©e : invisible cÃ´tÃ© Ã©lÃ¨ve, mÃªme si l'accÃ¨s existe toujours en base
+            continue  # formation dÃÂ©sactivÃÂ©e : invisible cÃÂ´tÃÂ© ÃÂ©lÃÂ¨ve, mÃÂªme si l'accÃÂ¨s existe toujours en base
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
@@ -55,11 +55,11 @@ def _verifier_acces_formation(eleve: Eleve, formation: Formation, session: Sessi
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃ¨s Ã  cette formation.")
+        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂ¨s ÃÂ  cette formation.")
     if not formation.actif and not eleve.compte_test:
-        # VÃ©rification de sÃ©curitÃ© mÃªme si l'Ã©lÃ¨ve a dÃ©jÃ  l'onglet ouvert ou
-        # connaÃ®t l'adresse exacte -- une formation dÃ©sactivÃ©e doit rester
-        # inaccessible Ã  tout moment, pas seulement absente du tableau de bord.
+        # VÃÂ©rification de sÃÂ©curitÃÂ© mÃÂªme si l'ÃÂ©lÃÂ¨ve a dÃÂ©jÃÂ  l'onglet ouvert ou
+        # connaÃÂ®t l'adresse exacte -- une formation dÃÂ©sactivÃÂ©e doit rester
+        # inaccessible ÃÂ  tout moment, pas seulement absente du tableau de bord.
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
     return acces
 
@@ -69,8 +69,8 @@ def detail_formation(
     formation_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
 ):
     """Renvoie le sommaire complet (modules/chapitres VISIBLES au niveau de
-    l'Ã©lÃ¨ve uniquement) -- les Ã©lÃ©ments hors niveau sont totalement absents
-    de cette rÃ©ponse, pas seulement grisÃ©s cÃ´tÃ© affichage."""
+    l'ÃÂ©lÃÂ¨ve uniquement) -- les ÃÂ©lÃÂ©ments hors niveau sont totalement absents
+    de cette rÃÂ©ponse, pas seulement grisÃÂ©s cÃÂ´tÃÂ© affichage."""
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
@@ -93,7 +93,7 @@ def detail_formation(
                 "accessible": ok, "valide": deja_valide,
             })
 
-        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaÃ®t pas du tout
+        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaÃÂ®t pas du tout
             modules_visibles.append({
                 "id": module.id, "titre": module.titre, "chapitres": chapitres_visibles,
             })
@@ -110,6 +110,8 @@ def detail_formation(
             'utilises': acces.jours_cabinet_utilises(),
             'restants': acces.jours_cabinet_restants(),
         } if jours_cabinet_total > 0 else None,
+        '_debug_niveau': acces.niveau,
+        '_debug_cabinet_total': jours_cabinet_total,
         'accompagnement_visio': {
             'total': jours_visio_total,
             'utilises': acces.jours_visio_utilises(),
@@ -130,7 +132,7 @@ def detail_module(
     acces = _verifier_acces_formation(eleve, formation, session)
 
     if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
-        raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accÃ¨s.")
+        raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accÃÂ¨s.")
 
     return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html}
 
@@ -165,7 +167,7 @@ def detail_chapitre(
 def valider_chapitre_eleve(
     chapitre_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
 ):
-    # CORRECTION PERFORMANCE : le chapitre est chargÃ© avec toute sa formation
+    # CORRECTION PERFORMANCE : le chapitre est chargÃÂ© avec toute sa formation
     # (modules + chapitres) en une seule fois via selectinload, au lieu de
     # laisser chaque relation se charger une par une (module, puis formation,
     # puis modules de la formation, puis chapitres de chaque module...).
@@ -185,9 +187,9 @@ def valider_chapitre_eleve(
 
     formation = chapitre.module.formation
 
-    # CORRECTION PERFORMANCE : l'accÃ¨s Ã©lÃ¨ve (AccesFormation) n'est rÃ©cupÃ©rÃ©
-    # qu'UNE fois ici, puis rÃ©utilisÃ© -- avant, la mÃªme requÃªte Ã©tait refaite
-    # 3 fois (une dans la vÃ©rification d'accÃ¨s, une dans
+    # CORRECTION PERFORMANCE : l'accÃÂ¨s ÃÂ©lÃÂ¨ve (AccesFormation) n'est rÃÂ©cupÃÂ©rÃÂ©
+    # qu'UNE fois ici, puis rÃÂ©utilisÃÂ© -- avant, la mÃÂªme requÃÂªte ÃÂ©tait refaite
+    # 3 fois (une dans la vÃÂ©rification d'accÃÂ¨s, une dans
     # chapitre_est_accessible, une dans progression_pourcentage).
     acces = (
         session.query(AccesFormation)
@@ -195,7 +197,7 @@ def valider_chapitre_eleve(
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃ¨s Ã  cette formation.")
+        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂ¨s ÃÂ  cette formation.")
     if not formation.actif and not eleve.compte_test:
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
 
@@ -205,7 +207,7 @@ def valider_chapitre_eleve(
 
     valider_chapitre_modele(session, eleve.id, chapitre_id)
 
-    # Si ce chapitre a un lien coaching â premiÃ¨re sÃ©ance auto
+    # Si ce chapitre a un lien coaching Ã¢ÂÂ premiÃÂ¨re sÃÂ©ance auto
     if chapitre.lien_coaching:
         seance = SeanceAccompagnement(
             acces_id=acces.id,
