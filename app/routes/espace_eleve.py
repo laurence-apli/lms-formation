@@ -1,6 +1,6 @@
 """
-Routes cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve -- toutes dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©pendent de eleve_connecte (un ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve doit ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªtre
-authentifiÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© pour voir quoi que ce soit ici).
+Routes cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve -- toutes dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©pendent de eleve_connecte (un ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve doit ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªtre
+authentifiÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© pour voir quoi que ce soit ici).
 """
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, selectinload
@@ -25,7 +25,7 @@ def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = D
     for acces in eleve.acces_formations:
         formation = acces.formation
         if not formation.actif and not eleve.compte_test:
-            continue  # formation dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©sactivÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©e : invisible cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve, mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme si l'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s existe toujours en base
+            continue  # formation dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©sactivÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©e : invisible cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve, mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme si l'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s existe toujours en base
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
@@ -55,11 +55,11 @@ def _verifier_acces_formation(eleve: Eleve, formation: Formation, session: Sessi
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  cette formation.")
+        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  cette formation.")
     if not formation.actif and not eleve.compte_test:
-        # VÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rification de sÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©curitÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme si l'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve a dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©jÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  l'onglet ouvert ou
-        # connaÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ®t l'adresse exacte -- une formation dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©sactivÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©e doit rester
-        # inaccessible ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  tout moment, pas seulement absente du tableau de bord.
+        # VÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rification de sÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©curitÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme si l'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve a dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©jÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  l'onglet ouvert ou
+        # connaÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ®t l'adresse exacte -- une formation dÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©sactivÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©e doit rester
+        # inaccessible ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  tout moment, pas seulement absente du tableau de bord.
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
     return acces
 
@@ -69,8 +69,8 @@ def detail_formation(
     formation_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
 ):
     """Renvoie le sommaire complet (modules/chapitres VISIBLES au niveau de
-    l'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve uniquement) -- les ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ments hors niveau sont totalement absents
-    de cette rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ponse, pas seulement grisÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©s cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© affichage."""
+    l'ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve uniquement) -- les ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ments hors niveau sont totalement absents
+    de cette rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ponse, pas seulement grisÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©s cÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ´tÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© affichage."""
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
@@ -93,7 +93,7 @@ def detail_formation(
                 "accessible": ok, "valide": deja_valide,
             })
 
-        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ®t pas du tout
+        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ®t pas du tout
             modules_visibles.append({
                 "id": module.id, "titre": module.titre, "chapitres": chapitres_visibles,
             })
@@ -132,7 +132,7 @@ def detail_module(
     acces = _verifier_acces_formation(eleve, formation, session)
 
     if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
-        raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s.")
+        raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s.")
 
     return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html}
 
@@ -167,7 +167,7 @@ def detail_chapitre(
 def valider_chapitre_eleve(
     chapitre_id: int, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
 ):
-    # CORRECTION PERFORMANCE : le chapitre est chargÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© avec toute sa formation
+    # CORRECTION PERFORMANCE : le chapitre est chargÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© avec toute sa formation
     # (modules + chapitres) en une seule fois via selectinload, au lieu de
     # laisser chaque relation se charger une par une (module, puis formation,
     # puis modules de la formation, puis chapitres de chaque module...).
@@ -187,9 +187,9 @@ def valider_chapitre_eleve(
 
     formation = chapitre.module.formation
 
-    # CORRECTION PERFORMANCE : l'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve (AccesFormation) n'est rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©cupÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©
-    # qu'UNE fois ici, puis rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©utilisÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© -- avant, la mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme requÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªte ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©tait refaite
-    # 3 fois (une dans la vÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rification d'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s, une dans
+    # CORRECTION PERFORMANCE : l'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©lÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨ve (AccesFormation) n'est rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©cupÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©
+    # qu'UNE fois ici, puis rÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©utilisÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ© -- avant, la mÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªme requÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂªte ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©tait refaite
+    # 3 fois (une dans la vÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©rification d'accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s, une dans
     # chapitre_est_accessible, une dans progression_pourcentage).
     acces = (
         session.query(AccesFormation)
@@ -197,7 +197,7 @@ def valider_chapitre_eleve(
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  cette formation.")
+        raise HTTPException(status_code=403, detail="Vous n'avez pas accÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨s ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ  cette formation.")
     if not formation.actif and not eleve.compte_test:
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
 
@@ -207,7 +207,7 @@ def valider_chapitre_eleve(
 
     valider_chapitre_modele(session, eleve.id, chapitre_id)
 
-    # Si ce chapitre a un lien coaching ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ premiÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨re sÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ance auto
+    # Si ce chapitre a un lien coaching ÃÂÃÂÃÂÃÂ¢ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ premiÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ¨re sÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ©ance auto
     if chapitre.lien_coaching:
         seance = SeanceAccompagnement(
             acces_id=acces.id,
@@ -242,7 +242,7 @@ async def demander_rdv(
     eleve: Eleve = Depends(eleve_connecte),
     session: Session = Depends(obtenir_session),
 ):
-    """Envoie un email de confirmation RDV ÃÂ  lÃ¢ÂÂÃÂ©lÃÂ¨ve et ÃÂ  Laurence."""
+    """Envoie un email de confirmation RDV Ã  lâÃ©lÃ¨ve et Ã  Laurence."""
     donnees = await request.json()
     type_rdv = donnees.get("type", "cabinet")
     acces = session.query(AccesFormation).filter_by(
