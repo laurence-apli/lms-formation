@@ -195,7 +195,9 @@ def email_coaching_rdv(
 ) -> bool:
     """Email envoyé à l'élève avec le lien Resalib pour son coaching d'accompagnement."""
     sujet = (f"Votre séance de coaching en visio — {titre_formation}" if type_rdv == "visio" else f"Votre séance de coaching — {titre_formation}")
-    corps = (
+    texte_corps = ("Il est temps de planifier votre séance de coaching en visio." if type_rdv == "visio" else "Il est temps de planifier votre séance de coaching d'accompagnement.")
+    texte_bouton = ("Réserver ma séance en visio" if type_rdv == "visio" else "Réserver ma séance de coaching")
+        corps = (
         '<div style="font-family: Georgia, Arial, sans-serif; background: #F5EDD6; padding: 0; margin: 0;">'
         '<div style="background: #2E2210; padding: 28px 36px;">'
         '<h1 style="color: #B8922A; font-size: 22px; margin: 0;">Séance de coaching</h1>'
@@ -205,14 +207,14 @@ def email_coaching_rdv(
         f'<p style="color: #2E2210; font-size: 16px;">Bonjour {prenom},</p>'
         '<p style="color: #444; font-size: 15px; line-height: 1.7;">'
         'Vous avez atteint une nouvelle étape de votre formation. '
-        ('Il est temps de planifier votre séance de coaching en visio.' if type_rdv == 'visio' else 'Il est temps de planifier votre séance de coaching d\'accompagnement.')
+        f'{texte_corps}'
         '</p>'
         '<div style="text-align: center; margin: 32px 0;">'
         f'<a href="{lien_resalib}" '
         'style="background: #B8922A; color: #fff; text-decoration: none; '
         'padding: 14px 32px; border-radius: 4px; font-size: 16px; '
         'font-family: Georgia, serif;">'
-        ('Réserver ma séance en visio' if type_rdv == 'visio' else 'Réserver ma séance de coaching')
+        f'{texte_bouton}'
         '</a></div>'
         f'<p style="color: #888; font-size: 13px;">'
         f'Lien direct : <span style="color: #B8922A;">{lien_resalib}</span></p>'
