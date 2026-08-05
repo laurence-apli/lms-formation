@@ -1,6 +1,6 @@
 """
-Routes de gestion des formations, modules et chapitres -- rÃ©servÃ©es Ã 
-l'administrateur connectÃ© (toutes les routes dÃ©pendent de admin_connecte).
+Routes de gestion des formations, modules et chapitres -- rÃÂ©servÃÂ©es ÃÂ 
+l'administrateur connectÃÂ© (toutes les routes dÃÂ©pendent de admin_connecte).
 """
 import base64
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, File, Request
@@ -42,6 +42,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "presentation_html": formation.presentation_html or "",
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
         "jours_visio_par_niveau": {j.niveau: j.jours_visio for j in formation.jours_par_niveau},
+        "lien_visio": formation.lien_visio or "",
         "modules": [
             {
                 "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
@@ -70,7 +71,7 @@ def creer_formation(
     presentation_html: str = Form(""), ordre_affichage: int = Form(0), session: Session = Depends(obtenir_session),
 ):
     if nb_niveaux not in (1, 2, 3):
-        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit Ãªtre 1, 2 ou 3.")
+        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit ÃÂªtre 1, 2 ou 3.")
     formation = Formation(titre=titre, couleur=couleur, nb_niveaux=nb_niveaux, presentation_html=presentation_html, ordre_affichage=ordre_affichage)
     session.add(formation)
     session.flush()
@@ -83,19 +84,20 @@ def creer_formation(
 def modifier_formation(
     formation_id: int, titre: str = Form(...), couleur: str = Form(...),
     nb_niveaux: int = Form(...), presentation_html: str = Form(""),
-    ordre_affichage: int = Form(0),
+    ordre_affichage: int = Form(0), lien_visio: str = Form(""),
     session: Session = Depends(obtenir_session),
 ):
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
     if nb_niveaux not in (1, 2, 3):
-        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit Ãªtre 1, 2 ou 3.")
+        raise HTTPException(status_code=400, detail="Le nombre de niveaux doit ÃÂªtre 1, 2 ou 3.")
 
     formation.titre = titre
     formation.couleur = couleur
     formation.presentation_html = presentation_html
     formation.ordre_affichage = ordre_affichage
+    formation.lien_visio = lien_visio or None
 
     if nb_niveaux != formation.nb_niveaux:
         niveaux_existants = {j.niveau for j in formation.jours_par_niveau}
@@ -302,7 +304,7 @@ def deplacer_chapitre(chapitre_id: int, direction: int = Form(...), session: Ses
     session.commit()
     return {"ok": True}
 
-# ---------- MÃ©dias ----------
+# ---------- MÃÂ©dias ----------
 
 @router.post("/chapitres/{chapitre_id}/medias")
 def ajouter_media(
@@ -311,7 +313,7 @@ def ajouter_media(
     session: Session = Depends(obtenir_session),
 ):
     if type not in ("pdf", "audio", "lien"):
-        raise HTTPException(status_code=400, detail="Type de mÃ©dia invalide.")
+        raise HTTPException(status_code=400, detail="Type de mÃÂ©dia invalide.")
     chapitre = session.get(Chapitre, chapitre_id)
     if chapitre is None:
         raise HTTPException(status_code=404, detail="Chapitre introuvable.")
@@ -338,7 +340,7 @@ async def uploader_media_fichier(
     session: Session = Depends(obtenir_session),
 ):
     if type not in ("pdf", "audio"):
-        raise HTTPException(status_code=400, detail="Ce type de mÃ©dia ne s'importe pas par fichier.")
+        raise HTTPException(status_code=400, detail="Ce type de mÃÂ©dia ne s'importe pas par fichier.")
     chapitre = session.get(Chapitre, chapitre_id)
     if chapitre is None:
         raise HTTPException(status_code=404, detail="Chapitre introuvable.")
@@ -364,7 +366,7 @@ async def uploader_media_fichier(
 def toggle_media_telechargeable(media_id: int, telechargeable: bool = Form(...), session: Session = Depends(obtenir_session)):
     media = session.get(Media, media_id)
     if media is None:
-        raise HTTPException(status_code=404, detail="MÃ©dia introuvable.")
+        raise HTTPException(status_code=404, detail="MÃÂ©dia introuvable.")
     media.telechargeable = telechargeable
     session.commit()
     return {"ok": True}
@@ -373,7 +375,7 @@ def toggle_media_telechargeable(media_id: int, telechargeable: bool = Form(...),
 def supprimer_media(media_id: int, session: Session = Depends(obtenir_session)):
     media = session.get(Media, media_id)
     if media is None:
-        raise HTTPException(status_code=404, detail="MÃ©dia introuvable.")
+        raise HTTPException(status_code=404, detail="MÃÂ©dia introuvable.")
     session.delete(media)
     session.commit()
     return {"ok": True}
