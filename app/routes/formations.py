@@ -95,7 +95,8 @@ def modifier_formation(
 
     formation.titre = titre
     formation.couleur = couleur
-    formation.presentation_html = presentation_html
+    if presentation_html:
+        formation.presentation_html = presentation_html
     formation.ordre_affichage = ordre_affichage
     formation.lien_visio = lien_visio or None
 
