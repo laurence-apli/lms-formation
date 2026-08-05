@@ -260,6 +260,7 @@ async def demander_rdv(
         prenom=eleve.prenom,
         lien_resalib=lien or "",
         titre_formation=formation.titre,
+        type_rdv=type_rdv,
     )
     email_demande_rdv_coach(
         prenom_eleve=eleve.prenom,
