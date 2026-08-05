@@ -1,6 +1,6 @@
 """
-ModÃÂ¨le de donnÃÂ©es de la plateforme LMS -- version serveur, ÃÂ  jour avec toutes
-les dÃÂ©cisions validÃÂ©es au fil des sessions de maquette (admin + ÃÂ©lÃÂ¨ve).
+ModÃ¨le de donnÃ©es de la plateforme LMS -- version serveur, Ã  jour avec toutes
+les dÃ©cisions validÃ©es au fil des sessions de maquette (admin + Ã©lÃ¨ve).
 """
 import secrets
 from datetime import datetime
@@ -96,16 +96,16 @@ class Chapitre(Base):
     module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
     titre = Column(String(200), nullable=False)
     # CORRECTION TRANSFERT NEON : contenu_html peut contenir des Mo d'images base64.
-    # deferred=True ÃÂ©vite de le charger lors des requÃÂªtes en masse (ex : validation
-    # de chapitre avec selectinload sur toute la formation). Il n'est chargÃÂ© que
-    # lorsque explicitement accÃÂ©dÃÂ© (route detail_chapitre, ÃÂ©dition admin).
+    # deferred=True Ã©vite de le charger lors des requÃªtes en masse (ex : validation
+    # de chapitre avec selectinload sur toute la formation). Il n'est chargÃ© que
+    # lorsque explicitement accÃ©dÃ© (route detail_chapitre, Ã©dition admin).
     contenu_html = deferred(Column(Text))
     ordre = Column(Integer, nullable=False)
     niveau_requis = Column(Integer, nullable=False, default=1)
     fichier_recu_nom = Column(String(300))
-    # Lien Resalib optionnel -- renseignÃÂ© par l'admin au niveau du chapitre.
-    # Si prÃÂ©sent, un email avec ce lien est envoyÃÂ© automatiquement ÃÂ  l'ÃÂ©lÃÂ¨ve
-    # quand il valide ce chapitre (premiÃÂ¨re sÃÂ©ance de coaching).
+    # Lien Resalib optionnel -- renseignÃ© par l'admin au niveau du chapitre.
+    # Si prÃ©sent, un email avec ce lien est envoyÃ© automatiquement Ã  l'Ã©lÃ¨ve
+    # quand il valide ce chapitre (premiÃ¨re sÃ©ance de coaching).
     lien_coaching = Column(String(500), nullable=True)
 
     module = relationship("Module", back_populates="chapitres")
@@ -135,10 +135,10 @@ class Eleve(Base):
     actif = Column(Boolean, default=True)
     compte_test = Column(Boolean, default=False)
     cree_le = Column(DateTime, default=datetime.utcnow)
-    # Statistiques de connexion (colonnes ajoutÃÂ©es via migration Neon)
+    # Statistiques de connexion (colonnes ajoutÃ©es via migration Neon)
     nb_connexions = Column(Integer, default=0)
     derniere_connexion = Column(DateTime, nullable=True)
-    lien_resalib = Column(String(500), nullable=True)  # lien Resalib de l'Ã©lÃ¨ve
+    lien_resalib = Column(String(500), nullable=True)  # lien Resalib de l'élève
     lien_resalib_visio = Column(String(500), nullable=True)  # lien Resalib visio
 
     acces_formations = relationship("AccesFormation", back_populates="eleve",
@@ -178,8 +178,8 @@ class Administrateur(Base):
     telephone = Column(String(50))
     mot_de_passe_hash = Column(String(255))
     # CORRECTION TRANSFERT NEON : photo_url et logo_url sont des images base64
-    # potentiellement lourdes. deferred=True ÃÂ©vite de les charger dans les requÃÂªtes
-    # d'authentification et autres requÃÂªtes qui n'ont pas besoin des images.
+    # potentiellement lourdes. deferred=True Ã©vite de les charger dans les requÃªtes
+    # d'authentification et autres requÃªtes qui n'ont pas besoin des images.
     photo_url = deferred(Column(Text))
     logo_url = deferred(Column(Text))
     lien_github = Column(String(500))
@@ -242,7 +242,7 @@ class AccesFormation(Base):
         return max(0, total - self.jours_visio_utilises())
 
     def jours_accompagnement_restants(self) -> int:
-        """CompatibilitÃÂ© ascendante Ã¢ÂÂ retourne les jours cabinet restants."""
+        """CompatibilitÃ© ascendante â retourne les jours cabinet restants."""
         return self.jours_cabinet_restants()
 
 class SeanceAccompagnement(Base):
@@ -252,11 +252,11 @@ class SeanceAccompagnement(Base):
     acces_id = Column(Integer, ForeignKey("acces_formations.id"), nullable=False)
     date_seance = Column(DateTime, default=datetime.utcnow)
 
-    # Colonnes ajoutÃÂ©es pour le suivi des coachings
-    lien_resalib = Column(String(500), nullable=True)   # lien envoyÃÂ© ÃÂ  la cliente
+    # Colonnes ajoutÃ©es pour le suivi des coachings
+    lien_resalib = Column(String(500), nullable=True)   # lien envoyÃ© Ã  la cliente
     type_envoi = Column(String(20), nullable=True)      # "auto" ou "manuel"
     statut = Column(String(20), nullable=False, default="en_attente")  # "en_attente" | "realise"
-    date_realise = Column(DateTime, nullable=True)      # renseignÃÂ© par l'admin quand la sÃÂ©ance a eu lieu
+    date_realise = Column(DateTime, nullable=True)      # renseignÃ© par l'admin quand la sÃ©ance a eu lieu
 
     type_accompagnement = Column(String(20), nullable=False, default="cabinet")  # "cabinet" | "visio"
 
@@ -382,7 +382,7 @@ def deplacer_chapitre_vers_module(session: Session, chapitre_id: int, nouveau_mo
     chapitre = session.get(Chapitre, chapitre_id)
     nouveau_module = session.get(Module, nouveau_module_id)
     if nouveau_module.formation_id != chapitre.module.formation_id:
-        raise ValueError("Impossible de dÃÂ©placer un chapitre vers une autre formation")
+        raise ValueError("Impossible de dÃ©placer un chapitre vers une autre formation")
     dernier_ordre = (
         session.query(Chapitre)
         .join(Module)
@@ -444,7 +444,7 @@ def dupliquer_formation(session: Session, formation_id: int) -> Formation:
 if __name__ == "__main__":
     engine = create_engine("sqlite:///lms_prototype.db", echo=False)
     Base.metadata.create_all(engine)
-    print("Structure de donnÃÂ©es crÃÂ©ÃÂ©e avec succÃÂ¨s dans lms_prototype.db")
+    print("Structure de donnÃ©es crÃ©Ã©e avec succÃ¨s dans lms_prototype.db")
 
 class CercleFemmes(Base):
     """Bloc unique ('singleton') pour annoncer le prochain Cercle de Femmes
@@ -455,23 +455,23 @@ class CercleFemmes(Base):
     id = Column(Integer, primary_key=True)
     titre = Column(String(200), default="Cercle de Femmes")
     date_evenement = Column(String(150)) # texte libre, ex: "Samedi 12 septembre 2026, 14h-17h"
-    lieu = Column(String(300))           # ex: "Cabinet de VÃÂ©ranne (42520)"
-    description_html = Column(Text)      # thÃÂ¨me, dÃÂ©roulÃÂ©, informations pratiques
-    photo_url = Column(Text)             # optionnel, image encodÃÂ©e en base64
+    lieu = Column(String(300))           # ex: "Cabinet de VÃ©ranne (42520)"
+    description_html = Column(Text)      # thÃ¨me, dÃ©roulÃ©, informations pratiques
+    photo_url = Column(Text)             # optionnel, image encodÃ©e en base64
     publie = Column(Boolean, default=True) # si False, le site affiche un message d'attente
     mis_a_jour_le = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 def obtenir_ou_creer_cercle_femmes(session: Session) -> "CercleFemmes":
-    """Il n'existe qu'une seule fiche 'prochain cercle' ÃÂ  la fois -- on la
-    rÃÂ©cupÃÂ¨re si elle existe, sinon on la crÃÂ©e avec des valeurs de dÃÂ©part
-    rÃÂ©alistes (Laurence les modifiera ensuite depuis l'admin)."""
+    """Il n'existe qu'une seule fiche 'prochain cercle' Ã  la fois -- on la
+    rÃ©cupÃ¨re si elle existe, sinon on la crÃ©e avec des valeurs de dÃ©part
+    rÃ©alistes (Laurence les modifiera ensuite depuis l'admin)."""
     cercle = session.query(CercleFemmes).first()
     if cercle is None:
         cercle = CercleFemmes(
-            titre="Cercle de Femmes de rentrÃÂ©e",
+            titre="Cercle de Femmes de rentrÃ©e",
             date_evenement="Mercredi 10 septembre 2026, 14h-17h",
-            lieu="Cabinet de VÃÂ©ranne (42520)",
-            description_html="Un cercle pour se retrouver aprÃÂ¨s l'ÃÂ©tÃÂ©, se relier ÃÂ  son cycle et ÃÂ  la puissance du fÃÂ©minin sacrÃÂ©. Places limitÃÂ©es, inscription par message.",
+            lieu="Cabinet de VÃ©ranne (42520)",
+            description_html="Un cercle pour se retrouver aprÃ¨s l'Ã©tÃ©, se relier Ã  son cycle et Ã  la puissance du fÃ©minin sacrÃ©. Places limitÃ©es, inscription par message.",
             photo_url="images/laurence-huiles-cadran.jpg",
             publie=True,
         )
