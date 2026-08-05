@@ -197,7 +197,7 @@ def email_coaching_rdv(
     sujet = (f"Votre séance de coaching en visio — {titre_formation}" if type_rdv == "visio" else f"Votre séance de coaching — {titre_formation}")
     texte_corps = ("Il est temps de planifier votre séance de coaching en visio." if type_rdv == "visio" else "Il est temps de planifier votre séance de coaching d'accompagnement.")
     texte_bouton = ("Réserver ma séance en visio" if type_rdv == "visio" else "Réserver ma séance de coaching")
-        corps = (
+    corps = (
         '<div style="font-family: Georgia, Arial, sans-serif; background: #F5EDD6; padding: 0; margin: 0;">'
         '<div style="background: #2E2210; padding: 28px 36px;">'
         '<h1 style="color: #B8922A; font-size: 22px; margin: 0;">Séance de coaching</h1>'
