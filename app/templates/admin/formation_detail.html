@@ -1,5 +1,5 @@
 {% extends "admin/base.html" %}
-{% block titre %}{{ formation.titre }} — Administration{% endblock %}
+{% block titre %}{{ formation.titre }} â Administration{% endblock %}
 {% block contenu %}
 <style>
 .formation-layout { display:flex; gap:24px; align-items:flex-start; }
@@ -60,7 +60,7 @@
 <div class="topbar"><div><h1>{{ formation.titre }}</h1></div></div>
 <div class="formation-layout">
 <div class="sommaire-panel" id="sommaire"></div>
-<div class="contenu-panel" id="contenu">Chargement…</div>
+<div class="contenu-panel" id="contenu">Chargementâ¦</div>
 </div>
 
 {% endblock %}
@@ -91,8 +91,8 @@ function renderSommaire() {
 
     html += `<div class="sommaire-module ${moduleActif ? 'actif' : ''}">
       <div class="btns-ordre">
-        ${!estPremier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, -1)" title="Monter">▲</button>` : '<span style="height:17px;display:block;"></span>'}
-        ${!estDernier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, 1)" title="Descendre">▼</button>` : '<span style="height:17px;display:block;"></span>'}
+        ${!estPremier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, -1)" title="Monter">â²</button>` : '<span style="height:17px;display:block;"></span>'}
+        ${!estDernier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, 1)" title="Descendre">â¼</button>` : '<span style="height:17px;display:block;"></span>'}
       </div>
       <span style="flex:1;" onclick="selectionner({type:'module', moduleId:${m.id}})">${esc(m.titre.toUpperCase())}</span>
       ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
@@ -105,12 +105,12 @@ function renderSommaire() {
 
       html += `<div class="sommaire-chapitre ${chapActif ? 'actif' : ''}">
         <div class="btns-ordre">
-          ${!estPremierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, -1)" title="Monter">▲</button>` : '<span style="height:17px;display:block;"></span>'}
-          ${!estDernierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, 1)" title="Descendre">▼</button>` : '<span style="height:17px;display:block;"></span>'}
+          ${!estPremierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, -1)" title="Monter">â²</button>` : '<span style="height:17px;display:block;"></span>'}
+          ${!estDernierChap ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerChapitre(${c.id}, 1)" title="Descendre">â¼</button>` : '<span style="height:17px;display:block;"></span>'}
         </div>
         <span class="puce"></span>
         <span style="flex:1;" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">${ci+1}. ${esc(c.titre)}</span>
-        ${c.lien_coaching ? '📧' : ''}
+        ${c.lien_coaching ? 'ð§' : ''}
       </div>`;
     });
 
@@ -144,15 +144,15 @@ function renderContenu() {
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `
       <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span></h2>
-      <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
-      ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l\'ont déjà ne peuvent plus y accéder.</div>' : ''}
-      ${(function(){const h=f.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
+      <div class="sous-titre">PrÃ©sentation de la formation â affichÃ©e Ã  l'Ã©lÃ¨ve avant qu'il commence</div>
+      ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est dÃ©sactivÃ©e : elle est invisible pour les nouveaux Ã©lÃ¨ves, et les Ã©lÃ¨ves qui l\'ont dÃ©jÃ  ne peuvent plus y accÃ©der.</div>' : ''}
+      ${(function(){const h=f.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de prÃ©sentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('formation', FORMATION_ID, f.titre)}
       ${zoneImportHtml('formation', FORMATION_ID, f.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
-        <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
+        <button class="btn" onclick="ouvrirModalEditerFormation()">â Modifier la formation</button>
         <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
-        <button class="btn" onclick="toggleActifFormation()">${f.actif ? 'Désactiver' : 'Activer'} la formation</button>
+        <button class="btn" onclick="toggleActifFormation()">${f.actif ? 'DÃ©sactiver' : 'Activer'} la formation</button>
         <button class="btn btn-danger-outline" onclick="demanderSuppressionFormation()">Supprimer la formation</button>
       </div>`;
 
@@ -160,12 +160,12 @@ function renderContenu() {
     const m = getModule(noeudActif.moduleId);
     zone.innerHTML = `
       <h2>${esc(m.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">Niveau ${m.niveau_requis}</span>` : ''}</h2>
-      <div class="sous-titre">Présentation du module — affichée à l'élève avant ses chapitres</div>
-      ${(function(){const h=m.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
+      <div class="sous-titre">PrÃ©sentation du module â affichÃ©e Ã  l'Ã©lÃ¨ve avant ses chapitres</div>
+      ${(function(){const h=m.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de prÃ©sentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('module', m.id, m.titre)}
       ${zoneImportHtml('module', m.id, m.fichier_recu_nom)}
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
-        <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">✎ Modifier le module</button>
+        <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">â Modifier le module</button>
         <button class="btn btn-danger-outline" onclick="supprimerModule(${m.id})">Supprimer le module</button>
       </div>`;
 
@@ -175,34 +175,34 @@ function renderContenu() {
     const autresModules = f.modules.filter(mm => mm.id !== m.id);
     zone.innerHTML = `
       <h2>${esc(c.titre)} ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${c.niveau_requis}">Niveau ${c.niveau_requis}</span>` : ''}
-        ${c.lien_coaching ? '<span class="coaching-badge">📧 Email coaching actif</span>' : ''}
+        ${c.lien_coaching ? '<span class="coaching-badge">ð§ Email coaching actif</span>' : ''}
       </h2>
       <div class="sous-titre">Module : ${esc(m.titre)}</div>
-      ${c.lien_coaching ? `<div style="background:#F0F8F2; border:1px solid #C3DECB; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px;">🔗 Lien coaching : <a href="${esc(c.lien_coaching)}" target="_blank" style="color:var(--gold);">${esc(c.lien_coaching)}</a></div>` : ''}
-      ${(function(){const h=c.contenu_html;if(!h)return '<div class="presentation-display vide">Aucun contenu importé pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
+      ${c.lien_coaching ? `<div style="background:#F0F8F2; border:1px solid #C3DECB; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:14px;">ð Lien coaching : <a href="${esc(c.lien_coaching)}" target="_blank" style="color:var(--gold);">${esc(c.lien_coaching)}</a></div>` : ''}
+      ${(function(){const h=c.contenu_html;if(!h)return '<div class="presentation-display vide">Aucun contenu importÃ© pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('chapitre', c.id, c.titre)}
       ${zoneImportHtml('chapitre', c.id, c.fichier_recu_nom)}
-      <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
+      <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">MÃ©dias complÃ©mentaires</label>
       <div class="medias-liste">
         ${c.medias.map(media => `
           <div class="media-row">
-            <span>${ {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || media.type }</span>
+            <span>${ {pdf:'ð', audio:'ð§', lien:'ð'}[media.type] || media.type }</span>
             <span style="flex:1;">${esc(media.titre)}</span>
             <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--grey);">
               <input type="checkbox" ${media.telechargeable ? 'checked' : ''} onchange="toggleMediaTelechargeable(${media.id}, this.checked)">
-              téléchargeable
+              tÃ©lÃ©chargeable
             </label>
-            <button onclick="supprimerMedia(${media.id})">🗑</button>
+            <button onclick="supprimerMedia(${media.id})">ð</button>
           </div>
-        `).join('') || '<div class="helper-text">Aucun média complémentaire.</div>'}
+        `).join('') || '<div class="helper-text">Aucun mÃ©dia complÃ©mentaire.</div>'}
       </div>
-      <button class="btn btn-sm" style="margin-top:6px;" onclick="ouvrirModalAjouterMedia(${c.id})">+ Ajouter un média</button>
+      <button class="btn btn-sm" style="margin-top:6px;" onclick="ouvrirModalAjouterMedia(${c.id})">+ Ajouter un mÃ©dia</button>
       <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
-        <button class="btn" onclick="ouvrirModalEditerChapitre(${m.id}, ${c.id})">✎ Modifier</button>
-        <button class="btn" onclick="dupliquerChapitre(${c.id})">⧉ Dupliquer</button>
+        <button class="btn" onclick="ouvrirModalEditerChapitre(${m.id}, ${c.id})">â Modifier</button>
+        <button class="btn" onclick="dupliquerChapitre(${c.id})">â§ Dupliquer</button>
         ${autresModules.length ? `
         <select class="move-select" onchange="if(this.value) deplacerChapitreVersModule(${c.id}, parseInt(this.value)); this.value='';">
-          <option value="">↪ Déplacer vers…</option>
+          <option value="">âª DÃ©placer versâ¦</option>
           ${autresModules.map(am => `<option value="${am.id}">${esc(am.titre)}</option>`).join('')}
         </select>` : ''}
         <button class="btn btn-danger-outline" onclick="supprimerChapitre(${c.id})">Supprimer</button>
@@ -217,7 +217,7 @@ function zoneImport(type, id, nomActuel) {
       ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
       ondragleave="this.style.borderColor='var(--border)';"
       ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerWord('${type}', ${id}, event.dataTransfer.files[0]);">
-      📄 Glisser un fichier Word ici, ou
+      ð Glisser un fichier Word ici, ou
       <label for="${inputId}" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
       <input type="file" id="${inputId}" accept=".docx" style="display:none;" onchange="importerWord('${type}', ${id}, this.files[0])">
       <div id="recu-${inputId}" style="margin-top:8px; font-weight:600; color:var(--ink);"></div>
@@ -227,7 +227,7 @@ function zoneImport(type, id, nomActuel) {
 async function importerWord(type, id, fichier) {
   if (!fichier) return;
   const zoneRecu = document.getElementById(`recu-fichier-${type}-${id}`);
-  zoneRecu.textContent = "Import en cours…";
+  zoneRecu.textContent = "Import en coursâ¦";
   const data = new FormData();
   data.append('fichier', fichier);
   try {
@@ -235,7 +235,7 @@ async function importerWord(type, id, fichier) {
               : type === 'module' ? `/admin/modules/${id}/importer-word`
               : `/admin/chapitres/${id}/importer-word`;
     const resultat = await appelApi(url, { method: 'POST', body: data });
-    afficherToast(`Fichier "${resultat.fichier}" importé avec succès`);
+    afficherToast(`Fichier "${resultat.fichier}" importÃ© avec succÃ¨s`);
     await charger();
   } catch (e) {
     zoneRecu.textContent = e.message;
@@ -246,7 +246,7 @@ async function importerWord(type, id, fichier) {
 async function importerHtml(type, id, fichier) {
   if (!fichier) return;
   const zoneRecu = document.getElementById(`recu-fichier-html-${type}-${id}`);
-  if (zoneRecu) zoneRecu.textContent = "Import en cours…";
+  if (zoneRecu) zoneRecu.textContent = "Import en coursâ¦";
   const data = new FormData();
   data.append('fichier', fichier);
   try {
@@ -254,7 +254,7 @@ async function importerHtml(type, id, fichier) {
                : type === 'module'   ? `/admin/modules/${id}/importer-html`
                :                       `/admin/chapitres/${id}/importer-html`;
     const resultat = await appelApi(url, { method: 'POST', body: data });
-    afficherToast(`Fichier "${resultat.fichier}" importé avec succès`);
+    afficherToast(`Fichier "${resultat.fichier}" importÃ© avec succÃ¨s`);
     await charger();
   } catch(e) {
     if (zoneRecu) zoneRecu.textContent = e.message || 'Erreur import HTML';
@@ -269,12 +269,12 @@ function zoneImportHtml(type, id, nomActuel) {
       ondragleave="this.style.borderColor='var(--border)';"
       ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; importerHtml('${type}', ${id}, event.dataTransfer.files[0]);"
       style="margin-top:8px; border-color: #6d9eeb;">
-      🌐 Glisser un fichier HTML ici, ou
+      ð Glisser un fichier HTML ici, ou
       <label for="${inputId}" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
       <input type="file" id="${inputId}" accept=".html" style="display:none"
         onchange="importerHtml('${type}', ${id}, this.files[0])">
-      <div style="font-size:11px; color:#888; margin-top:4px;">Seuls les fichiers .html sont acceptés.</div>
-      <div id="recu-fichier-html-${type}-${id}" style="font-size:12px; color:green; margin-top:4px;">${nomActuel ? '✔ ' + nomActuel : ''}</div>
+      <div style="font-size:11px; color:#888; margin-top:4px;">Seuls les fichiers .html sont acceptÃ©s.</div>
+      <div id="recu-fichier-html-${type}-${id}" style="font-size:12px; color:green; margin-top:4px;">${nomActuel ? 'â ' + nomActuel : ''}</div>
     </div>
   `;
 }
@@ -329,6 +329,7 @@ function ouvrirModalEditerFormation() {
       </select>
       <label>Jours d'accompagnement par niveau (Cabinet &amp; Visio)</label>
       <div id="bloc-jours">${joursHtml}</div>
+      <label>Lien visio (Cal.com)</label><input type="url" id="input-lien-visio" value="${esc(f.lien_visio || '')}" placeholder="https://cal.com/..." style="width:100%">
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
         <button class="btn btn-primary" onclick="enregistrerFormation()">Enregistrer</button>
@@ -358,6 +359,7 @@ async function enregistrerFormation() {
   data.append('couleur', document.getElementById('input-couleur').value);
   data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
+  data.append('lien_visio', document.getElementById('input-lien-visio').value || '');
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
     const dataJours = new URLSearchParams();
@@ -367,7 +369,7 @@ async function enregistrerFormation() {
     }
     await appelApi(`/admin/formations/${FORMATION_ID}/jours-accompagnement`, { method: 'PUT', body: dataJours });
     fermerModal();
-    afficherToast('Formation modifiée');
+    afficherToast('Formation modifiÃ©e');
     await charger();
   } catch (e) {
     document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
@@ -378,10 +380,10 @@ function demanderSuppressionFormation() {
   afficherOverlay(`
     <div class="modal">
       <h3>Supprimer "${esc(donnees.titre)}" ?</h3>
-      <p style="font-size:13px; color:var(--grey);">Cette action est définitive.</p>
+      <p style="font-size:13px; color:var(--grey);">Cette action est dÃ©finitive.</p>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppressionFormation()">Supprimer définitivement</button>
+        <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerSuppressionFormation()">Supprimer dÃ©finitivement</button>
       </div>
     </div>`);
 }
@@ -393,7 +395,7 @@ async function confirmerSuppressionFormation() {
 
 async function toggleActifFormation() {
   await appelApi(`/admin/formations/${FORMATION_ID}/toggle-actif`, { method: 'POST' });
-  afficherToast('Statut mis à jour');
+  afficherToast('Statut mis Ã  jour');
   await charger();
 }
 
@@ -405,11 +407,11 @@ function ouvrirModalEditerModule(moduleId) { afficherOverlay(modalModuleHtml(get
 function modalModuleHtml(m) {
   const f = donnees;
   const niveauOptions = f.nb_niveaux > 1 ? `
-    <label>Niveau d'accès minimum requis</label>
+    <label>Niveau d'accÃ¨s minimum requis</label>
     <select id="input-niveau">
       ${Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${m && m.niveau_requis===n?'selected':''}>Niveau ${n}</option>`).join('')}
     </select>
-    <div class="helper-text">⚠ Ce niveau verrouille tout le module.</div>` : '';
+    <div class="helper-text">â  Ce niveau verrouille tout le module.</div>` : '';
   return `
     <div class="modal">
       <h3>${m ? 'Modifier le module' : 'Nouveau module'}</h3>
@@ -417,11 +419,11 @@ function modalModuleHtml(m) {
       <label>Titre du module</label>
       <input type="text" id="input-titre" value="${m ? esc(m.titre) : ''}">
       ${niveauOptions}
-      <label>Contenu de présentation</label>
+      <label>Contenu de prÃ©sentation</label>
       <textarea id="input-presentation">${m ? esc(m.presentation_html) : ''}</textarea>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="${m ? `enregistrerModule(${m.id})` : 'creerModule()'}">${m ? 'Enregistrer' : 'Créer'}</button>
+        <button class="btn btn-primary" onclick="${m ? `enregistrerModule(${m.id})` : 'creerModule()'}">${m ? 'Enregistrer' : 'CrÃ©er'}</button>
       </div>
     </div>`;
 }
@@ -435,7 +437,7 @@ async function creerModule() {
   data.append('presentation_html', document.getElementById('input-presentation').value);
   const m = await appelApi(`/admin/formations/${FORMATION_ID}/modules`, { method: 'POST', body: data });
   fermerModal();
-  afficherToast('Module créé');
+  afficherToast('Module crÃ©Ã©');
   await charger();
   selectionner({ type: 'module', moduleId: m.id });
 }
@@ -449,13 +451,13 @@ async function enregistrerModule(moduleId) {
   data.append('presentation_html', document.getElementById('input-presentation').value);
   await appelApi(`/admin/modules/${moduleId}`, { method: 'PUT', body: data });
   fermerModal();
-  afficherToast('Module modifié');
+  afficherToast('Module modifiÃ©');
   await charger();
 }
 
 async function supprimerModule(moduleId) {
   await appelApi(`/admin/modules/${moduleId}`, { method: 'DELETE' });
-  afficherToast('Module supprimé');
+  afficherToast('Module supprimÃ©');
   if (noeudActif.type !== 'formation') selectionner({ type: 'formation' });
   await charger();
 }
@@ -468,7 +470,7 @@ function ouvrirModalEditerChapitre(moduleId, chapId) { afficherOverlay(modalChap
 function modalChapitreHtml(moduleId, c) {
   const f = donnees;
   const niveauOptions = f.nb_niveaux > 1 ? `
-    <label>Niveau d'accès minimum requis</label>
+    <label>Niveau d'accÃ¨s minimum requis</label>
     <select id="input-niveau">
       ${Array.from({length: f.nb_niveaux}, (_, i) => i+1).map(n => `<option value="${n}" ${c && c.niveau_requis===n?'selected':''}>Niveau ${n}</option>`).join('')}
     </select>` : '';
@@ -479,12 +481,12 @@ function modalChapitreHtml(moduleId, c) {
       <label>Titre du chapitre</label>
       <input type="text" id="input-titre" value="${c ? esc(c.titre) : ''}">
       ${niveauOptions}
-      <label>Lien coaching Resalib <span style="font-weight:400; color:var(--grey);">(optionnel — déclenche un email automatique à la validation)</span></label>
+      <label>Lien coaching Resalib <span style="font-weight:400; color:var(--grey);">(optionnel â dÃ©clenche un email automatique Ã  la validation)</span></label>
       <input type="url" id="input-lien-coaching" placeholder="https://www.resalib.fr/praticien/..." value="${c ? esc(c.lien_coaching || '') : ''}">
-      <div class="helper-text">Si renseigné, l'élève reçoit automatiquement un email avec ce lien dès qu'il valide ce chapitre.</div>
+      <div class="helper-text">Si renseignÃ©, l'Ã©lÃ¨ve reÃ§oit automatiquement un email avec ce lien dÃ¨s qu'il valide ce chapitre.</div>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
-        <button class="btn btn-primary" onclick="${c ? `enregistrerChapitre(${moduleId}, ${c.id})` : `creerChapitre(${moduleId})`}">${c ? 'Enregistrer' : 'Créer'}</button>
+        <button class="btn btn-primary" onclick="${c ? `enregistrerChapitre(${moduleId}, ${c.id})` : `creerChapitre(${moduleId})`}">${c ? 'Enregistrer' : 'CrÃ©er'}</button>
       </div>
     </div>`;
 }
@@ -498,7 +500,7 @@ async function creerChapitre(moduleId) {
   data.append('lien_coaching', document.getElementById('input-lien-coaching').value.trim());
   const c = await appelApi(`/admin/modules/${moduleId}/chapitres`, { method: 'POST', body: data });
   fermerModal();
-  afficherToast('Chapitre créé');
+  afficherToast('Chapitre crÃ©Ã©');
   await charger();
   selectionner({ type: 'chapitre', moduleId: moduleId, chapId: c.id });
 }
@@ -512,20 +514,20 @@ async function enregistrerChapitre(moduleId, chapId) {
   data.append('lien_coaching', document.getElementById('input-lien-coaching').value.trim());
   await appelApi(`/admin/chapitres/${chapId}`, { method: 'PUT', body: data });
   fermerModal();
-  afficherToast('Chapitre modifié');
+  afficherToast('Chapitre modifiÃ©');
   await charger();
 }
 
 async function supprimerChapitre(chapId) {
   await appelApi(`/admin/chapitres/${chapId}`, { method: 'DELETE' });
-  afficherToast('Chapitre supprimé');
+  afficherToast('Chapitre supprimÃ©');
   selectionner({ type: 'formation' });
   await charger();
 }
 
 async function dupliquerChapitre(chapId) {
   await appelApi(`/admin/chapitres/${chapId}/dupliquer`, { method: 'POST' });
-  afficherToast('Chapitre dupliqué');
+  afficherToast('Chapitre dupliquÃ©');
   await charger();
 }
 
@@ -533,29 +535,29 @@ async function deplacerChapitreVersModule(chapId, nouveauModuleId) {
   await appelApi(`/admin/chapitres/${chapId}/deplacer-vers-module`, {
     method: 'POST', body: new URLSearchParams({ nouveau_module_id: nouveauModuleId }),
   });
-  afficherToast('Chapitre déplacé');
+  afficherToast('Chapitre dÃ©placÃ©');
   await charger();
 }
 
-// ---------- Médias ----------
+// ---------- MÃ©dias ----------
 
 function ouvrirModalAjouterMedia(chapId) {
   afficherOverlay(`
     <div class="modal">
-      <h3>Ajouter un média</h3>
+      <h3>Ajouter un mÃ©dia</h3>
       <div id="zone-erreur-modal"></div>
       <label>Type</label>
       <select id="input-media-type" onchange="majFormulaireMedia()">
-        <option value="pdf">📄 PDF</option>
-        <option value="audio">🎧 Audio</option>
-        <option value="lien">🔗 Lien externe</option>
+        <option value="pdf">ð PDF</option>
+        <option value="audio">ð§ Audio</option>
+        <option value="lien">ð Lien externe</option>
       </select>
-      <label>Titre affiché à l'élève</label>
+      <label>Titre affichÃ© Ã  l'Ã©lÃ¨ve</label>
       <input type="text" id="input-media-titre">
       <div id="zone-source-media"></div>
       <label style="display:flex; align-items:center; gap:8px; margin-top:14px;">
         <input type="checkbox" id="input-media-telechargeable" style="width:auto;">
-        Téléchargeable par l'élève
+        TÃ©lÃ©chargeable par l'Ã©lÃ¨ve
       </label>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
@@ -569,7 +571,7 @@ function majFormulaireMedia() {
   const type = document.getElementById('input-media-type').value;
   const zone = document.getElementById('zone-source-media');
   if (type === 'lien') {
-    zone.innerHTML = `<label>URL</label><input type="text" id="input-media-url" placeholder="https://…">`;
+    zone.innerHTML = `<label>URL</label><input type="text" id="input-media-url" placeholder="https://â¦">`;
   } else {
     const accept = type === 'pdf' ? '.pdf' : '.mp3,.wav,.m4a,.ogg';
     zone.innerHTML = `
@@ -578,7 +580,7 @@ function majFormulaireMedia() {
         ondragover="event.preventDefault(); this.style.borderColor='var(--gold)';"
         ondragleave="this.style.borderColor='var(--border)';"
         ondrop="event.preventDefault(); this.style.borderColor='var(--border)'; recevoirFichierMedia(event.dataTransfer.files[0]);">
-        📎 Glisser le fichier ici, ou
+        ð Glisser le fichier ici, ou
         <label for="input-fichier-media" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
         <input type="file" id="input-fichier-media" accept="${accept}" style="display:none;" onchange="recevoirFichierMedia(this.files[0])">
         <div id="nom-fichier-media" style="margin-top:8px; font-weight:600; color:var(--ink);"></div>
@@ -591,7 +593,7 @@ let fichierMediaEnCours = null;
 function recevoirFichierMedia(fichier) {
   if (!fichier) return;
   fichierMediaEnCours = fichier;
-  document.getElementById('nom-fichier-media').textContent = `✓ ${fichier.name}`;
+  document.getElementById('nom-fichier-media').textContent = `â ${fichier.name}`;
   const champTitre = document.getElementById('input-media-titre');
   if (champTitre && !champTitre.value.trim()) {
     champTitre.value = fichier.name.replace(/\.[^.]+$/, "");
@@ -611,17 +613,17 @@ async function ajouterMedia(chapId) {
       data.append('telechargeable', telechargeable);
       await appelApi(`/admin/chapitres/${chapId}/medias`, { method: 'POST', body: data });
     } else {
-      if (!fichierMediaEnCours) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Merci de déposer un fichier.</div>'; return; }
+      if (!fichierMediaEnCours) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Merci de dÃ©poser un fichier.</div>'; return; }
       const data = new FormData();
       data.append('type', type); data.append('titre', titre);
       data.append('telechargeable', telechargeable);
       data.append('fichier', fichierMediaEnCours);
       const bouton = document.getElementById('btn-ajouter-media');
-      bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
+      bouton.textContent = 'Envoi en coursâ¦'; bouton.disabled = true;
       await appelApi(`/admin/chapitres/${chapId}/medias/upload`, { method: 'POST', body: data });
     }
     fichierMediaEnCours = null;
-    fermerModal(); afficherToast('Média ajouté'); await charger();
+    fermerModal(); afficherToast('MÃ©dia ajoutÃ©'); await charger();
   } catch (e) {
     document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
     const bouton = document.getElementById('btn-ajouter-media');
@@ -638,7 +640,7 @@ async function toggleMediaTelechargeable(mediaId, valeur) {
 
 async function supprimerMedia(mediaId) {
   await appelApi(`/admin/medias/${mediaId}`, { method: 'DELETE' });
-  afficherToast('Média supprimé'); await charger();
+  afficherToast('MÃ©dia supprimÃ©'); await charger();
 }
 
 charger();
