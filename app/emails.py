@@ -191,58 +191,10 @@ def email_coaching_rdv(
     prenom: str,
     lien_resalib: str,
     titre_formation: str,
-) -> bool:
-    """Email automatique (ou manuel) envoyé à l'élève avec le lien de réservation
-    Resalib pour son coaching d'accompagnement."""
-    sujet = f"Votre séance de coaching — {titre_formation}"
-    corps = f"""
-<div style="font-family: Georgia, Arial, sans-serif; background: #F5EDD6; padding: 0; margin: 0;">
-  <div style="background: #2E2210; padding: 28px 36px;">
-    <h1 style="color: #B8922A; font-size: 22px; margin: 0; letter-spacing: 1px;">
-      Séance de coaching
-    </h1>
-    <p style="color: #e8d8b0; font-size: 13px; margin: 6px 0 0;">
-      {titre_formation}
-    </p>
-  </div>
-  <div style="padding: 32px 36px;">
-    <p style="color: #2E2210; font-size: 16px;">Bonjour {prenom},</p>
-    <p style="color: #444; font-size: 15px; line-height: 1.7;">
-      Vous avez atteint une nouvelle étape de votre formation.
-      Il est temps de planifier votre séance de coaching d'accompagnement.
-    </p>
-    <p style="color: #444; font-size: 15px; line-height: 1.7;">
-      Cliquez sur le bouton ci-dessous pour choisir votre créneau&nbsp;:
-    </p>
-    <div style="text-align: center; margin: 32px 0;">
-      <a href="{lien_resalib}"
-         style="background: #B8922A; color: #fff; text-decoration: none;
-                padding: 14px 32px; border-radius: 4px; font-size: 16px;
-                font-family: Georgia, serif; letter-spacing: 0.5px;">
-        Réserver ma séance de coaching
-      </a>
-    </div>
-    <p style="color: #888; font-size: 13px; line-height: 1.6;">
-      Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur&nbsp;:<br>
-      <span style="color: #B8922A;">{lien_resalib}</span>
-    </p>
-    <hr style="border: none; border-top: 1px solid #ddd; margin: 28px 0;">
-    <p style="color: #aaa; font-size: 12px;">
-      Laurence Mermet-Bijon — Accompagnement féminin
-    </p>
-  </div>
-</div>
-"""
-    return _envoyer_email(destinataire, sujet, corps)
-
-def email_coaching_rdv(
-    destinataire: str,
-    prenom: str,
-    lien_resalib: str,
-    titre_formation: str,
+    type_rdv: str = "cabinet",
 ) -> bool:
     """Email envoyé à l'élève avec le lien Resalib pour son coaching d'accompagnement."""
-    sujet = f"Votre séance de coaching — {titre_formation}"
+    sujet = (f"Votre séance de coaching en visio — {titre_formation}" if type_rdv == "visio" else f"Votre séance de coaching — {titre_formation}")
     corps = (
         '<div style="font-family: Georgia, Arial, sans-serif; background: #F5EDD6; padding: 0; margin: 0;">'
         '<div style="background: #2E2210; padding: 28px 36px;">'
@@ -253,14 +205,14 @@ def email_coaching_rdv(
         f'<p style="color: #2E2210; font-size: 16px;">Bonjour {prenom},</p>'
         '<p style="color: #444; font-size: 15px; line-height: 1.7;">'
         'Vous avez atteint une nouvelle étape de votre formation. '
-        'Il est temps de planifier votre séance de coaching d\'accompagnement.'
+        ('Il est temps de planifier votre séance de coaching en visio.' if type_rdv == 'visio' else 'Il est temps de planifier votre séance de coaching d\'accompagnement.')
         '</p>'
         '<div style="text-align: center; margin: 32px 0;">'
         f'<a href="{lien_resalib}" '
         'style="background: #B8922A; color: #fff; text-decoration: none; '
         'padding: 14px 32px; border-radius: 4px; font-size: 16px; '
         'font-family: Georgia, serif;">'
-        'Réserver ma séance de coaching'
+        ('Réserver ma séance en visio' if type_rdv == 'visio' else 'Réserver ma séance de coaching')
         '</a></div>'
         f'<p style="color: #888; font-size: 13px;">'
         f'Lien direct : <span style="color: #B8922A;">{lien_resalib}</span></p>'
