@@ -1,4 +1,4 @@
-"""
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)"""
 Connexion Ã  la base de donnÃ©es et fourniture d'une session par requÃªte web.
 """
 import logging
