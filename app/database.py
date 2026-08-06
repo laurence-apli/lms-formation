@@ -1,4 +1,4 @@
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)"""
+"""
 Connexion Ã  la base de donnÃ©es et fourniture d'une session par requÃªte web.
 """
 import logging
@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # local) -- ignorÃ© si on utilise PostgreSQL (Neon) en production.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Colonnes ajoutÃ©es au modÃ¨le APRÃS la crÃ©ation initiale des tables.
