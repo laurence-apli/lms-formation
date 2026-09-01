@@ -10,7 +10,7 @@ import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from passlib.hash import bcrypt
+import bcrypt as _bcrypt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -87,7 +87,7 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
             prenom=prenom,
             nom=nom,
             email=email,
-            mot_de_passe_hash=bcrypt.hash(secrets.token_hex(16)),
+            mot_de_passe_hash=_bcrypt.hashpw(secrets.token_hex(16).encode(), _bcrypt.gensalt()).decode(),
             actif=False,  # activé par le webhook après paiement
         )
         session.add(eleve)
