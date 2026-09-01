@@ -9,6 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .config import SECRET_KEY
 from .database import initialiser_base
 from .routes import auth, formations, import_word, eleves, espace_eleve, profil
+from .routes import offres_admin, offres_publiques
 from . import pages
 from . import pages_admin
 from . import setup_temporaire
@@ -77,3 +78,6 @@ app.include_router(boutique_admin.router)
 
 from .routes import inscription_publique
 app.include_router(inscription_publique.router)
+# Offres publiques et paiements
+app.include_router(offres_admin.router, prefix="/admin", tags=["offres-admin"])
+app.include_router(offres_publiques.router, tags=["offres-publiques"])
