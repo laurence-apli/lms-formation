@@ -17,7 +17,9 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import Offre, Eleve, Formation
 from ..routes.boutique_models import Commande
-from ..config import STRIPE_SECRET_KEY, URL_PLATEFORME
+import os
+STRIPE_SECRET_KEY = os.environ.get("STRIPE_SECRET_KEY", "")
+URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "http://localhost:8000")
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
