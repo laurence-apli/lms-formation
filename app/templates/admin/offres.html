@@ -1,0 +1,214 @@
+{% extends "admin/base.html" %}
+{% block titre %}Offres & Paiements{% endblock %}
+{% block contenu %}
+<style>
+  .offres-header { margin-bottom:28px; }
+  .offres-header h1 { font-family:'EB Garamond',serif; font-size:26px; font-weight:600; color:var(--ink); margin:0 0 4px; }
+  .offres-header p { font-size:13px; color:var(--grey); margin:0; }
+
+  .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:7px; font-size:13px; font-weight:600; cursor:pointer; border:none; transition:opacity .15s; }
+  .btn:hover { opacity:.85; }
+  .btn-gold { background:var(--gold); color:#fff; }
+  .btn-outline { background:transparent; border:1px solid var(--border); color:var(--ink); }
+  .btn-danger { background:#c0392b; color:#fff; }
+  .btn-sm { padding:5px 11px; font-size:12px; }
+
+  .offres-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:18px; margin-bottom:32px; }
+  .offre-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+  .offre-card-img { height:130px; background:#f0ebe0; position:relative; }
+  .offre-card-img img { width:100%; height:100%; object-fit:cover; }
+  .offre-card-img-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--grey); font-size:13px; }
+  .offre-card-body { padding:14px 16px; }
+  .offre-card-title { font-family:'EB Garamond',serif; font-size:17px; font-weight:600; color:var(--ink); margin:0 0 4px; }
+  .offre-card-price { font-size:13px; color:var(--gold); font-weight:600; margin-bottom:8px; }
+  .offre-card-link { display:flex; align-items:center; gap:6px; background:#f5f0e8; border-radius:6px; padding:6px 10px; margin-bottom:10px; }
+  .offre-card-link span { font-size:11.5px; color:var(--grey); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .offre-card-link button { background:none; border:none; cursor:pointer; color:var(--gold); font-size:12px; font-weight:600; white-space:nowrap; }
+  .offre-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .badge-actif { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+  .badge-actif.on { background:#e8f5e9; color:#2e7d32; }
+  .badge-actif.off { background:#fce4e4; color:#c0392b; }
+
+  /* Formulaire de création */
+  .offre-form-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:24px; margin-bottom:28px; }
+  .offre-form-card h2 { font-family:'EB Garamond',serif; font-size:20px; font-weight:600; color:var(--ink); margin:0 0 18px; }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .form-group { margin-bottom:14px; }
+  .form-group label { display:block; font-size:12px; font-weight:700; letter-spacing:.05em; color:var(--grey); text-transform:uppercase; margin-bottom:5px; }
+  .form-group input, .form-group textarea, .form-group select { width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:7px; font-size:13.5px; color:var(--ink); background:var(--bg); font-family:inherit; }
+  .form-group textarea { min-height:80px; resize:vertical; }
+  .points-list { display:flex; flex-direction:column; gap:6px; }
+  .point-row { display:flex; gap:6px; }
+  .point-row input { flex:1; }
+  .point-row button { background:none; border:none; cursor:pointer; color:#c0392b; font-size:16px; line-height:1; }
+  #add-point { background:none; border:1px dashed var(--border); border-radius:6px; padding:5px 10px; font-size:12px; color:var(--grey); cursor:pointer; text-align:left; margin-top:4px; }
+  .form-formations { display:flex; flex-direction:column; gap:5px; max-height:150px; overflow-y:auto; }
+  .form-formations label { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink); text-transform:none; letter-spacing:0; font-weight:400; cursor:pointer; }
+  .form-actions { display:flex; gap:10px; margin-top:8px; }
+  .edit-form { display:none; }
+</style>
+
+<div class="offres-header">
+  <h1>Offres & Paiements</h1>
+  <p>Créez des pages de paiement partageables — lien public, inscription et acompte intégrés.</p>
+</div>
+
+<!-- Formulaire de création -->
+<div class="offre-form-card">
+  <h2>Nouvelle offre</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Nom de l'offre *</label>
+      <input type="text" id="new-nom" placeholder="Ex : Programme Équilibre & Fondations" />
+    </div>
+    <div class="form-group">
+      <label>Prix total (€) *</label>
+      <input type="number" id="new-prix" placeholder="490" min="0" step="0.01" />
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Description courte</label>
+    <textarea id="new-desc" placeholder="Un accompagnement personnalisé pour…"></textarea>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Acompte (€) — laisser vide si non proposé</label>
+      <input type="number" id="new-acompte" placeholder="150" min="0" step="0.01" />
+    </div>
+    <div class="form-group">
+      <label>Formations débloquées après paiement</label>
+      <div class="form-formations" id="new-formations">
+        {% for f in formations %}
+        <label><input type="checkbox" value="{{ f.id }}" class="new-form-check" /> {{ f.titre }}</label>
+        {% endfor %}
+        {% if not formations %}<span style="font-size:13px;color:var(--grey);">Aucune formation active</span>{% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="form-group">
+    <label>Points inclus (affiché sur la page)</label>
+    <div class="points-list" id="new-points-list">
+      <div class="point-row"><input type="text" placeholder="Ex : Accès immédiat à la plateforme" /><button type="button" onclick="this.closest('.point-row').remove()">×</button></div>
+    </div>
+    <button id="add-point" type="button" onclick="addPoint('new-points-list')">+ Ajouter un point</button>
+  </div>
+  <div class="form-actions">
+    <button class="btn btn-gold" onclick="creerOffre()">Créer l'offre</button>
+  </div>
+</div>
+
+<!-- Liste des offres -->
+<div class="offres-grid" id="offres-grid">
+  <div style="color:var(--grey);font-size:13px;">Chargement…</div>
+</div>
+
+<script>
+const URL_PLATEFORME = "{{ request.base_url | string | replace('http://','https://') }}".replace(/\/$/, '');
+
+function addPoint(listId) {
+  const list = document.getElementById(listId);
+  const row = document.createElement('div');
+  row.className = 'point-row';
+  row.innerHTML = '<input type="text" placeholder="Ex : Séances d\'accompagnement incluses" /><button type="button" onclick="this.closest(\'.point-row\').remove()">×</button>';
+  list.appendChild(row);
+}
+
+function getPoints(listId) {
+  return [...document.querySelectorAll('#' + listId + ' input')].map(i => i.value.trim()).filter(Boolean);
+}
+
+function getFormations(prefix) {
+  return [...document.querySelectorAll('.' + prefix + '-form-check:checked')].map(i => parseInt(i.value));
+}
+
+async function creerOffre() {
+  const nom = document.getElementById('new-nom').value.trim();
+  const prix = parseFloat(document.getElementById('new-prix').value);
+  if (!nom || isNaN(prix)) { alert('Nom et prix obligatoires'); return; }
+  const acompteVal = document.getElementById('new-acompte').value;
+  const body = {
+    nom, prix_total: prix,
+    description: document.getElementById('new-desc').value.trim(),
+    points_inclus: getPoints('new-points-list'),
+    montant_acompte: acompteVal ? parseFloat(acompteVal) : null,
+    formations_ids: getFormations('new'),
+  };
+  const r = await fetch('/admin/api/offres', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (r.ok) { alert('Offre créée !'); chargerOffres(); } else { alert('Erreur : ' + (await r.text())); }
+}
+
+async function toggleActif(id) {
+  await fetch('/admin/api/offres/' + id + '/toggle-actif', { method:'POST' });
+  chargerOffres();
+}
+
+async function supprimerOffre(id, nom) {
+  if (!confirm('Supprimer l\'offre "' + nom + '" ? Cette action est irréversible.')) return;
+  await fetch('/admin/api/offres/' + id, { method:'DELETE' });
+  chargerOffres();
+}
+
+function copierLien(lien) {
+  const url = URL_PLATEFORME + lien;
+  navigator.clipboard.writeText(url).then(() => {
+    const el = event.target;
+    const prev = el.textContent;
+    el.textContent = 'Copié !';
+    setTimeout(() => el.textContent = prev, 1500);
+  });
+}
+
+async function uploaderImage(id) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = async () => {
+    const fd = new FormData();
+    fd.append('fichier', input.files[0]);
+    const r = await fetch('/admin/api/offres/' + id + '/image', { method:'POST', body: fd });
+    if (r.ok) chargerOffres();
+    else alert('Erreur upload image');
+  };
+  input.click();
+}
+
+function renderOffres(offres) {
+  const grid = document.getElementById('offres-grid');
+  if (!offres.length) { grid.innerHTML = '<p style="color:var(--grey);font-size:13px;">Aucune offre créée.</p>'; return; }
+  grid.innerHTML = offres.map(o => {
+    const url = URL_PLATEFORME + o.lien;
+    const img = o.image_url
+      ? `<img src="${o.image_url}" alt="${o.nom}" />`
+      : `<div class="offre-card-img-placeholder">📷 Cliquer pour ajouter une image</div>`;
+    return `
+    <div class="offre-card">
+      <div class="offre-card-img" onclick="uploaderImage(${o.id})" style="cursor:pointer" title="Changer l'image">${img}</div>
+      <div class="offre-card-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+          <div class="offre-card-title">${o.nom}</div>
+          <span class="badge-actif ${o.actif ? 'on' : 'off'}">${o.actif ? 'Active' : 'Inactive'}</span>
+        </div>
+        <div class="offre-card-price">${o.prix_total.toFixed(2)} €${o.montant_acompte ? ` — acompte ${o.montant_acompte.toFixed(2)} €` : ''}</div>
+        <div class="offre-card-link">
+          <span title="${url}">${url}</span>
+          <button onclick="copierLien('${o.lien}')">Copier le lien</button>
+        </div>
+        <div class="offre-card-actions">
+          <button class="btn btn-outline btn-sm" onclick="toggleActif(${o.id})">${o.actif ? 'Désactiver' : 'Activer'}</button>
+          <button class="btn btn-outline btn-sm" onclick="uploaderImage(${o.id})">📷 Image</button>
+          <button class="btn btn-danger btn-sm" onclick="supprimerOffre(${o.id}, '${o.nom.replace(/'/g,"\\'")}')">Supprimer</button>
+        </div>
+        <div style="font-size:11px;color:var(--grey);margin-top:8px;">Créée le ${o.cree_le}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function chargerOffres() {
+  const r = await fetch('/admin/api/offres');
+  if (r.ok) renderOffres(await r.json());
+}
+
+chargerOffres();
+</script>
+{% endblock %}
