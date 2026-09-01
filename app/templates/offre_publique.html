@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ offre.nom }} — Ma Résonance</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f0e8; color: #1a1208; min-height: 100vh; }
+
+  /* Topbar */
+  .topbar { background: #2c1f0e; padding: .7rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-brand { color: #e8d8b8; font-family: 'Georgia', serif; font-size: 15px; letter-spacing: .02em; }
+  .topbar-secure { color: rgba(232,216,184,.6); font-size: 12px; display: flex; align-items: center; gap: 5px; }
+
+  /* Layout */
+  .page { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+  /* Hero image */
+  .hero { border-radius: 14px; overflow: hidden; height: 220px; margin-bottom: 2rem; background: #e8d8b0; position: relative; }
+  .hero img { width: 100%; height: 100%; object-fit: cover; }
+  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 30%, rgba(26,18,8,.55)); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.25rem 1.5rem; }
+  .hero-badge { display: inline-block; background: #a07830; color: #fff; font-size: 11px; letter-spacing: .07em; padding: 3px 12px; border-radius: 20px; margin-bottom: .5rem; font-weight: 600; text-transform: uppercase; }
+  .hero-title { font-family: Georgia, serif; font-size: 24px; color: #fff; font-weight: 400; line-height: 1.2; }
+
+  /* Sans hero image */
+  .hero-text { background: #fff; border-radius: 14px; padding: 2rem 1.5rem; margin-bottom: 2rem; }
+  .hero-text .hero-badge { display: inline-block; margin-bottom: .75rem; }
+  .hero-text .hero-title { font-family: Georgia, serif; font-size: 26px; color: #1a1208; font-weight: 400; }
+
+  /* Grille 2 colonnes */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 680px) { .grid { grid-template-columns: 1fr; } }
+
+  /* Colonne gauche */
+  .left { }
+  .section-label { font-size: 11px; font-weight: 700; letter-spacing: .09em; color: #a07830; text-transform: uppercase; margin-bottom: 1rem; }
+  .desc { font-size: 14px; color: #5c4a30; line-height: 1.65; margin-bottom: 1.25rem; }
+  .feature { display: flex; align-items: flex-start; gap: 9px; margin-bottom: .6rem; }
+  .check { width: 17px; height: 17px; border-radius: 50%; background: #faf5ec; border: 1.5px solid #c49a45; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; color: #a07830; font-size: 10px; }
+  .feature-text { font-size: 13.5px; color: #5c4a30; line-height: 1.4; }
+  .price-box { margin-top: 1.5rem; padding: 1rem 1.25rem; background: #fff; border: 1px solid rgba(160,120,48,.2); border-radius: 10px; }
+  .price-label { font-size: 10px; letter-spacing: .07em; color: #8a7560; text-transform: uppercase; margin-bottom: .3rem; }
+  .price-main { font-family: Georgia, serif; font-size: 30px; color: #1a1208; }
+  .price-note { font-size: 12px; color: #a07830; margin-top: .25rem; }
+
+  /* Colonne droite — formulaire */
+  .right { background: #fff; border-radius: 14px; padding: 1.5rem; border: 1px solid rgba(160,120,48,.15); }
+  .field-group { margin-bottom: .85rem; }
+  .field-group label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: #8a7560; text-transform: uppercase; margin-bottom: .3rem; }
+  .field-group input { width: 100%; padding: 9px 11px; border: 1px solid rgba(160,120,48,.25); border-radius: 7px; background: #fdfaf5; color: #1a1208; font-size: 14px; font-family: inherit; outline: none; }
+  .field-group input:focus { border-color: #a07830; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 400px) { .row2 { grid-template-columns: 1fr; } }
+
+  /* Options de paiement */
+  .pay-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(160,120,48,.2); border-radius: 8px; margin-bottom: .5rem; cursor: pointer; background: #fdfaf5; transition: border-color .15s; }
+  .pay-option.selected { border-color: #a07830; background: #faf5ec; }
+  .radio { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #c8b080; flex-shrink: 0; transition: background .15s; }
+  .radio.on { background: #a07830; border-color: #a07830; }
+  .pay-info { flex: 1; }
+  .pay-name { font-size: 13.5px; font-weight: 600; color: #1a1208; }
+  .pay-sub { font-size: 11.5px; color: #8a7560; }
+  .pay-amt { font-size: 14px; font-weight: 700; color: #2c1f0e; }
+
+  /* Totaux */
+  .divider { border: none; border-top: 1px solid rgba(160,120,48,.15); margin: 1rem 0; }
+  .total-row { display: flex; justify-content: space-between; font-size: 13px; color: #5c4a30; margin-bottom: .3rem; }
+  .total-main { display: flex; justify-content: space-between; font-size: 16px; font-weight: 600; color: #1a1208; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid rgba(160,120,48,.2); }
+
+  /* CTA */
+  .cta { width: 100%; padding: 12px; background: #2c1f0e; color: #e8d8b8; border: none; border-radius: 8px; font-size: 15px; font-family: Georgia, serif; cursor: pointer; margin-top: 1rem; letter-spacing: .03em; }
+  .cta:hover { background: #3d2c18; }
+  .cta:disabled { opacity: .6; cursor: wait; }
+  .btn-login { width: 100%; padding: 8px; background: transparent; color: #a07830; border: 1px solid rgba(160,120,48,.3); border-radius: 8px; font-size: 12.5px; font-family: inherit; cursor: pointer; margin-top: .5rem; }
+  .klarna-note { margin-top: .75rem; padding: 8px 10px; background: #f5eeff; border-left: 3px solid #9b5fd4; border-radius: 0 6px 6px 0; font-size: 11.5px; color: #5a2d82; line-height: 1.5; }
+  .cgv { font-size: 11px; color: #8a7560; text-align: center; margin-top: .75rem; line-height: 1.5; }
+  .error-msg { background: #fce4e4; color: #c0392b; border-radius: 7px; padding: 8px 12px; font-size: 13px; margin-top: .75rem; display: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="topbar-brand">Ma Résonance — Espace formation</span>
+  <span class="topbar-secure">🔒 Paiement sécurisé Stripe</span>
+</div>
+
+<div class="page">
+  {% if offre.image_url %}
+  <div class="hero">
+    <img src="{{ offre.image_url }}" alt="{{ offre.nom }}" />
+    <div class="hero-overlay">
+      <span class="hero-badge">Accompagnement féminin</span>
+      <div class="hero-title">{{ offre.nom }}</div>
+    </div>
+  </div>
+  {% else %}
+  <div class="hero-text">
+    <span class="hero-badge">Accompagnement féminin</span>
+    <div class="hero-title">{{ offre.nom }}</div>
+  </div>
+  {% endif %}
+
+  <div class="grid">
+    <div class="left">
+      <div class="section-label">Ce que vous recevez</div>
+      {% if offre.description %}
+      <p class="desc">{{ offre.description }}</p>
+      {% endif %}
+      {% for point in offre.points_inclus %}
+      <div class="feature"><div class="check">✓</div><span class="feature-text">{{ point }}</span></div>
+      {% endfor %}
+      <div class="price-box">
+        <div class="price-label">Investissement</div>
+        <div class="price-main">{{ "%.0f"|format(offre.prix_total) }} €</div>
+        {% if offre.montant_acompte %}
+        <div class="price-note">ou acompte de {{ "%.0f"|format(offre.montant_acompte) }} € aujourd'hui</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="section-label" style="margin-bottom:.85rem">Vos informations</div>
+      <div class="row2">
+        <div class="field-group"><label>Prénom *</label><input type="text" id="prenom" autocomplete="given-name" /></div>
+        <div class="field-group"><label>Nom</label><input type="text" id="nom" autocomplete="family-name" /></div>
+      </div>
+      <div class="field-group"><label>Email *</label><input type="email" id="email" autocomplete="email" /></div>
+
+      <div class="divider"></div>
+      <div class="section-label" style="margin-bottom:.85rem">Votre paiement</div>
+
+      <div class="pay-option selected" id="opt-comptant" onclick="selectPay('comptant')">
+        <div class="radio on" id="radio-comptant"></div>
+        <div class="pay-info">
+          <div class="pay-name">Paiement comptant</div>
+          <div class="pay-sub">Accès immédiat, en une fois</div>
+        </div>
+        <div class="pay-amt">{{ "%.0f"|format(offre.prix_total) }} €</div>
+      </div>
+
+      {% if offre.montant_acompte %}
+      <div class="pay-option" id="opt-acompte" onclick="selectPay('acompte')">
+        <div class="radio" id="radio-acompte"></div>
+        <div class="pay-info">
+          <div class="pay-name">Acompte aujourd'hui</div>
+          <div class="pay-sub">Solde de {{ "%.0f"|format(offre.prix_total - offre.montant_acompte) }} € ultérieurement</div>
+        </div>
+        <div class="pay-amt">{{ "%.0f"|format(offre.montant_acompte) }} €</div>
+      </div>
+      {% endif %}
+
+      <div class="divider"></div>
+      <div class="total-row"><span>Montant dû aujourd'hui</span><span id="display-now">{{ "%.0f"|format(offre.prix_total) }} €</span></div>
+      {% if offre.montant_acompte %}
+      <div class="total-row" id="row-reste" style="display:none"><span style="color:#b0a090">Solde restant</span><span style="color:#b0a090">{{ "%.0f"|format(offre.prix_total - offre.montant_acompte) }} €</span></div>
+      {% endif %}
+      <div class="total-main"><span>Total formation</span><span>{{ "%.0f"|format(offre.prix_total) }} €</span></div>
+
+      <button class="cta" id="btn-pay" onclick="procederPaiement()">Procéder au paiement →</button>
+      <button class="btn-login" onclick="window.location='/eleve/connexion'">J'ai déjà un compte — me connecter</button>
+      <div class="klarna-note">💳 Paiement en 3 fois avec Klarna disponible sur la page suivante.</div>
+      <div class="error-msg" id="error-msg"></div>
+      <div class="cgv">En cliquant, vous créez votre compte et acceptez<br>les conditions générales de vente.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const OFFRE_SLUG = "{{ offre.slug }}";
+  let typePaiement = 'comptant';
+
+  {% if offre.montant_acompte %}
+  function selectPay(type) {
+    typePaiement = type;
+    document.getElementById('opt-comptant').classList.toggle('selected', type === 'comptant');
+    document.getElementById('opt-acompte').classList.toggle('selected', type === 'acompte');
+    document.getElementById('radio-comptant').classList.toggle('on', type === 'comptant');
+    document.getElementById('radio-acompte').classList.toggle('on', type === 'acompte');
+    const now = type === 'acompte' ? '{{ "%.0f"|format(offre.montant_acompte) }} €' : '{{ "%.0f"|format(offre.prix_total) }} €';
+    document.getElementById('display-now').textContent = now;
+    document.getElementById('row-reste').style.display = type === 'acompte' ? 'flex' : 'none';
+  }
+  {% else %}
+  function selectPay(type) {}
+  {% endif %}
+
+  async function procederPaiement() {
+    const prenom = document.getElementById('prenom').value.trim();
+    const nom = document.getElementById('nom').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const errEl = document.getElementById('error-msg');
+    errEl.style.display = 'none';
+
+    if (!prenom) { showError('Veuillez entrer votre prénom.'); return; }
+    if (!email || !email.includes('@')) { showError('Veuillez entrer une adresse email valide.'); return; }
+
+    const btn = document.getElementById('btn-pay');
+    btn.disabled = true;
+    btn.textContent = 'Redirection vers le paiement…';
+
+    try {
+      const r = await fetch('/offre/' + OFFRE_SLUG + '/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prenom, nom, email, type_paiement: typePaiement })
+      });
+      const data = await r.json();
+      if (r.ok && data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        showError(data.detail || 'Une erreur est survenue. Veuillez réessayer.');
+        btn.disabled = false;
+        btn.textContent = 'Procéder au paiement →';
+      }
+    } catch(e) {
+      showError('Erreur de connexion. Veuillez réessayer.');
+      btn.disabled = false;
+      btn.textContent = 'Procéder au paiement →';
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+</script>
+</body>
+</html>
