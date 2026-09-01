@@ -259,8 +259,11 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
         stripe_session = event["data"]["object"]
         commande_id = stripe_session["metadata"].get("commande_id")
         commande = session.get(Commande, int(commande_id)) if commande_id else None
+        metadata = stripe_session.get("metadata", {})
 
-        if commande and commande.statut != "payee":
+        if metadata.get("type") == "offre_publique":
+            _activer_offre_apres_paiement(session, stripe_session, metadata)
+        elif commande and commande.statut != "payee":
             commande.statut = "payee"
             commande.payee_le = datetime.utcnow()
             commande.moyen_paiement = stripe_session.get("payment_method_types", ["card"])[0]
@@ -268,6 +271,39 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
             activer_acces_commande(session, commande)
 
     return {"ok": True}
+
+
+def _activer_offre_apres_paiement(session, stripe_session, metadata):
+    import json
+    from ..models import Eleve, AccesFormation, Offre
+    eleve_id = int(metadata.get("eleve_id", 0))
+    offre_id = int(metadata.get("offre_id", 0))
+    commande_id = int(metadata.get("commande_id", 0))
+    compte_cree = metadata.get("compte_cree") == "1"
+    eleve = session.get(Eleve, eleve_id)
+    offre = session.get(Offre, offre_id)
+    commande = session.get(Commande, commande_id)
+    if not eleve or not offre:
+        logger.warning(f"Webhook offre_publique: eleve={eleve_id} ou offre={offre_id} introuvable")
+        return
+    eleve.actif = True
+    if commande and commande.statut != "payee":
+        commande.statut = "payee"
+        commande.payee_le = datetime.utcnow()
+        commande.moyen_paiement = stripe_session.get("payment_method_types", ["card"])[0]
+    if offre.formations_ids:
+        from ..models import Formation
+        for fid in json.loads(offre.formations_ids):
+            if not session.query(AccesFormation).filter_by(eleve_id=eleve.id, formation_id=fid).first():
+                session.add(AccesFormation(eleve_id=eleve.id, formation_id=fid, niveau=1))
+    session.commit()
+    logger.info(f"Offre {offre_id} activee pour eleve {eleve_id}")
+    if compte_cree:
+        try:
+            from ..routes.auth import _envoyer_email_definition_mdp
+            _envoyer_email_definition_mdp(eleve, session)
+        except Exception as e:
+            logger.error(f"Erreur email mdp: {e}")
 """
 Routes de paiement -- création de la session Stripe (achat neuf OU montée en
 niveau, éventuellement combinés dans le même panier), et webhook qui active
