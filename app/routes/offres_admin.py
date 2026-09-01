@@ -8,16 +8,29 @@ import base64
 from decimal import Decimal
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+templates = Jinja2Templates(directory="app/templates")
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
 from ..models import Offre, Formation
 from ..routes.auth import admin_connecte
+from ..config import URL_SITE_VITRINE
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+@router.get("/offres", response_class=HTMLResponse)
+def page_offres(request: Request, admin=Depends(admin_connecte)):
+    return templates.TemplateResponse(
+        request, "admin/offres.html",
+        {"profil": {"prenom": admin.prenom, "nom": admin.nom}, "page_active": "offres", "url_site_vitrine": URL_SITE_VITRINE}
+    )
 
 
 def _slugifier(nom: str) -> str:
