@@ -9,7 +9,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from .database import obtenir_session
-from .models import Administrateur, Formation
+from .models import Administrateur, Formation, Offre
 from .routes.auth import admin_connecte
 from .config import URL_SITE_VITRINE
 
@@ -124,3 +124,16 @@ def page_coaching(request: Request, admin: Administrateur = Depends(admin_connec
         {"profil": _profil_admin(admin), "page_active": "coaching"},
     )
 
+
+@router.get("/offres", response_class=HTMLResponse)
+def page_offres(
+    request: Request,
+    admin: Administrateur = Depends(admin_connecte),
+    session: Session = Depends(obtenir_session),
+):
+    formations = session.query(Formation).filter_by(actif=True).order_by(Formation.titre).all()
+    return _rendre(request, "admin/offres.html", {
+        **_profil_admin(admin),
+        "page_active": "offres",
+        "formations": [{"id": f.id, "titre": f.titre} for f in formations],
+    })
