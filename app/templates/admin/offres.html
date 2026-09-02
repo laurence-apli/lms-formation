@@ -217,6 +217,7 @@ async function creerOffre() {
   const acompteVal = document.getElementById('new-acompte').value;
   const body = {
     nom, prix_total: prix,
+    badge: document.getElementById('new-badge').value || 'Accompagnement féminin',
     description: document.getElementById('new-desc').value.trim(),
     points_inclus: getPoints('new-points-list'),
     montant_acompte: acompteVal ? parseFloat(acompteVal) : null,
