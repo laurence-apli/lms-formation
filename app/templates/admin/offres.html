@@ -261,7 +261,10 @@ async function uploaderImage(id) {
   input.click();
 }
 
+const offresMap = {};
+
 function renderOffres(offres) {
+  offres.forEach(o => offresMap[o.id] = o);
   const grid = document.getElementById('offres-grid');
   if (!offres.length) { grid.innerHTML = '<p style="color:var(--grey);font-size:13px;">Aucune offre créée.</p>'; return; }
   grid.innerHTML = offres.map(o => {
@@ -283,7 +286,7 @@ function renderOffres(offres) {
           <button onclick="copierLien('${o.lien}')">Copier le lien</button>
         </div>
         <div class="offre-card-actions">
-          <button class="btn btn-outline btn-sm" onclick="ouvrirEdition(o)">✏️ Modifier</button>
+          <button class="btn btn-outline btn-sm" onclick="ouvrirEdition(offresMap[${o.id}])">✏️ Modifier</button>
           <button class="btn btn-outline btn-sm" onclick="toggleActif(${o.id})">${o.actif ? 'Désactiver' : 'Activer'}</button>
           <button class="btn btn-outline btn-sm" onclick="uploaderImage(${o.id})">📷 Image</button>
           <button class="btn btn-danger btn-sm" onclick="supprimerOffre(${o.id}, '${o.nom.replace(/'/g,"\\'")}')">Supprimer</button>
