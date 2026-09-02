@@ -70,6 +70,10 @@
     <label>Description courte</label>
     <textarea id="new-desc" placeholder="Un accompagnement personnalisé pour…"></textarea>
   </div>
+  <div class="form-group">
+    <label>Texte du badge (ex : Accompagnement féminin)</label>
+    <input type="text" id="new-badge" placeholder="Accompagnement féminin" value="Accompagnement féminin" />
+  </div>
   <div class="form-row">
     <div class="form-group">
       <label>Acompte (€) — laisser vide si non proposé</label>
@@ -102,6 +106,56 @@
   <div style="color:var(--grey);font-size:13px;">Chargement…</div>
 </div>
 
+
+<!-- Modal édition offre -->
+<div id="modal-edit" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;overflow-y:auto;">
+  <div style="background:#fff;max-width:600px;margin:40px auto;border-radius:10px;padding:28px;">
+    <h2 style="margin:0 0 20px;font-size:18px;">Modifier l'offre</h2>
+    <input type="hidden" id="edit-id" />
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nom de l'offre *</label>
+        <input type="text" id="edit-nom" />
+      </div>
+      <div class="form-group">
+        <label>Prix total (€) *</label>
+        <input type="number" id="edit-prix" min="0" step="0.01" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Texte du badge</label>
+      <input type="text" id="edit-badge" />
+    </div>
+    <div class="form-group">
+      <label>Description courte</label>
+      <textarea id="edit-desc"></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Acompte (€) — vide si non proposé</label>
+        <input type="number" id="edit-acompte" min="0" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label>Formations débloquées</label>
+        <div class="form-formations" id="edit-formations">
+          {% for f in formations %}
+          <label><input type="checkbox" value="{{ f.id }}" class="edit-form-check" /> {{ f.titre }}</label>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Points inclus</label>
+      <div class="points-list" id="edit-points-list"></div>
+      <button type="button" onclick="addPoint('edit-points-list')">+ Ajouter un point</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-gold" onclick="sauvegarderEdition()">Enregistrer</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modal-edit').style.display='none'">Annuler</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const URL_PLATEFORME = "{{ request.base_url | string | replace('http://','https://') }}".replace(/\/$/, '');
 
@@ -119,6 +173,41 @@ function getPoints(listId) {
 
 function getFormations(prefix) {
   return [...document.querySelectorAll('.' + prefix + '-form-check:checked')].map(i => parseInt(i.value));
+}
+
+function ouvrirEdition(o) {
+  document.getElementById('edit-id').value = o.id;
+  document.getElementById('edit-nom').value = o.nom;
+  document.getElementById('edit-prix').value = o.prix_total;
+  document.getElementById('edit-badge').value = o.badge || 'Accompagnement féminin';
+  document.getElementById('edit-desc').value = o.description;
+  document.getElementById('edit-acompte').value = o.montant_acompte || '';
+  document.querySelectorAll('.edit-form-check').forEach(cb => cb.checked = (o.formations_ids||[]).includes(parseInt(cb.value)));
+  const pl = document.getElementById('edit-points-list');
+  pl.innerHTML = '';
+  (o.points_inclus||[]).forEach(p => {
+    const row = document.createElement('div'); row.className='point-row';
+    row.innerHTML = '<input type="text" value="'+p.replace(/"/g,'&quot;')+'" /><button type="button" onclick="this.closest(\'.point-row\').remove()">×</button>';
+    pl.appendChild(row);
+  });
+  document.getElementById('modal-edit').style.display = 'block';
+}
+
+async function sauvegarderEdition() {
+  const id = document.getElementById('edit-id').value;
+  const payload = {
+    nom: document.getElementById('edit-nom').value,
+    badge: document.getElementById('edit-badge').value || 'Accompagnement féminin',
+    description: document.getElementById('edit-desc').value,
+    prix_total: parseFloat(document.getElementById('edit-prix').value) || 0,
+    montant_acompte: parseFloat(document.getElementById('edit-acompte').value) || null,
+    formations_ids: Array.from(document.querySelectorAll('.edit-form-check:checked')).map(c=>parseInt(c.value)),
+    points_inclus: Array.from(document.querySelectorAll('#edit-points-list input')).map(i=>i.value).filter(v=>v.trim()),
+    actif: true
+  };
+  const r = await fetch('/admin/api/offres/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if (r.ok) { document.getElementById('modal-edit').style.display='none'; chargerOffres(); }
+  else alert('Erreur lors de la sauvegarde');
 }
 
 async function creerOffre() {
@@ -194,6 +283,7 @@ function renderOffres(offres) {
           <button onclick="copierLien('${o.lien}')">Copier le lien</button>
         </div>
         <div class="offre-card-actions">
+          <button class="btn btn-outline btn-sm" onclick="ouvrirEdition(o)">✏️ Modifier</button>
           <button class="btn btn-outline btn-sm" onclick="toggleActif(${o.id})">${o.actif ? 'Désactiver' : 'Activer'}</button>
           <button class="btn btn-outline btn-sm" onclick="uploaderImage(${o.id})">📷 Image</button>
           <button class="btn btn-danger btn-sm" onclick="supprimerOffre(${o.id}, '${o.nom.replace(/'/g,"\\'")}')">Supprimer</button>

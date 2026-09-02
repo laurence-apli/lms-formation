@@ -90,13 +90,13 @@
   <div class="hero">
     <img src="{{ offre.image_url }}" alt="{{ offre.nom }}" />
     <div class="hero-overlay">
-      <span class="hero-badge">Accompagnement féminin</span>
+      <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
       <div class="hero-title">{{ offre.nom }}</div>
     </div>
   </div>
   {% else %}
   <div class="hero-text">
-    <span class="hero-badge">Accompagnement féminin</span>
+    <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
     <div class="hero-title">{{ offre.nom }}</div>
   </div>
   {% endif %}

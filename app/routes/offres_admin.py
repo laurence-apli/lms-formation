@@ -49,6 +49,7 @@ class OffreIn(BaseModel):
     prix_total: float
     montant_acompte: float | None = None
     formations_ids: list[int] = []
+    badge: str = "Accompagnement féminin"
     actif: bool = True
 
 
@@ -68,6 +69,7 @@ def lister_offres(session: Session = Depends(obtenir_session), admin=Depends(adm
             "actif": o.actif,
             "formations_ids": json.loads(o.formations_ids or "[]"),
             "cree_le": o.cree_le.strftime("%d/%m/%Y") if o.cree_le else "",
+            "badge": o.badge or "Accompagnement féminin",
             "lien": f"/offre/{o.slug}",
         }
         for o in offres
@@ -91,6 +93,7 @@ def creer_offre(data: OffreIn, session: Session = Depends(obtenir_session), admi
         prix_total=Decimal(str(data.prix_total)),
         montant_acompte=Decimal(str(data.montant_acompte)) if data.montant_acompte else None,
         formations_ids=json.dumps(data.formations_ids),
+        badge=data.badge,
         actif=data.actif,
     )
     session.add(offre)
@@ -113,6 +116,7 @@ def modifier_offre(
     offre.prix_total = Decimal(str(data.prix_total))
     offre.montant_acompte = Decimal(str(data.montant_acompte)) if data.montant_acompte else None
     offre.formations_ids = json.dumps(data.formations_ids)
+    offre.badge = data.badge
     offre.actif = data.actif
     session.commit()
     return {"ok": True}

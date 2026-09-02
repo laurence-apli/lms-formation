@@ -496,3 +496,4 @@ class Offre(Base):
     actif = Column(Boolean, default=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
     formations_ids = Column(Text, nullable=True)  # JSON list [1, 2]
+    badge = Column(String(200), nullable=True, default="Accompagnement féminin")
