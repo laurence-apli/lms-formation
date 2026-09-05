@@ -1,3 +1,4 @@
+from typing import Optional
 """
 Routes admin pour la gestion des offres publiques de paiement.
 """
@@ -48,7 +49,7 @@ class OffreIn(BaseModel):
     description: str = ""
     points_inclus: list[str] = []
     prix_total: float
-    montant_acompte: float | None = None
+    montant_acompte: Optional[float] = None
     formations_ids: list[int] = []
     badge: str = "Accompagnement féminin"
     actif: bool = True
@@ -220,7 +221,7 @@ class PaiementManuelIn(BaseModel):
     nom: str
     description: str
     montant_verse: float
-    montant_prix_total: float | None = None
+    montant_prix_total: Optional[float] = None
     type_paiement: str = "comptant"  # "comptant" ou "acompte"
     moyen_paiement: str = "virement"  # "virement", "cheque", "especes", "cabinet"
     note: str = ""
@@ -264,9 +265,9 @@ def enregistrer_paiement_manuel(
 class LienPaiementIn(BaseModel):
     description: str
     montant: float
-    email_client: str | None = None
-    prenom_client: str | None = None
-    nom_client: str | None = None
+    email_client: Optional[str] = None
+    prenom_client: Optional[str] = None
+    nom_client: Optional[str] = None
 
 
 @router.post("/api/paiements/lien-stripe")
