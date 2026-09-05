@@ -189,7 +189,7 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
             offre = session.get(Offre, c.offre_id)
             desc = offre.nom if offre else f"Offre #{c.offre_id}"
         else:
-            desc = ", ".join(lc.tarif.tarif.formation.titre if hasattr(lc, 'tarif') and lc.tarif else "Formation" for lc in (c.lignes or [])) or "Achat boutique"
+            desc = ", ".join(lc.tarif.formation.titre if hasattr(lc, 'tarif') and lc.tarif and hasattr(lc.tarif, 'formation') and lc.tarif.formation else "Formation" for lc in (c.lignes or [])) or "Achat boutique"
         # Reste dû (acompte seulement)
         reste_du = 0.0
         if c.type_paiement == "acompte" and c.statut not in ("annulee", "payee"):
@@ -197,8 +197,8 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
                 offre = session.get(Offre, c.offre_id)
                 if offre:
                     reste_du = float(offre.prix_total) - float(c.montant_total)
-            elif c.montant_prix_total:
-                reste_du = float(c.montant_prix_total) - float(c.montant_total)
+            elif getattr(c, "montant_prix_total", None):
+                reste_du = float(c.montant_prix_total) - float(c.montant_total)  # noqa
         result.append({
             "id": c.id,
             "date": c.cree_le.strftime("%d/%m/%Y") if c.cree_le else "",
@@ -259,3 +259,73 @@ def enregistrer_paiement_manuel(
     session.add(commande)
     session.commit()
     return {"ok": True, "commande_id": commande.id, "eleve_id": eleve.id}
+
+
+class LienPaiementIn(BaseModel):
+    description: str
+    montant: float
+    email_client: str | None = None
+    prenom_client: str | None = None
+    nom_client: str | None = None
+
+
+@router.post("/api/paiements/lien-stripe")
+def creer_lien_stripe(
+    data: LienPaiementIn,
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    import os, stripe as _stripe
+    _stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    if not _stripe.api_key:
+        raise HTTPException(status_code=500, detail="STRIPE_SECRET_KEY non configurée")
+    try:
+        # Trouver ou créer le customer Stripe
+        customer_id = None
+        if data.email_client:
+            customers = _stripe.Customer.list(email=data.email_client, limit=1)
+            if customers.data:
+                customer_id = customers.data[0].id
+            else:
+                name_parts = []
+                if data.prenom_client:
+                    name_parts.append(data.prenom_client)
+                if data.nom_client:
+                    name_parts.append(data.nom_client)
+                cust = _stripe.Customer.create(
+                    email=data.email_client,
+                    name=" ".join(name_parts) or None,
+                )
+                customer_id = cust.id
+
+        # Créer une facture Stripe avec un élément de ligne
+        invoice_params = dict(
+            collection_method="send_invoice",
+            days_until_due=7,
+        )
+        if customer_id:
+            invoice_params["customer"] = customer_id
+
+        invoice = _stripe.Invoice.create(**invoice_params)
+
+        # Ajouter la ligne
+        item_params = dict(
+            invoice=invoice.id,
+            amount=int(round(data.montant * 100)),
+            currency="eur",
+            description=data.description,
+        )
+        if customer_id:
+            item_params["customer"] = customer_id
+        _stripe.InvoiceItem.create(**item_params)
+
+        # Finaliser (génère le PDF + lien de paiement)
+        invoice = _stripe.Invoice.finalize_invoice(invoice.id)
+
+        return {
+            "url": invoice.hosted_invoice_url,
+            "invoice_id": invoice.id,
+            "invoice_pdf": invoice.invoice_pdf,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

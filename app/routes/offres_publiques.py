@@ -59,6 +59,7 @@ def page_offre(request: Request, slug: str, session: Session = Depends(obtenir_s
             "montant_acompte": float(offre.montant_acompte) if offre.montant_acompte else None,
             "image_url": offre.image_url,
             "formations": formations,
+            "badge": offre.badge or "Accompagnement féminin",
         }
     })
 
