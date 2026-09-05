@@ -17,15 +17,15 @@
   .page { max-width: 960px; margin: 0 auto; padding: 2rem 1rem 4rem; }
 
   /* Hero image */
-  .hero { border-radius: 14px; overflow: hidden; height: 220px; margin-bottom: 2rem; background: #e8d8b0; position: relative; }
-  .hero img { width: 100%; height: 100%; object-fit: cover; }
-  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 30%, rgba(26,18,8,.55)); display: flex; flex-direction: column; justify-content: flex-end; padding: 1.25rem 1.5rem; }
+  .hero { border-radius: 14px; overflow: hidden; margin-bottom: 0; background: #e8d8b0; }
+  .hero img { width: 100%; height: auto; display: block; }
+  .hero-info { padding: 1rem 0 1.5rem; }
   .hero-badge { display: inline-block; background: #a07830; color: #fff; font-size: 11px; letter-spacing: .07em; padding: 3px 12px; border-radius: 20px; margin-bottom: .5rem; font-weight: 600; text-transform: uppercase; }
-  .hero-title { font-family: Georgia, serif; font-size: 24px; color: #fff; font-weight: 400; line-height: 1.2; }
+  .hero-title { font-family: Georgia, serif; font-size: 26px; color: #1a1208; font-weight: 400; line-height: 1.25; margin-bottom: .5rem; }
 
   /* Sans hero image */
-  .hero-text { background: #fff; border-radius: 14px; padding: 2rem 1.5rem; margin-bottom: 2rem; }
-  .hero-text .hero-badge { display: inline-block; margin-bottom: .75rem; }
+  .hero-text { background: #fff; padding: 1rem 0 1.5rem; }
+  .hero-text .hero-badge { display: inline-block; margin-bottom: .5rem; }
   .hero-text .hero-title { font-family: Georgia, serif; font-size: 26px; color: #1a1208; font-weight: 400; }
 
   /* Grille 2 colonnes */
@@ -89,15 +89,15 @@
   {% if offre.image_url %}
   <div class="hero">
     <img src="{{ offre.image_url }}" alt="{{ offre.nom }}" />
-    <div class="hero-overlay">
-      <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
-      <div class="hero-title">{{ offre.nom }}</div>
-    </div>
+  </div>
+  <div class="hero-info">
+    <div class="hero-title">{{ offre.nom }}</div>
+    <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
   </div>
   {% else %}
   <div class="hero-text">
-    <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
     <div class="hero-title">{{ offre.nom }}</div>
+    <span class="hero-badge">{{ offre.badge or "Accompagnement féminin" }}</span>
   </div>
   {% endif %}
 
