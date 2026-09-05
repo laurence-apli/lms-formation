@@ -137,3 +137,7 @@ def page_offres(
         "page_active": "offres",
         "formations": [{"id": f.id, "titre": f.titre} for f in formations],
     })
+
+@router.get("/emails-auto", response_class=HTMLResponse)
+def page_emails_auto(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(request, "admin/emails_auto.html", {"profil": _profil_admin(admin), "page_active": "emails-auto"})

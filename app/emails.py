@@ -184,6 +184,26 @@ def email_notification_paiement_echoue(nom_complet, email_client, description_ac
     corps_html = _corps_email_admin("Tentative de paiement echouee", "#C47B6E", montant, nom_complet, email_client, description_achat, motif)
     return _envoyer_email(EMAIL_ADMIN, sujet, corps_html)
 
+
+def email_paiement_echoue_eleve(prenom: str, email_eleve: str, nom_offre: str) -> bool:
+    """Email envoyé à l'élève quand sa session de paiement Stripe a expiré ou échoué."""
+    html = (
+        '<!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#F5EDD6;font-family:Georgia,serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6;padding:40px 20px;"><tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;">'
+        '<tr><td style="background:#2E2210;padding:24px 32px;text-align:center;">'
+        '<p style="margin:0;font-family:Georgia,serif;font-size:19px;font-weight:600;color:#F5EDD6;">Votre paiement n'a pas abouti</p>'
+        '</td></tr>'
+        '<tr><td style="background:#C47B6E;height:4px;"></td></tr>'
+        '<tr><td style="padding:32px;">'
+        f'<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Bonjour <strong>{prenom}</strong>,</p>'
+        f'<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Votre tentative de paiement pour <strong>{nom_offre}</strong> n'a pas pu être finalisée (session expirée ou paiement refusé).</p>'
+        '<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Vous pouvez réessayer en retournant sur la page de l'offre. Si le problème persiste, n'hésitez pas à nous contacter directement.</p>'
+        '<p style="margin:32px 0 0;font-size:11px;color:#888;">Ceci est un message automatique.</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+    )
+    return _envoyer_email(email_eleve, f"Paiement non abouti — {nom_offre}", html)
+
 def email_confirmation_achat_eleve(prenom: str, email_eleve: str, nom_offre: str, montant: float, est_acompte: bool = False, compte_nouveau: bool = True) -> bool:
     """Email de confirmation envoyé à l'élève après paiement d'une offre."""
     montant_str = "{:.2f}".format(montant)

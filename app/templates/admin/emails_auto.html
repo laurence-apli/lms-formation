@@ -1,0 +1,98 @@
+{% extends "admin/base.html" %}
+{% block titre %}Emails automatiques{% endblock %}
+{% block contenu %}
+<div class="topbar"><div><h1>Emails automatiques</h1><p style="color:var(--grey);font-size:13px;margin-top:4px;">Tous les emails envoyés automatiquement par la plateforme</p></div></div>
+
+<style>
+.email-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:14px;display:flex;gap:16px;align-items:flex-start;}
+.email-icon{font-size:22px;flex-shrink:0;width:36px;text-align:center;}
+.email-body{flex:1;}
+.email-titre{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.email-desc{font-size:13px;color:var(--grey);margin-bottom:8px;}
+.tags{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;}
+.tag.eleve{background:#e8f5e9;color:#2e7d32;}
+.tag.admin{background:#dbeafe;color:#1d4ed8;}
+.tag.auto{background:#f3e8ff;color:#6b21a8;}
+.section-title{font-size:13px;font-weight:600;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;margin:24px 0 10px;}
+</style>
+
+<div class="section-title">Compte et authentification</div>
+
+<div class="email-card">
+  <div class="email-icon">🔑</div>
+  <div class="email-body">
+    <div class="email-titre">Création de compte — définir son mot de passe</div>
+    <div class="email-desc">Envoyé à l'élève quand son compte est créé (via offre publique). Contient un lien sécurisé pour choisir son mot de passe.</div>
+    <div class="tags"><span class="tag eleve">→ Élève</span><span class="tag auto">Automatique</span></div>
+  </div>
+</div>
+
+<div class="email-card">
+  <div class="email-icon">🔒</div>
+  <div class="email-body">
+    <div class="email-titre">Réinitialisation du mot de passe</div>
+    <div class="email-desc">Envoyé à l'élève quand il clique sur "Mot de passe oublié". Contient un lien valable 24h.</div>
+    <div class="tags"><span class="tag eleve">→ Élève</span><span class="tag auto">Automatique</span></div>
+  </div>
+</div>
+
+<div class="section-title">Paiements</div>
+
+<div class="email-card">
+  <div class="email-icon">✅</div>
+  <div class="email-body">
+    <div class="email-titre">Paiement reçu (confirmation élève)</div>
+    <div class="email-desc">Envoyé à l'élève dès que son paiement est confirmé par Stripe — que ce soit un paiement comptant ou un acompte.</div>
+    <div class="tags"><span class="tag eleve">→ Élève</span><span class="tag auto">Automatique (Stripe webhook)</span></div>
+  </div>
+</div>
+
+<div class="email-card">
+  <div class="email-icon">💰</div>
+  <div class="email-body">
+    <div class="email-titre">Paiement reçu (notification admin)</div>
+    <div class="email-desc">Envoyé à laurencemb42@gmail.com pour chaque paiement confirmé — boutique ou offre publique. Indique le nom, email, montant et formation/offre.</div>
+    <div class="tags"><span class="tag admin">→ Admin</span><span class="tag auto">Automatique (Stripe webhook)</span></div>
+  </div>
+</div>
+
+<div class="email-card">
+  <div class="email-icon">❌</div>
+  <div class="email-body">
+    <div class="email-titre">Paiement non abouti (notification élève)</div>
+    <div class="email-desc">Envoyé à l'élève si sa session de paiement Stripe a expiré ou a échoué (offres publiques). L'invite à réessayer.</div>
+    <div class="tags"><span class="tag eleve">→ Élève</span><span class="tag auto">Automatique (Stripe webhook)</span></div>
+  </div>
+</div>
+
+<div class="email-card">
+  <div class="email-icon">⚠️</div>
+  <div class="email-body">
+    <div class="email-titre">Paiement échoué (notification admin)</div>
+    <div class="email-desc">Envoyé à l'admin si une tentative de paiement échoue. Indique le motif.</div>
+    <div class="tags"><span class="tag admin">→ Admin</span><span class="tag auto">Automatique</span></div>
+  </div>
+</div>
+
+<div class="section-title">Accompagnement et coaching</div>
+
+<div class="email-card">
+  <div class="email-icon">📅</div>
+  <div class="email-body">
+    <div class="email-titre">Lien de réservation coaching</div>
+    <div class="email-desc">Envoyé à l'élève avec son lien Resalib pour planifier sa séance de coaching (cabinet ou visio).</div>
+    <div class="tags"><span class="tag eleve">→ Élève</span><span class="tag auto">Manuel (depuis l'admin)</span></div>
+  </div>
+</div>
+
+<div class="email-card">
+  <div class="email-icon">👤</div>
+  <div class="email-body">
+    <div class="email-titre">Nouvelle connexion élève</div>
+    <div class="email-desc">Envoyé à l'admin quand un élève se connecte pour la toute première fois à la plateforme.</div>
+    <div class="tags"><span class="tag admin">→ Admin</span><span class="tag auto">Automatique</span></div>
+  </div>
+</div>
+
+{% endblock %}

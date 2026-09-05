@@ -80,6 +80,12 @@ def activer_acces_commande(session: Session, commande: Commande) -> None:
         for l in commande.lignes
     )
     email_notification_paiement_reussi(f"{eleve.prenom} {eleve.nom}", eleve.email, description, float(commande.montant_total))
+    # Email de confirmation à l'élève (boutique)
+    try:
+        from ..emails import email_confirmation_achat_eleve
+        email_confirmation_achat_eleve(eleve.prenom, eleve.email, description, float(commande.montant_total), est_acompte=False, compte_nouveau=False)
+    except Exception as e:
+        logger.error(f"Erreur email confirmation boutique: {e}")
 
 class CreerPaiementRequete(BaseModel):
     tarif_ids: list[int] = []
@@ -280,12 +286,16 @@ async def webhook_stripe(request: Request, session: Session = Depends(obtenir_se
             offre = session.query(Offre).filter_by(id=offre_id).first() if offre_id else None
             if eleve and offre:
                 try:
-                    from ..emails import email_notification_paiement_echoue
+                    from ..emails import email_notification_paiement_echoue, email_paiement_echoue_eleve
                     montant = stripe_session.get("amount_total", 0) / 100
                     email_notification_paiement_echoue(
                         f"{eleve.prenom} {eleve.nom}", eleve.email,
                         offre.nom, montant, "Session de paiement expirée ou abandonnée"
                     )
+                    try:
+                        email_paiement_echoue_eleve(eleve.prenom, eleve.email, offre.nom)
+                    except Exception:
+                        pass
                 except Exception as e:
                     logger.error(f"Erreur email echec offre: {e}")
 
