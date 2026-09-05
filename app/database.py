@@ -32,6 +32,9 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS date_realise TIMESTAMP",
     "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS compte_test BOOLEAN DEFAULT FALSE",
     "ALTER TABLE offres ADD COLUMN IF NOT EXISTS badge VARCHAR(200) DEFAULT 'Accompagnement féminin'",
+    "ALTER TABLE commandes ADD COLUMN IF NOT EXISTS offre_id INTEGER",
+    "ALTER TABLE commandes ADD COLUMN IF NOT EXISTS type_paiement VARCHAR(20)",
+    "ALTER TABLE commandes ADD COLUMN IF NOT EXISTS note TEXT",
     "ALTER TABLE jours_accompagnement_niveau ADD COLUMN IF NOT EXISTS jours_visio INTEGER DEFAULT 0",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS type_accompagnement VARCHAR(20) DEFAULT 'cabinet'",
 ]

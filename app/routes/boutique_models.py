@@ -80,6 +80,9 @@ class Commande(Base):
     code_promo_utilise = Column(String(50), nullable=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
     payee_le = Column(DateTime, nullable=True)
+    offre_id = Column(Integer, nullable=True)  # si commande via offre publique
+    type_paiement = Column(String(20), nullable=True)  # "comptant" ou "acompte"
+    note = Column(Text, nullable=True)
 
     eleve = relationship("Eleve", backref="commandes")
     lignes = relationship("LigneCommande", back_populates="commande", cascade="all, delete-orphan")

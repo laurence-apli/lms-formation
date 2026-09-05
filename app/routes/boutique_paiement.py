@@ -298,12 +298,22 @@ def _activer_offre_apres_paiement(session, stripe_session, metadata):
                 session.add(AccesFormation(eleve_id=eleve.id, formation_id=fid, niveau=1))
     session.commit()
     logger.info(f"Offre {offre_id} activee pour eleve {eleve_id}")
+    # Email au nouvel élève pour définir son mot de passe
     if compte_cree:
         try:
             from ..routes.auth import _envoyer_email_definition_mdp
             _envoyer_email_definition_mdp(eleve, session)
         except Exception as e:
             logger.error(f"Erreur email mdp: {e}")
+    # Email de notification à l'administrateur
+    try:
+        from ..emails import email_notification_paiement_reussi
+        montant_paye = stripe_session.get("amount_total", 0) / 100
+        type_p = metadata.get("type_paiement", "comptant")
+        desc = f"{'Acompte' if type_p == 'acompte' else 'Paiement'} — {offre.nom}"
+        email_notification_paiement_reussi(f"{eleve.prenom} {eleve.nom}", eleve.email, desc, montant_paye)
+    except Exception as e:
+        logger.error(f"Erreur email admin offre: {e}")
 """
 Routes de paiement -- création de la session Stripe (achat neuf OU montée en
 niveau, éventuellement combinés dans le même panier), et webhook qui active

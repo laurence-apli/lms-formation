@@ -1,0 +1,95 @@
+{% extends "admin/base.html" %}
+{% block titre %}Suivi des paiements — Administration{% endblock %}
+{% block contenu %}
+<div class="topbar"><div><h1>Suivi des paiements</h1><p style="color:var(--grey);font-size:13px;margin-top:4px;">Toutes les commandes — boutique et offres publiques</p></div></div>
+
+<div id="filtres" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:center;">
+  <select id="filtre-statut" onchange="charger()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+    <option value="">Tous les statuts</option>
+    <option value="en_attente">En attente</option>
+    <option value="payee">Payee</option>
+    <option value="acompte_verse">Acompte verse</option>
+    <option value="annulee">Annulee</option>
+  </select>
+  <select id="filtre-type" onchange="charger()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+    <option value="">Tous les types</option>
+    <option value="comptant">Comptant</option>
+    <option value="acompte">Acompte</option>
+  </select>
+  <span id="total-recap" style="margin-left:auto;font-size:13px;color:var(--grey);"></span>
+</div>
+
+<div style="overflow-x:auto;">
+<table id="table-paiements" style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead>
+    <tr style="border-bottom:2px solid var(--border);text-align:left;">
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Date</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Eleve</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Email</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Offre / Formation</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Type</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;text-align:right;">Montant paye</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;text-align:right;">Reste du</th>
+      <th style="padding:10px 8px;color:var(--grey);font-weight:600;">Statut</th>
+    </tr>
+  </thead>
+  <tbody id="tbody-paiements">
+    <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--grey);">Chargement...</td></tr>
+  </tbody>
+</table>
+</div>
+
+<script>
+const STATUT_LABELS = {
+  'payee': ['Payee', '#2e7d32', '#e8f5e9'],
+  'en_attente': ['En attente', '#856404', '#fff3cd'],
+  'acompte_verse': ['Acompte verse', '#0d6efd', '#dbeafe'],
+  'annulee': ['Annulee', '#c0392b', '#fce4e4'],
+};
+
+function badgeStatut(s) {
+  const cfg = STATUT_LABELS[s] || [s, '#666', '#eee'];
+  return '<span style="background:'+cfg[2]+';color:'+cfg[1]+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+cfg[0]+'</span>';
+}
+
+function badgeType(t) {
+  if (!t) return '';
+  if (t === 'acompte') return '<span style="background:#fff3cd;color:#856404;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">Acompte</span>';
+  return '<span style="background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">Comptant</span>';
+}
+
+async function charger() {
+  const statut = document.getElementById('filtre-statut').value;
+  const type = document.getElementById('filtre-type').value;
+  const r = await fetch('/admin/api/paiements');
+  if (!r.ok) { document.getElementById('tbody-paiements').innerHTML = '<tr><td colspan="8" style="text-align:center;color:red;padding:20px;">Erreur de chargement</td></tr>'; return; }
+  let data = await r.json();
+  if (statut) data = data.filter(function(p) { return p.statut === statut; });
+  if (type) data = data.filter(function(p) { return p.type_paiement === type; });
+
+  const total = data.reduce(function(s, p) { return s + p.montant_total; }, 0);
+  const totalReste = data.reduce(function(s, p) { return s + p.reste_du; }, 0);
+  document.getElementById('total-recap').textContent = data.length + ' commande(s) — ' + total.toFixed(2) + ' EUR encaisses' + (totalReste > 0 ? ' — ' + totalReste.toFixed(2) + ' EUR en attente' : '');
+
+  if (!data.length) {
+    document.getElementById('tbody-paiements').innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--grey);">Aucune commande trouvee.</td></tr>';
+    return;
+  }
+
+  document.getElementById('tbody-paiements').innerHTML = data.map(function(p) {
+    return '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:10px 8px;white-space:nowrap;">' + p.date + '</td>' +
+      '<td style="padding:10px 8px;font-weight:600;">' + p.prenom + ' ' + p.nom + '</td>' +
+      '<td style="padding:10px 8px;color:var(--grey);">' + p.email + '</td>' +
+      '<td style="padding:10px 8px;">' + p.description + '</td>' +
+      '<td style="padding:10px 8px;">' + badgeType(p.type_paiement) + '</td>' +
+      '<td style="padding:10px 8px;text-align:right;font-weight:600;">' + p.montant_total.toFixed(2) + ' EUR</td>' +
+      '<td style="padding:10px 8px;text-align:right;' + (p.reste_du > 0 ? 'color:#c0392b;font-weight:600;' : 'color:var(--grey);') + '">' + (p.reste_du > 0 ? p.reste_du.toFixed(2) + ' EUR' : '—') + '</td>' +
+      '<td style="padding:10px 8px;">' + badgeStatut(p.statut) + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+charger();
+</script>
+{% endblock %}

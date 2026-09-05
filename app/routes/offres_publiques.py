@@ -100,6 +100,8 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
     commande = Commande(
         eleve_id=eleve.id,
         montant_total=montant,
+        offre_id=offre.id,
+        type_paiement=data.type_paiement,
         statut="en_attente",
         moyen_paiement="stripe",
     )

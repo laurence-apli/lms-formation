@@ -17,9 +17,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
-from ..models import Offre, Formation
+from ..models import Offre, Formation, Eleve
 from ..routes.auth import admin_connecte
 from ..config import URL_SITE_VITRINE
+from ..routes.boutique_models import Commande
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -159,3 +160,52 @@ def supprimer_offre(offre_id: int, session: Session = Depends(obtenir_session), 
     session.delete(offre)
     session.commit()
     return {"ok": True}
+
+
+@router.get("/paiements", response_class=HTMLResponse)
+def page_paiements(request: Request, admin=Depends(admin_connecte)):
+    return templates.TemplateResponse(
+        request, "admin/paiements.html",
+        {"profil": {"prenom": admin.prenom, "nom": admin.nom}, "page_active": "paiements", "url_site_vitrine": URL_SITE_VITRINE}
+    )
+
+
+@router.get("/api/paiements")
+def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(admin_connecte)):
+    from sqlalchemy.orm import joinedload
+    from datetime import datetime as dt
+    commandes = (
+        session.query(Commande)
+        .options(joinedload(Commande.eleve))
+        .order_by(Commande.cree_le.desc())
+        .all()
+    )
+    result = []
+    for c in commandes:
+        if not c.eleve:
+            continue
+        # Description
+        if c.offre_id:
+            offre = session.get(Offre, c.offre_id)
+            desc = offre.nom if offre else f"Offre #{c.offre_id}"
+        else:
+            desc = ", ".join(lc.tarif.tarif.formation.titre if hasattr(lc, 'tarif') and lc.tarif else "Formation" for lc in (c.lignes or [])) or "Achat boutique"
+        # Reste dû (acompte seulement)
+        reste_du = 0.0
+        if c.type_paiement == "acompte" and c.statut not in ("annulee", "payee"):
+            offre = session.get(Offre, c.offre_id) if c.offre_id else None
+            if offre:
+                reste_du = float(offre.prix_total) - float(c.montant_total)
+        result.append({
+            "id": c.id,
+            "date": c.cree_le.strftime("%d/%m/%Y") if c.cree_le else "",
+            "prenom": c.eleve.prenom,
+            "nom": c.eleve.nom,
+            "email": c.eleve.email,
+            "description": desc,
+            "type_paiement": c.type_paiement,
+            "montant_total": float(c.montant_total),
+            "reste_du": reste_du,
+            "statut": c.statut,
+        })
+    return result
