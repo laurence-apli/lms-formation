@@ -184,6 +184,35 @@ def email_notification_paiement_echoue(nom_complet, email_client, description_ac
     corps_html = _corps_email_admin("Tentative de paiement echouee", "#C47B6E", montant, nom_complet, email_client, description_achat, motif)
     return _envoyer_email(EMAIL_ADMIN, sujet, corps_html)
 
+def email_confirmation_achat_eleve(prenom: str, email_eleve: str, nom_offre: str, montant: float, est_acompte: bool = False, compte_nouveau: bool = True) -> bool:
+    """Email de confirmation envoyé à l'élève après paiement d'une offre."""
+    montant_str = "{:.2f}".format(montant)
+    type_str = "Acompte" if est_acompte else "Paiement"
+    suite_html = (
+        "<p style='margin:16px 0 0;font-size:15px;color:#2E2210;'>Vous allez recevoir un second email pour <strong>créer votre mot de passe</strong> et accéder à la plateforme.</p>"
+        if compte_nouveau else
+        "<p style='margin:16px 0 0;font-size:15px;color:#2E2210;'>Connectez-vous dès maintenant sur la plateforme pour accéder à vos formations.</p>"
+    )
+    html = (
+        '<!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#F5EDD6;font-family:Georgia,serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6;padding:40px 20px;"><tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;">'
+        '<tr><td style="background:#2E2210;padding:24px 32px;text-align:center;">'
+        '<p style="margin:0;font-family:Georgia,serif;font-size:19px;font-weight:600;color:#F5EDD6;">Confirmation de paiement</p>'
+        '</td></tr>'
+        '<tr><td style="background:#B8922A;height:4px;"></td></tr>'
+        '<tr><td style="padding:32px;">'
+        f'<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Bonjour <strong>{prenom}</strong>,</p>'
+        f'<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Votre {type_str.lower()} de <strong>{montant_str} EUR</strong> pour <strong>{nom_offre}</strong> a bien été reçu. Merci !</p>'
+        + suite_html +
+        '<p style="margin:32px 0 0;font-size:11px;color:#888;">Ceci est un message automatique.</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+    )
+    sujet = f"Confirmation — {nom_offre}"
+    return _envoyer_email(email_eleve, sujet, html)
+
+
+
 # TEST_INSERTION
 
 def email_coaching_rdv(
