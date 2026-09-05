@@ -200,6 +200,7 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
                     reste_du = float(offre.prix_total) - float(c.montant_total)
             elif getattr(c, "montant_prix_total", None):
                 reste_du = float(c.montant_prix_total) - float(c.montant_total)  # noqa
+        encaisse = float(c.montant_total) if c.statut in ("payee", "acompte_verse") else 0.0
         result.append({
             "id": c.id,
             "date": c.cree_le.strftime("%d/%m/%Y") if c.cree_le else "",
@@ -208,7 +209,9 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
             "email": c.eleve.email,
             "description": desc,
             "type_paiement": c.type_paiement,
+            "moyen_paiement": c.moyen_paiement,
             "montant_total": float(c.montant_total),
+            "encaisse": encaisse,
             "reste_du": reste_du,
             "statut": c.statut,
         })
@@ -330,3 +333,17 @@ def creer_lien_stripe(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/api/paiements/{commande_id}")
+def supprimer_paiement(
+    commande_id: int,
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    commande = session.get(Commande, commande_id)
+    if not commande:
+        raise HTTPException(status_code=404, detail="Commande introuvable")
+    session.delete(commande)
+    session.commit()
+    return {"ok": True}
