@@ -1,8 +1,8 @@
 """
-Routes de gestion des Ã©lÃ¨ves -- rÃ©servÃ©es Ã  l'administrateur connectÃ©.
-Couvre : fiche Ã©lÃ¨ve centrale, accÃ¨s aux formations avec niveau, jours
-d'accompagnement, diplÃ´mes, et la crÃ©ation de compte avec envoi d'e-mail
-automatique de premiÃ¨re connexion.
+Routes de gestion des élèves -- réservées à l'administrateur connecté.
+Couvre : fiche élève centrale, accès aux formations avec niveau, jours
+d'accompagnement, diplômes, et la création de compte avec envoi d'e-mail
+automatique de première connexion.
 """
 import re
 from datetime import datetime
@@ -26,7 +26,7 @@ def _valider_champs_eleve(nom: str, prenom: str, email: str) -> list:
     if not nom or not nom.strip():
         erreurs.append("le nom")
     if not prenom or not prenom.strip():
-        erreurs.append("le prÃ©nom")
+        erreurs.append("le prénom")
     if not email or not email.strip():
         erreurs.append("l'e-mail")
     elif not REGEX_EMAIL.match(email.strip()):
@@ -55,7 +55,7 @@ def creer_eleve(
 
     email_normalise = email.strip().lower()
     if session.query(Eleve).filter_by(email=email_normalise).first() is not None:
-        raise HTTPException(status_code=400, detail="Un Ã©lÃ¨ve existe dÃ©jÃ  avec cet e-mail.")
+        raise HTTPException(status_code=400, detail="Un élève existe déjà avec cet e-mail.")
 
     eleve = Eleve(nom=nom.strip(), prenom=prenom.strip(), email=email_normalise, actif=True)
     session.add(eleve)
@@ -78,7 +78,7 @@ def modifier_eleve(
 ):
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
     erreurs = _valider_champs_eleve(nom, prenom, email)
     if erreurs:
         raise HTTPException(status_code=400, detail=f"Champs requis manquants ou invalides : {', '.join(erreurs)}.")
@@ -97,7 +97,7 @@ def modifier_eleve(
 def toggle_actif_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
     eleve.actif = not eleve.actif
     session.commit()
     return {"id": eleve.id, "actif": eleve.actif}
@@ -107,7 +107,7 @@ def toggle_actif_eleve(eleve_id: int, session: Session = Depends(obtenir_session
 def toggle_test_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
     eleve.compte_test = not eleve.compte_test
     session.commit()
     return {"id": eleve.id, "compte_test": eleve.compte_test}
@@ -116,7 +116,7 @@ def toggle_test_eleve(eleve_id: int, session: Session = Depends(obtenir_session)
 def supprimer_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
     session.delete(eleve)
     session.commit()
     return {"ok": True}
@@ -125,7 +125,7 @@ def supprimer_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
 def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
     acces_detail = []
     for acces in eleve.acces_formations:
         acces_detail.append({
@@ -154,7 +154,7 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         "acces": acces_detail,
     }
 
-# ---------- AccÃ¨s aux formations ----------
+# ---------- Accès aux formations ----------
 
 @router.post("/eleves/{eleve_id}/acces")
 def donner_acces_formation(
@@ -164,9 +164,9 @@ def donner_acces_formation(
     eleve = session.get(Eleve, eleve_id)
     formation = session.get(Formation, formation_id)
     if eleve is None or formation is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve ou formation introuvable.")
+        raise HTTPException(status_code=404, detail="Élève ou formation introuvable.")
     if False:  # formations inactives autorisees par admin
-        raise HTTPException(status_code=400, detail="Cette formation est dÃ©sactivÃ©e, elle ne peut pas Ãªtre attribuÃ©e Ã  un Ã©lÃ¨ve.")
+        raise HTTPException(status_code=400, detail="Cette formation est désactivée, elle ne peut pas être attribuée à un élève.")
 
     niveau_final = niveau if formation.nb_niveaux > 1 else 1
     if niveau_final not in range(1, formation.nb_niveaux + 1):
@@ -192,26 +192,26 @@ def retirer_acces_formation(eleve_id: int, formation_id: int, session: Session =
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=404, detail="AccÃ¨s introuvable.")
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
     session.delete(acces)
     session.commit()
     return {"ok": True}
 
-# ---------- RÃ©initialisation de l'avancement ----------
+# ---------- Réinitialisation de l'avancement ----------
 
 @router.post("/eleves/{eleve_id}/acces/{formation_id}/reinitialiser-avancement")
 def reinitialiser_avancement(
     eleve_id: int, formation_id: int,
     session: Session = Depends(obtenir_session),
 ):
-    """Supprime toutes les validations de chapitres d'un Ã©lÃ¨ve pour une formation donnÃ©e."""
+    """Supprime toutes les validations de chapitres d'un élève pour une formation donnée."""
     acces = (
         session.query(AccesFormation)
         .filter_by(eleve_id=eleve_id, formation_id=formation_id)
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=404, detail="AccÃ¨s introuvable.")
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
     formation = session.get(Formation, formation_id)
     chapitre_ids = [c.id for m in formation.modules for c in m.chapitres]
     if chapitre_ids:
@@ -232,13 +232,13 @@ def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, type_acc
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=404, detail="AccÃ¨s introuvable.")
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
     if type_accompagnement == "visio":
         if acces.jours_visio_restants() <= 0:
-            raise HTTPException(status_code=400, detail="Aucune sÃ©ance visio restante pour ce niveau.")
+            raise HTTPException(status_code=400, detail="Aucune séance visio restante pour ce niveau.")
     else:
         if acces.jours_cabinet_restants() <= 0:
-            raise HTTPException(status_code=400, detail="Aucune sÃ©ance cabinet restante pour ce niveau.")
+            raise HTTPException(status_code=400, detail="Aucune séance cabinet restante pour ce niveau.")
     session.add(SeanceAccompagnement(acces_id=acces.id, type_accompagnement=type_accompagnement))
     session.commit()
     return {
@@ -247,11 +247,11 @@ def enregistrer_seance_accompagnement(eleve_id: int, formation_id: int, type_acc
         "jours_visio_restants": acces.jours_visio_restants(),
     }
 
-# ---------- DiplÃ´mes ----------
+# ---------- Diplômes ----------
 
 @router.get("/diplomes")
 def lister_diplomes_en_attente(session: Session = Depends(obtenir_session)):
-    """Tout Ã©lÃ¨ve ayant atteint 100% sur une formation, diplÃ´me pas encore marquÃ© envoyÃ©."""
+    """Tout élève ayant atteint 100% sur une formation, diplôme pas encore marqué envoyé."""
     candidats = []
     for acces in session.query(AccesFormation).all():
         if acces.diplome_envoye:
@@ -274,7 +274,7 @@ def marquer_diplome_envoye(eleve_id: int, formation_id: int, session: Session = 
         .first()
     )
     if acces is None:
-        raise HTTPException(status_code=404, detail="AccÃ¨s introuvable.")
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
     acces.diplome_envoye = True
     session.commit()
     return {"ok": True}
@@ -338,7 +338,7 @@ def statistiques_connexions(session: Session = Depends(obtenir_session)):
     return resultats
 
 # ---------------------------------------------------------------------------
-# Coaching -- gestion des sÃ©ances d'accompagnement
+# Coaching -- gestion des séances d'accompagnement
 # ---------------------------------------------------------------------------
 
 @router.post("/eleves/{eleve_id}/coaching/envoyer")
@@ -347,13 +347,13 @@ def coaching_envoyer_lien(
     lien_resalib: str = Form(...),
     session: Session = Depends(obtenir_session),
 ):
-    """Admin envoie manuellement un lien coaching Ã  la cliente (sÃ©ances 2, 3â¦)."""
+    """Admin envoie manuellement un lien coaching à la cliente (séances 2, 3…)."""
     acces = session.query(AccesFormation).filter_by(eleve_id=eleve_id).first()
     if acces is None:
-        raise HTTPException(status_code=404, detail="AccÃ¨s formation introuvable.")
+        raise HTTPException(status_code=404, detail="Accès formation introuvable.")
     eleve = session.get(Eleve, eleve_id)
     if eleve is None:
-        raise HTTPException(status_code=404, detail="ÃlÃ¨ve introuvable.")
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
 
     seance = SeanceAccompagnement(
         acces_id=acces.id,
@@ -379,10 +379,10 @@ def coaching_marquer_realise(
     seance_id: int,
     session: Session = Depends(obtenir_session),
 ):
-    """Admin marque une sÃ©ance comme rÃ©alisÃ©e â le compteur avance d'une unitÃ©."""
+    """Admin marque une séance comme réalisée — le compteur avance d'une unité."""
     seance = session.get(SeanceAccompagnement, seance_id)
     if seance is None or seance.acces.eleve_id != eleve_id:
-        raise HTTPException(status_code=404, detail="SÃ©ance introuvable.")
+        raise HTTPException(status_code=404, detail="Séance introuvable.")
     seance.statut = "realise"
     seance.date_realise = datetime.utcnow()
     session.commit()
@@ -390,7 +390,7 @@ def coaching_marquer_realise(
 
 @router.get("/coaching/global")
 def coaching_global(session: Session = Depends(obtenir_session)):
-    """Toutes les sÃ©ances coaching, toutes Ã©lÃ¨ves confondues â pour la page admin globale."""
+    """Toutes les séances coaching, toutes élèves confondues — pour la page admin globale."""
     from sqlalchemy.orm import joinedload
     seances_db = (
         session.query(SeanceAccompagnement)
@@ -428,7 +428,7 @@ def coaching_historique(
     eleve_id: int,
     session: Session = Depends(obtenir_session),
 ):
-    """Retourne toutes les sÃ©ances coaching de cet Ã©lÃ¨ve avec leur statut."""
+    """Retourne toutes les séances coaching de cet élève avec leur statut."""
     acces_list = session.query(AccesFormation).filter_by(eleve_id=eleve_id).all()
     seances = []
     for acces in acces_list:

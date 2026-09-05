@@ -1,5 +1,5 @@
 """
-Connexion Ã  la base de donnÃ©es et fourniture d'une session par requÃªte web.
+Connexion à la base de données et fourniture d'une session par requête web.
 """
 import logging
 from sqlalchemy import create_engine, text
@@ -9,16 +9,16 @@ from .models import Base
 
 logger = logging.getLogger(__name__)
 
-# `connect_args` spÃ©cifique Ã  SQLite (nÃ©cessaire seulement en dÃ©veloppement
-# local) -- ignorÃ© si on utilise PostgreSQL (Neon) en production.
+# `connect_args` spécifique à SQLite (nécessaire seulement en développement
+# local) -- ignoré si on utilise PostgreSQL (Neon) en production.
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Colonnes ajoutÃ©es au modÃ¨le APRÃS la crÃ©ation initiale des tables.
+# Colonnes ajoutées au modèle APRÈS la création initiale des tables.
 # Chaque instruction utilise ADD COLUMN IF NOT EXISTS : idempotente, sans danger.
-# SQLite ne supporte pas IF NOT EXISTS â ignorÃ©es en dev local.
+# SQLite ne supporte pas IF NOT EXISTS → ignorées en dev local.
 _MIGRATIONS_COLONNES = [
     "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS nb_connexions INTEGER DEFAULT 0",
     "ALTER TABLE eleves ADD COLUMN IF NOT EXISTS derniere_connexion TIMESTAMP",
@@ -50,20 +50,20 @@ def _migrer_colonnes():
                 conn.commit()
             except Exception as e:
                 conn.rollback()
-                logger.warning("Migration colonne ignorÃ©e (%s) : %s", sql.split()[:6], e)
+                logger.warning("Migration colonne ignorée (%s) : %s", sql.split()[:6], e)
 
 
 def initialiser_base():
-    """CrÃ©e toutes les tables manquantes et ajoute les colonnes ajoutÃ©es
-    aprÃ¨s la crÃ©ation initiale. Sans danger Ã  appeler Ã  chaque dÃ©marrage."""
+    """Crée toutes les tables manquantes et ajoute les colonnes ajoutées
+    après la création initiale. Sans danger à appeler à chaque démarrage."""
     Base.metadata.create_all(bind=engine)
     if not DATABASE_URL.startswith("sqlite"):
         _migrer_colonnes()
 
 
 def obtenir_session():
-    """Fournit une session de base de donnÃ©es pour la durÃ©e d'une requÃªte web,
-    et la referme proprement ensuite -- mÃªme si une erreur survient."""
+    """Fournit une session de base de données pour la durée d'une requête web,
+    et la referme proprement ensuite -- même si une erreur survient."""
     session = SessionLocal()
     try:
         yield session

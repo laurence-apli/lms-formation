@@ -240,7 +240,7 @@ class ImporteurWord:
                     body_paras.append((ptext, p_align))
             label_html = f'<div class="pq-label">{esc(label)}</div>' if label else ""
             body_html = "".join(
-                f'<p{f" style=\"text-align:{a};\"" if a else ""}>{esc(t)}</p>'
+                '<p' + (f' style="text-align:{a};"' if a else '') + f'>{esc(t)}</p>'
                 for t, a in body_paras
             )
             return f'<div class="pull-quote">{label_html}<div class="pq-body">{body_html}</div></div>'
