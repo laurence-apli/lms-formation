@@ -193,9 +193,12 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
         # Reste dû (acompte seulement)
         reste_du = 0.0
         if c.type_paiement == "acompte" and c.statut not in ("annulee", "payee"):
-            offre = session.get(Offre, c.offre_id) if c.offre_id else None
-            if offre:
-                reste_du = float(offre.prix_total) - float(c.montant_total)
+            if c.offre_id:
+                offre = session.get(Offre, c.offre_id)
+                if offre:
+                    reste_du = float(offre.prix_total) - float(c.montant_total)
+            elif c.montant_prix_total:
+                reste_du = float(c.montant_prix_total) - float(c.montant_total)
         result.append({
             "id": c.id,
             "date": c.cree_le.strftime("%d/%m/%Y") if c.cree_le else "",
@@ -209,3 +212,50 @@ def api_paiements(session: Session = Depends(obtenir_session), admin=Depends(adm
             "statut": c.statut,
         })
     return result
+
+
+class PaiementManuelIn(BaseModel):
+    email: str
+    prenom: str
+    nom: str
+    description: str
+    montant_verse: float
+    montant_prix_total: float | None = None
+    type_paiement: str = "comptant"  # "comptant" ou "acompte"
+    moyen_paiement: str = "virement"  # "virement", "cheque", "especes", "cabinet"
+    note: str = ""
+
+
+@router.post("/api/paiements/manuel")
+def enregistrer_paiement_manuel(
+    data: PaiementManuelIn,
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    from ..models import Eleve as EleveModel
+    import bcrypt as _bcrypt, secrets
+    from decimal import Decimal
+    # Trouver ou créer l'élève
+    eleve = session.query(EleveModel).filter_by(email=data.email.lower().strip()).first()
+    if not eleve:
+        eleve = EleveModel(
+            prenom=data.prenom,
+            nom=data.nom,
+            email=data.email.lower().strip(),
+            mot_de_passe_hash=_bcrypt.hashpw(secrets.token_hex(16).encode(), _bcrypt.gensalt()).decode(),
+            actif=True,
+        )
+        session.add(eleve)
+        session.flush()
+    commande = Commande(
+        eleve_id=eleve.id,
+        montant_total=Decimal(str(data.montant_verse)),
+        montant_prix_total=Decimal(str(data.montant_prix_total)) if data.montant_prix_total else None,
+        type_paiement=data.type_paiement,
+        moyen_paiement=data.moyen_paiement,
+        note=data.note,
+        statut="payee" if data.type_paiement == "comptant" else "acompte_verse",
+    )
+    session.add(commande)
+    session.commit()
+    return {"ok": True, "commande_id": commande.id, "eleve_id": eleve.id}

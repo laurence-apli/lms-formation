@@ -83,6 +83,7 @@ class Commande(Base):
     offre_id = Column(Integer, nullable=True)  # si commande via offre publique
     type_paiement = Column(String(20), nullable=True)  # "comptant" ou "acompte"
     note = Column(Text, nullable=True)
+    montant_prix_total = Column(Numeric(10, 2), nullable=True)  # prix total (utile pour les acomptes manuels)
 
     eleve = relationship("Eleve", backref="commandes")
     lignes = relationship("LigneCommande", back_populates="commande", cascade="all, delete-orphan")
