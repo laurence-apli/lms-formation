@@ -293,6 +293,34 @@ async function afficherContenu() {
         const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
         const extensions = { pdf: '.pdf', audio: '.mp3' };
         const nomFichier = (media.titre || 'fichier') + (extensions[media.type] || '');
+
+        // Détection YouTube / Vimeo pour les liens
+        if (media.type === 'lien') {
+          const url = media.url || '';
+          const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
+          const viMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+          if (ytMatch) {
+            const embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+            return `<div class="media-eleve-row media-video-embed">
+              <div class="audio-player-header">🎬 ${media.titre}</div>
+              <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin-top:10px;">
+                <iframe src="${embedUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;border-radius:8px;" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+              </div>
+            </div>`;
+          }
+          if (viMatch) {
+            const embedUrl = `https://player.vimeo.com/video/${viMatch[1]}`;
+            return `<div class="media-eleve-row media-video-embed">
+              <div class="audio-player-header">🎬 ${media.titre}</div>
+              <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin-top:10px;">
+                <iframe src="${embedUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;border-radius:8px;" allowfullscreen></iframe>
+              </div>
+            </div>`;
+          }
+          // Lien simple
+          return `<a class="media-eleve-row" href="${url}" target="_blank" rel="noopener">🔗 ${media.titre} <span class="media-eleve-action">Ouvrir →</span></a>`;
+        }
+
         if (media.type === 'audio') {
           return `<div class="media-eleve-row media-audio-player">
             <div class="audio-player-header">${icone} ${media.titre}</div>
@@ -303,7 +331,7 @@ async function afficherContenu() {
         }
         return media.telechargeable
           ? `<a class="media-eleve-row" href="${media.url}" download="${nomFichier}" target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
-          : `<div class="media-eleve-row non-telechargeable">${icone} ${media.titre} <span class="media-eleve-action">Consultation uniquement</span></div>`;
+          : `<a class="media-eleve-row" href="${media.url}" target="_blank" rel="noopener">${icone} ${media.titre} <span class="media-eleve-action">Ouvrir →</span></a>`;
       }).join('') + '</div>';
     }
     const _cHtml = c.contenu_html;
