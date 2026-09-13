@@ -141,3 +141,21 @@ def page_offres(
 @router.get("/emails-auto", response_class=HTMLResponse)
 def page_emails_auto(request: Request, admin: Administrateur = Depends(admin_connecte)):
     return _rendre(request, "admin/emails_auto.html", {"profil": _profil_admin(admin), "page_active": "emails-auto"})
+
+
+# ---------- Pages Netlify ----------
+
+PAGES_NETLIFY = [
+    {"nom": "Éclore", "url": "https://eclore-lmb.netlify.app/", "description": "Session intensive 3h · en présence"},
+    {"nom": "Soins énergétiques", "url": "https://soins-energetiques.netlify.app/", "description": "Séances individuelles"},
+    {"nom": "Cercle de Femmes", "url": "https://cercle-de-femmes.netlify.app/", "description": "Cercle collectif"},
+    {"nom": "Le Temps des Essentielles", "url": "https://le-temps-des-essentielles.netlify.app/", "description": "Programme en groupe"},
+]
+
+@router.get("/pages-netlify", response_class=HTMLResponse)
+def page_pages_netlify(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return _rendre(request, "admin/pages_netlify.html", {
+        "profil": _profil_admin(admin),
+        "page_active": "pages-netlify",
+        "pages": PAGES_NETLIFY,
+    })
