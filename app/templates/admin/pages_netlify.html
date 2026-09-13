@@ -1,0 +1,49 @@
+{% extends "admin/base.html" %}
+
+{% block titre %}Pages Netlify{% endblock %}
+
+{% block contenu %}
+<div class="topbar">
+  <div>
+    <div class="breadcrumb">Administration</div>
+    <h1>&#x1F517; Pages Netlify</h1>
+  </div>
+</div>
+
+<p style="color:var(--grey); font-size:14px; margin-bottom:28px; max-width:620px;">
+  Pages de vente heberg&#233;es sur Netlify. Pour ajouter une nouvelle page, d&#233;ployez-la sur Netlify puis demandez &#224; Claude de l'ajouter ici.
+</p>
+
+<div style="display:grid; gap:14px; max-width:800px;">
+{% for page in pages %}
+<div style="background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; box-shadow:0 1px 4px rgba(46,34,16,0.05);">
+  <div style="flex:1; min-width:0;">
+    <div style="font-family:'EB Garamond',serif; font-size:19px; font-weight:600; margin-bottom:3px;">{{ page.nom }}</div>
+    {% if page.description %}<div style="font-size:13px; color:var(--grey); margin-bottom:6px;">{{ page.description }}</div>{% endif %}
+    <div style="font-size:12px; color:var(--grey); font-family:monospace; word-break:break-all;">{{ page.url }}</div>
+  </div>
+  <div style="display:flex; gap:8px; flex-shrink:0;">
+    <button onclick="copier('{{ page.url }}')" class="btn btn-sm">&#x1F4CB; Copier</button>
+    <a href="{{ page.url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm">Ouvrir &#x2197;</a>
+  </div>
+</div>
+{% endfor %}
+</div>
+
+<div style="margin-top:36px; max-width:800px; background:#F5EDD6; border:1px solid var(--border); border-radius:10px; padding:20px 24px;">
+  <div style="font-family:'EB Garamond',serif; font-size:17px; font-weight:600; margin-bottom:10px;">&#x1F4A1; Ajouter une nouvelle page</div>
+  <ol style="font-size:14px; line-height:2; margin:0; padding-left:20px;">
+    <li>Cr&#233;er la page HTML avec Claude</li>
+    <li>La d&#233;ployer sur Netlify (glisser-d&#233;poser le dossier)</li>
+    <li>Dire &#224; Claude : <em style="color:var(--gold);">&#171; Ajoute la page [Nom] avec l'URL [url] dans l'onglet Pages Netlify &#187;</em></li>
+  </ol>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copier(url) {
+  navigator.clipboard.writeText(url).then(function() { afficherToast('Lien copi&#233; !'); });
+}
+</script>
+{% endblock %}
