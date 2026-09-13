@@ -15,11 +15,13 @@
   body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); display:flex; min-height:100vh; }
 
   .sidebar { width:240px; background:var(--ink); color:#F5EDD6; flex-shrink:0; display:flex; flex-direction:column; padding:24px 0; }
-  .sidebar .brand { font-family:'EB Garamond',serif; font-size:18px; font-weight:600; padding:0 20px 24px; border-bottom:1px solid rgba(245,237,214,0.15); margin-bottom:16px; }
+  .sidebar .brand { font-family:'EB Garamond',serif; font-size:18px; font-weight:600; padding:0 20px 24px; border-bottom:1px solid rgba(245,237,214,0.15); margin-bottom:8px; }
   .sidebar .brand small { display:block; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.06em; color:#B8922A; margin-top:4px; }
-  .nav-item { padding:10px 20px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; color:#D8CBA0; border-left:3px solid transparent; text-decoration:none; }
+  .nav-item { padding:9px 20px; cursor:pointer; font-size:14px; display:flex; align-items:center; gap:10px; color:#D8CBA0; border-left:3px solid transparent; text-decoration:none; }
   .nav-item.active { background:rgba(184,146,42,0.15); color:#F5EDD6; border-left-color:var(--gold); }
   .nav-item:hover:not(.active) { background:rgba(255,255,255,0.04); }
+  .nav-group-label { font-family:'League Spartan',sans-serif; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7A6E5A; padding:12px 20px 4px; }
+  .nav-separator { border:none; border-top:1px solid rgba(245,237,214,0.1); margin:6px 0; }
 
   .main { flex:1; padding:32px 40px; overflow-y:auto; }
   .topbar { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:28px; }
@@ -57,26 +59,38 @@
 
 <div class="sidebar">
   <div class="brand">{{ profil.prenom }} {{ profil.nom }}<small>ADMINISTRATION FORMATIONS</small></div>
-  <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">📚 Formations</a>
-  <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">👤 Élèves</a>
-  <a class="nav-item {% if page_active == 'coaching' %}active{% endif %}" href="/admin/page/coaching">🤝 Coaching</a>
-  <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">🎓 Diplômes <span id="badge-diplomes" style="display:none; background:#B8922A; color:#2E2210; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
-  <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">📊 Statistiques</a>
-  <a class="nav-item {% if page_active == 'cercle-femmes' %}active{% endif %}" href="/admin/page/cercle-femmes">Cercle de Femmes</a>
-  <a class="nav-item {% if page_active == 'catalogue-tarifs' %}active{% endif %}" href="/admin/page/catalogue-tarifs">Catalogue & Tarifs</a>
-  <a class="nav-item {% if page_active == 'codes-promo' %}active{% endif %}" href="/admin/page/codes-promo">Codes promo</a>
-  <a class="nav-item {% if page_active == 'offres' %}active{% endif %}" href="/admin/offres">🏷️ Offres</a>
-  <a class="nav-item {% if page_active == 'paiements' %}active{% endif %}" href="/admin/paiements">💳 Suivi paiements</a>
-  <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">🪪 Mon profil</a>
-  <a class="nav-item {% if page_active == 'emails-auto' %}active{% endif %}" href="/admin/page/emails-auto">📧 Emails auto</a>
-<a class="nav-item {% if page_active == 'pages-netlify' %}active{% endif %}" href="/admin/page/pages-netlify">🔗 Pages Netlify</a>
+
+  <div class="nav-group-label">&#x1F393; Formations</div>
+  <a class="nav-item {% if page_active == 'formations' %}active{% endif %}" href="/admin/page/formations">&#x1F4DA; Formations</a>
+  <a class="nav-item {% if page_active == 'catalogue-tarifs' %}active{% endif %}" href="/admin/page/catalogue-tarifs">&#x1F4CB; Catalogue &amp; Tarifs</a>
+  <a class="nav-item {% if page_active == 'codes-promo' %}active{% endif %}" href="/admin/page/codes-promo">&#x1F39F;&#xFE0F; Codes promo</a>
+
+  <hr class="nav-separator">
+  <div class="nav-group-label">&#x1F3F7;&#xFE0F; Offres &amp; Ventes</div>
+  <a class="nav-item {% if page_active == 'offres' %}active{% endif %}" href="/admin/offres">&#x1F3F7;&#xFE0F; Offres</a>
+  <a class="nav-item {% if page_active == 'pages-netlify' %}active{% endif %}" href="/admin/page/pages-netlify">&#x1F517; Pages Netlify</a>
+  <a class="nav-item {% if page_active == 'cercle-femmes' %}active{% endif %}" href="/admin/page/cercle-femmes">&#x1F338; Cercle de Femmes</a>
+
+  <hr class="nav-separator">
+  <div class="nav-group-label">&#x1F465; Suivi clients</div>
+  <a class="nav-item {% if page_active == 'paiements' %}active{% endif %}" href="/admin/paiements">&#x1F4B3; Suivi paiements</a>
+  <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">&#x1F464; &#xC9;l&#xE8;ves</a>
+  <a class="nav-item {% if page_active == 'coaching' %}active{% endif %}" href="/admin/page/coaching">&#x1F91D; Coaching</a>
+
+  <hr class="nav-separator">
+  <div class="nav-group-label">&#x2699;&#xFE0F; Administration</div>
+  <a class="nav-item {% if page_active == 'diplomes' %}active{% endif %}" href="/admin/page/diplomes">&#x1F393; Dipl&#xF4;mes <span id="badge-diplomes" style="display:none; background:#B8922A; color:#2E2210; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
+  <a class="nav-item {% if page_active == 'statistiques' %}active{% endif %}" href="/admin/page/statistiques">&#x1F4CA; Statistiques</a>
+  <a class="nav-item {% if page_active == 'profil' %}active{% endif %}" href="/admin/page/profil">&#x1FAA6; Mon profil</a>
+  <a class="nav-item {% if page_active == 'emails-auto' %}active{% endif %}" href="/admin/page/emails-auto">&#x1F4E7; Emails auto</a>
+
   {% if url_site_vitrine %}
-  <a class="nav-item" href="{{ url_site_vitrine }}" target="_blank" rel="noopener" style="margin-top:auto; border-top:1px solid rgba(245,237,214,0.15); padding-top:14px;">← Retour au site</a>
+  <a class="nav-item" href="{{ url_site_vitrine }}" target="_blank" rel="noopener" style="margin-top:auto; border-top:1px solid rgba(245,237,214,0.15); padding-top:14px;">&#x2190; Retour au site</a>
   {% else %}
   <div style="margin-top:auto;"></div>
   {% endif %}
   <form action="/admin/deconnexion" method="post" style="margin:0; border-top:1px solid rgba(245,237,214,0.15); padding-top:8px;">
-    <button type="submit" class="nav-item" style="width:100%; background:none; border:none; cursor:pointer; color:#D8CBA0; font-family:inherit; font-size:14px; text-align:left;">🚪 Déconnexion</button>
+    <button type="submit" class="nav-item" style="width:100%; background:none; border:none; cursor:pointer; color:#D8CBA0; font-family:inherit; font-size:14px; text-align:left;">&#x1F6AA; D&#xE9;connexion</button>
   </form>
 </div>
 
@@ -103,13 +117,8 @@ async function appelApi(url, options = {}) {
     try {
       const corps = await resp.json();
       if (typeof corps.detail === "string") {
-        // Erreur "normale", levée volontairement par nos propres routes (ex: HTTPException)
         detail = corps.detail;
       } else if (Array.isArray(corps.detail)) {
-        // Erreur de validation automatique de FastAPI : une liste de champs en
-        // erreur, chacun avec son propre message -- jamais un texte simple.
-        // Sans ce cas, l'erreur s'affichait comme "[object Object]" (bug trouvé
-        // et corrigé : on reconstruit un message lisible à partir de la liste).
         detail = corps.detail.map(d => d.msg || JSON.stringify(d)).join(" — ");
       }
     } catch (e) {}
@@ -118,10 +127,6 @@ async function appelApi(url, options = {}) {
   try { return await resp.json(); } catch (e) { return {}; }
 }
 
-// Badge de notification sur "Diplômes" : affiche le nombre d'élèves ayant
-// atteint 100% sans diplôme encore marqué envoyé. Présent sur TOUTES les
-// pages admin (ce script vit dans le template de base, partagé partout),
-// pour que Laurence le voie où qu'elle se trouve dans l'administration.
 (async function chargerBadgeDiplomes() {
   try {
     const diplomesEnAttente = await appelApi('/admin/diplomes');
@@ -130,10 +135,7 @@ async function appelApi(url, options = {}) {
       badge.textContent = diplomesEnAttente.length;
       badge.style.display = 'inline-block';
     }
-  } catch (e) {
-    // Échec silencieux : un badge de notification qui ne s'affiche pas
-    // n'est jamais grave au point de perturber le reste de la page.
-  }
+  } catch (e) {}
 })();
 </script>
 {% block scripts %}{% endblock %}
