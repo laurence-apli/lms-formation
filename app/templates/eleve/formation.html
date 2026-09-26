@@ -111,6 +111,41 @@
 /* Vidéo intégrée (YouTube / Vimeo) : pleine largeur de lecture */
 .media-video-embed { display:block !important; padding:12px 16px 16px; }
 .media-video-embed .audio-player-header { display:block; width:100%; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* Lecteur vidéo maison (YouTube sans ses boutons) */
+.lv { position:relative; margin-top:10px; border-radius:8px; overflow:hidden; background:#000; outline:none; }
+.lv-cadre { position:relative; width:100%; padding-bottom:56.25%; height:0; }
+.lv-cadre iframe, .lv-cadre .lv-iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+.lv-voile { position:absolute; inset:0; z-index:2; cursor:pointer; }
+.lv.lecture.inactif, .lv.lecture.inactif .lv-voile { cursor:none; }
+.lv-poster { position:absolute; inset:0; z-index:3; background:#000 center/cover no-repeat; display:flex; align-items:center; justify-content:center; cursor:pointer; }
+.lv.demarre .lv-poster { display:none; }
+.lv.fini .lv-poster { display:flex; }
+.lv-gros-play { width:72px; height:72px; border-radius:50%; border:none; background:rgba(46,34,16,.72); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .15s, background .15s; }
+.lv-gros-play:hover { background:var(--gold); transform:scale(1.06); }
+.lv-gros-play svg { width:28px; height:28px; fill:currentColor; margin-left:4px; }
+.lv-ctrl { position:absolute; left:0; right:0; bottom:0; z-index:4; display:flex; align-items:center; gap:10px; padding:28px 14px 10px;
+  background:linear-gradient(to top, rgba(0,0,0,.72), rgba(0,0,0,0)); transition:opacity .35s; }
+.lv:not(.demarre) .lv-ctrl, .lv.fini .lv-ctrl { opacity:0; pointer-events:none; }
+.lv.lecture.inactif .lv-ctrl { opacity:0; pointer-events:none; }
+.lv-btn { flex-shrink:0; width:34px; height:34px; border:none; border-radius:50%; background:transparent; color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; }
+.lv-btn:hover { background:rgba(255,255,255,.18); }
+.lv-btn svg { width:18px; height:18px; fill:currentColor; display:block; }
+.lv-temps { flex-shrink:0; color:#fff; font-size:13px; font-variant-numeric:tabular-nums; min-width:36px; text-align:center; }
+.lv-barre { --pct:0%; flex:1; min-width:60px; height:6px; margin:0; border-radius:999px; cursor:pointer; outline:none; -webkit-appearance:none; appearance:none;
+  background:linear-gradient(to right, var(--gold) 0%, var(--gold) var(--pct), rgba(255,255,255,.35) var(--pct), rgba(255,255,255,.35) 100%); }
+.lv-barre::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:14px; height:14px; border-radius:50%; background:#fff; border:3px solid var(--gold); cursor:pointer; }
+.lv-barre::-moz-range-thumb { width:10px; height:10px; border-radius:50%; background:#fff; border:3px solid var(--gold); cursor:pointer; }
+.lv-barre::-moz-range-track { background:transparent; height:6px; }
+.lv:fullscreen { width:100%; height:100%; margin:0; border-radius:0; }
+.lv:fullscreen .lv-cadre { height:100%; padding-bottom:0; }
+.lv:-webkit-full-screen { width:100%; height:100%; margin:0; border-radius:0; }
+.lv:-webkit-full-screen .lv-cadre { height:100%; padding-bottom:0; }
+.contenu-eleve .lv button, .contenu-eleve .lv input { -webkit-user-select:auto; user-select:auto; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+@media (max-width: 480px) {
+  .lv-ctrl { gap:4px; padding:22px 8px 6px; }
+  .lv-temps { font-size:11px; min-width:30px; }
+  .lv-btn { width:30px; height:30px; }
+}
 @media (max-width: 480px) {
   .lecteur-audio { gap:8px; padding-right:12px; }
   .lecteur-audio .la-temps { font-size:12px; min-width:32px; }
@@ -170,6 +205,136 @@
 // on les capte donc en phase de capture sur document.
 const LA_ICONE_PLAY  = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg>';
 const LA_ICONE_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>';
+const LV_ICONE_SON   = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h2.5L8 3v10L4.5 10H2zM10.5 5.2a3.5 3.5 0 0 1 0 5.6l-.8-1a2.2 2.2 0 0 0 0-3.6zM12.3 3a6.3 6.3 0 0 1 0 10l-.8-1a5 5 0 0 0 0-8z"/></svg>';
+const LV_ICONE_MUET  = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6h2.5L8 3v10L4.5 10H2zM10 5.9l.9-.9 1.6 1.6L14.1 5l.9.9-1.6 1.6 1.6 1.6-.9.9-1.6-1.6-1.6 1.6-.9-.9 1.6-1.6z"/></svg>';
+const LV_ICONE_PLEIN = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 2h4.5v1.6H3.6V6.5H2zM9.5 2H14v4.5h-1.6V3.6H9.5zM2 9.5h1.6v2.9h2.9V14H2zM12.4 9.5H14V14H9.5v-1.6h2.9z"/></svg>';
+
+// ===== Lecteur vidéo maison (YouTube) =====
+// YouTube est chargé sans ses boutons (controls=0). Un voile transparent
+// capte souris et clics : YouTube n'affiche donc plus rien par-dessus
+// l'image. Nos contrôles disparaissent après 2 s d'inactivité en lecture.
+let _lvApi = null;
+function lvChargerApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (!_lvApi) _lvApi = new Promise(res => {
+    const avant = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function () { if (avant) avant(); res(); };
+    const sc = document.createElement('script');
+    sc.src = 'https://www.youtube.com/iframe_api';
+    document.head.appendChild(sc);
+  });
+  return _lvApi;
+}
+function lvPauseToutes(sauf) {
+  document.querySelectorAll('.lv').forEach(v => {
+    if (v !== sauf && v._player && v._player.pauseVideo && v.classList.contains('lecture')) v._player.pauseVideo();
+  });
+}
+function initVideosYT(racine) {
+  const els = racine.querySelectorAll('.lv:not([data-init])');
+  if (!els.length) return;
+  els.forEach(el => { el.dataset.init = '1'; });
+  lvChargerApi().then(() => els.forEach(lvInit));
+}
+function lvInit(el) {
+  const $ = sel => el.querySelector(sel);
+  const barre = $('.lv-barre');
+  let minuteur = null, suivi = null, glisse = false, muet = false;
+
+  const player = new YT.Player($('.lv-iframe'), {
+    host: 'https://www.youtube-nocookie.com',
+    videoId: el.dataset.yt,
+    width: '100%', height: '100%',
+    playerVars: { controls: 0, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, hl: 'fr' },
+    events: {
+      onReady: majTemps,
+      onStateChange: e => {
+        const S = YT.PlayerState;
+        if (e.data === S.PLAYING) {
+          el.classList.add('lecture', 'demarre'); el.classList.remove('fini');
+          lvPauseToutes(el);
+          document.querySelectorAll('.lecteur-audio audio').forEach(a => a.pause());
+          reveil();
+          if (!suivi) suivi = setInterval(tic, 250);
+        } else {
+          el.classList.remove('lecture', 'inactif');
+          if (e.data === S.ENDED) el.classList.add('fini');
+        }
+        const enLecture = e.data === S.PLAYING || e.data === S.BUFFERING;
+        const btn = $('.lv-play');
+        btn.innerHTML = enLecture ? LA_ICONE_PAUSE : LA_ICONE_PLAY;
+        btn.setAttribute('aria-label', enLecture ? 'Pause' : 'Lecture');
+        majTemps();
+      }
+    }
+  });
+  el._player = player;
+
+  function tic() {
+    if (!document.body.contains(el)) { clearInterval(suivi); suivi = null; try { player.destroy(); } catch (e) {} return; }
+    if (el.classList.contains('lecture')) majTemps();
+  }
+  function majTemps() {
+    if (!player.getDuration) return;
+    const d = player.getDuration() || 0, t = player.getCurrentTime() || 0;
+    const pct = d > 0 ? (t / d) * 100 : 0;
+    if (!glisse) barre.value = Math.round(pct * 10);
+    barre.style.setProperty('--pct', pct + '%');
+    $('.lv-courant').textContent = laFormat(t);
+    $('.lv-total').textContent = d > 0 ? laFormat(d) : '--:--';
+  }
+  function basculer() {
+    if (!player.getPlayerState) return;
+    const st = player.getPlayerState();
+    if (st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING) player.pauseVideo();
+    else { if (st === YT.PlayerState.ENDED) player.seekTo(0, true); player.playVideo(); }
+  }
+  function reveil() {
+    el.classList.remove('inactif');
+    clearTimeout(minuteur);
+    minuteur = setTimeout(() => { if (el.classList.contains('lecture') && !glisse) el.classList.add('inactif'); }, 2000);
+  }
+
+  $('.lv-poster').addEventListener('click', basculer);
+  $('.lv-voile').addEventListener('click', () => {
+    // Sur écran tactile, un premier appui fait réapparaître les contrôles
+    if (el.classList.contains('inactif') && el._tactile) { reveil(); return; }
+    basculer(); reveil();
+  });
+  $('.lv-play').addEventListener('click', () => { basculer(); reveil(); });
+  $('.lv-son').addEventListener('click', () => {
+    muet = !muet;
+    if (muet) player.mute(); else player.unMute();
+    $('.lv-son').innerHTML = muet ? LV_ICONE_MUET : LV_ICONE_SON;
+    $('.lv-son').setAttribute('aria-label', muet ? 'Remettre le son' : 'Couper le son');
+    reveil();
+  });
+  const pleinPossible = !!(el.requestFullscreen || el.webkitRequestFullscreen);
+  if (!pleinPossible) $('.lv-plein').style.display = 'none';
+  $('.lv-plein').addEventListener('click', () => {
+    const actif = document.fullscreenElement || document.webkitFullscreenElement;
+    if (actif) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    reveil();
+  });
+  barre.addEventListener('pointerdown', () => { glisse = true; });
+  barre.addEventListener('input', () => {
+    const d = player.getDuration ? player.getDuration() : 0;
+    const pct = barre.value / 10;
+    barre.style.setProperty('--pct', pct + '%');
+    if (d > 0) { $('.lv-courant').textContent = laFormat((pct / 100) * d); player.seekTo((pct / 100) * d, true); }
+    reveil();
+  });
+  barre.addEventListener('change', () => { glisse = false; reveil(); });
+  el.addEventListener('mousemove', reveil);
+  el.addEventListener('touchstart', () => { el._tactile = true; }, { passive: true });
+  el.addEventListener('mouseleave', () => { if (el.classList.contains('lecture')) { clearTimeout(minuteur); minuteur = setTimeout(() => el.classList.add('inactif'), 600); } });
+  el.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === ' ' || e.key === 'k') { e.preventDefault(); basculer(); reveil(); }
+    if (e.key === 'f') { $('.lv-plein').click(); }
+  });
+}
 
 function laFormat(sec) {
   if (!isFinite(sec) || sec < 0) return '--:--';
@@ -193,6 +358,7 @@ document.addEventListener('click', function (e) {
   const a = btn.closest('.lecteur-audio').querySelector('audio');
   if (a.paused) {
     document.querySelectorAll('.lecteur-audio audio').forEach(x => { if (x !== a) x.pause(); });
+    lvPauseToutes(null);
     a.play().catch(() => {});
   } else {
     a.pause();
@@ -390,12 +556,26 @@ async function afficherContenu() {
           const ytMatch = /(?:youtube(?:-nocookie)?\.com|youtu\.be)\//.test(url) && url.match(/(?:[?&]v=|youtu\.be\/|\/embed\/|\/shorts\/|\/live\/)([A-Za-z0-9_-]{11})/);
           const viMatch = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
           if (ytMatch) {
-            // Mode sans cookies (RGPD) + suggestions de fin limitées à la même chaîne
-            const embedUrl = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?rel=0&playsinline=1`;
+            // Lecteur vidéo maison : YouTube sans ses propres boutons (controls=0),
+            // nos contrôles par-dessus, qui disparaissent pendant la lecture.
+            // Initialisé par initVideosYT() après l'affichage du chapitre.
+            const vid = ytMatch[1];
             return `<div class="media-eleve-row media-video-embed">
               <div class="audio-player-header">🎬 ${media.titre}</div>
-              <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;margin-top:10px;">
-                <iframe src="${embedUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;border-radius:8px;" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" title="${media.titre}"></iframe>
+              <div class="lv" data-yt="${vid}" tabindex="0">
+                <div class="lv-cadre"><div class="lv-iframe"></div></div>
+                <div class="lv-voile"></div>
+                <div class="lv-poster" style="background-image:url('https://i.ytimg.com/vi/${vid}/hqdefault.jpg')">
+                  <button type="button" class="lv-gros-play" aria-label="Lire la vidéo">${LA_ICONE_PLAY}</button>
+                </div>
+                <div class="lv-ctrl">
+                  <button type="button" class="lv-btn lv-play" aria-label="Lecture">${LA_ICONE_PLAY}</button>
+                  <span class="lv-temps lv-courant">0:00</span>
+                  <input type="range" class="lv-barre" min="0" max="1000" step="1" value="0" aria-label="Position de lecture">
+                  <span class="lv-temps lv-total">--:--</span>
+                  <button type="button" class="lv-btn lv-son" aria-label="Couper le son">${LV_ICONE_SON}</button>
+                  <button type="button" class="lv-btn lv-plein" aria-label="Plein écran">${LV_ICONE_PLEIN}</button>
+                </div>
               </div>
             </div>`;
           }
@@ -436,6 +616,7 @@ async function afficherContenu() {
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
+    initVideosYT(zone);
     if (_cEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _cHtml.replace(/<\/head>/i,'<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   }
 }
