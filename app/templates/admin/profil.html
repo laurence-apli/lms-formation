@@ -32,55 +32,58 @@
 
 <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border);">
 <div style="font-size:13px; color:var(--ink); font-weight:600; margin-bottom:14px;">🔧 Liens techniques</div>
-<div class="helper-text" style="margin-bottom:14px;">Ces liens mènent aux pages de connexion de chaque service. Tu te connectes toi-même avec ton propre mot de passe (jamais stocké ici).</div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🔗 Dépôt du code (GitHub)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<input type="text" id="profil-lien-github" placeholder="https://github.com/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-<a class="btn btn-sm" id="lien-ouvrir-github" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
+<div class="helper-text" style="margin-bottom:14px;">Chaque bouton ouvre le bon compte du service. Si le service affiche un autre compte, déconnecte-toi puis reconnecte-toi avec celui indiqué. Les mots de passe ne sont jamais stockés ici.</div>
+<style>
+.lien-outil { padding:10px 0; border-bottom:1px solid var(--border); }
+.lien-outil:last-child { border-bottom:none; }
+.lien-outil-titre { font-size:13px; font-weight:600; color:var(--ink); }
+.lien-outil-compte { font-size:12px; color:var(--grey); margin:2px 0 8px; }
+.lien-outil-btns { display:flex; flex-wrap:wrap; gap:8px; }
+</style>
+<div class="lien-outil">
+<div class="lien-outil-titre">🔗 Code de la plateforme (GitHub)</div>
+<div class="lien-outil-compte">Compte : <strong>laurence-apli</strong> — dépôt lms-formation</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation" target="_blank" rel="noopener">Dépôt ↗</a><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation/commits/main" target="_blank" rel="noopener">Historique des modifications ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🌐 Hébergement du serveur (Render)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<input type="text" id="profil-lien-render" placeholder="https://dashboard.render.com/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-<a class="btn btn-sm" id="lien-ouvrir-render" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">🖥️ Serveur de la plateforme (Render)</div>
+<div class="lien-outil-compte">Service : <strong>lms-formation</strong> (My Workspace)</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.render.com/web/srv-d90c5l68bjmc7393f5o0/deploys" target="_blank" rel="noopener">Déploiements ↗</a><a class="btn btn-sm" href="https://dashboard.render.com/web/srv-d90c5l68bjmc7393f5o0/logs" target="_blank" rel="noopener">Journaux (logs) ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🗄️ Base de données (Neon)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<input type="text" id="profil-lien-neon" placeholder="https://console.neon.tech/…" style="flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px;">
-<a class="btn btn-sm" id="lien-ouvrir-neon" href="#" target="_blank" rel="noopener" style="display:none;">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">🗄️ Base de données (Neon)</div>
+<div class="lien-outil-compte">Projet de la plateforme</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://console.neon.tech/app/projects" target="_blank" rel="noopener">Console ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">📧 Emails transactionnels (Resend)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<a class="btn btn-sm" href="https://resend.com/emails" target="_blank" rel="noopener">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">🌐 Site vitrine (Netlify)</div>
+<div class="lien-outil-compte">Équipe : <strong>maresonance42</strong></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://app.netlify.com/teams/maresonance42/projects" target="_blank" rel="noopener">Projets ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🌐 Site vitrine (Netlify)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<a class="btn btn-sm" href="https://app.netlify.com/teams/maresonance42/overview" target="_blank" rel="noopener">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">🎬 Vidéos des formations (YouTube)</div>
+<div class="lien-outil-compte">Chaîne : <strong>Laurence Mermet-Bijon</strong> (@LaurenceMermet-Bijon) — vidéos en « non répertoriée »</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA" target="_blank" rel="noopener">YouTube Studio ↗</a><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA/videos/upload" target="_blank" rel="noopener">Mes vidéos ↗</a><a class="btn btn-sm" href="https://www.youtube.com/@LaurenceMermet-Bijon" target="_blank" rel="noopener">Chaîne ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">💳 Paiements (Stripe)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<a class="btn btn-sm" href="https://dashboard.stripe.com" target="_blank" rel="noopener">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">📧 Emails automatiques (Resend)</div>
+<div class="lien-outil-compte"></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://resend.com/emails" target="_blank" rel="noopener">Emails envoyés ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">🟢 Disponibilité serveur (UptimeRobot)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<a class="btn btn-sm" href="https://dashboard.uptimerobot.com/monitors" target="_blank" rel="noopener">Ouvrir ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">💳 Paiements (Stripe)</div>
+<div class="lien-outil-compte">Compte de Laurence</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/dashboard" target="_blank" rel="noopener">Dashboard ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">📅 Prise de RDV visio (Cal.com)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-<a class="btn btn-sm" href="https://cal.com/laurence-mermet-bijon-energeticienne/seance-visio" target="_blank" rel="noopener">Calendrier ↗</a>
-<a class="btn btn-sm" href="https://app.cal.com" target="_blank" rel="noopener">Dashboard ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">🟢 Disponibilité du serveur (UptimeRobot)</div>
+<div class="lien-outil-compte"></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.uptimerobot.com/monitors" target="_blank" rel="noopener">Moniteurs ↗</a></div>
 </div>
-
-<label style="display:block; font-size:12px; color:var(--grey); font-weight:600; margin-bottom:4px;">💳 Paiements (Stripe)</label>
-<div style="display:flex; gap:8px; margin-bottom:14px;">
-  <a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/dashboard" target="_blank" rel="noopener">Dashboard ↗</a>
+<div class="lien-outil">
+<div class="lien-outil-titre">📅 Rendez-vous visio (Cal.com)</div>
+<div class="lien-outil-compte"></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://cal.com/laurence-mermet-bijon-energeticienne/seance-visio" target="_blank" rel="noopener">Calendrier public ↗</a><a class="btn btn-sm" href="https://app.cal.com" target="_blank" rel="noopener">Dashboard ↗</a></div>
 </div>
 
 </div>
@@ -99,18 +102,6 @@ document.getElementById('profil-prenom').value = p.prenom || '';
 document.getElementById('profil-nom').value = p.nom || '';
 document.getElementById('profil-email').value = p.email || '';
 document.getElementById('profil-telephone').value = p.telephone || '';
-
-for (const service of ['github', 'render', 'neon']) {
-const valeur = p[`lien_${service}`] || '';
-document.getElementById(`profil-lien-${service}`).value = valeur;
-const lien = document.getElementById(`lien-ouvrir-${service}`);
-if (valeur) {
-lien.href = valeur;
-lien.style.display = 'inline-flex';
-} else {
-lien.style.display = 'none';
-}
-}
 
 if (p.photo_url) document.getElementById('zone-photo').innerHTML = `<img src="${p.photo_url}" style="width:100%;height:100%;object-fit:cover;">`;
 if (p.logo_url) document.getElementById('zone-logo').innerHTML = `<img src="${p.logo_url}" style="width:100%;height:100%;object-fit:contain;">`;
@@ -139,9 +130,6 @@ data.append('prenom', document.getElementById('profil-prenom').value);
 data.append('nom', document.getElementById('profil-nom').value);
 data.append('email', document.getElementById('profil-email').value);
 data.append('telephone', document.getElementById('profil-telephone').value);
-data.append('lien_github', document.getElementById('profil-lien-github').value);
-data.append('lien_render', document.getElementById('profil-lien-render').value);
-data.append('lien_neon', document.getElementById('profil-lien-neon').value);
 try {
 await appelApi('/admin/profil', { method: 'PUT', body: data });
 afficherToast('Profil enregistré');
