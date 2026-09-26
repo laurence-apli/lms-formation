@@ -140,6 +140,10 @@
 .lv:fullscreen .lv-cadre { height:100%; padding-bottom:0; }
 .lv:-webkit-full-screen { width:100%; height:100%; margin:0; border-radius:0; }
 .lv:-webkit-full-screen .lv-cadre { height:100%; padding-bottom:0; }
+/* « Grand écran » de secours (iPhone) */
+.lv.lv-pseudo { position:fixed; inset:0; z-index:10000; margin:0; border-radius:0; display:flex; align-items:center; justify-content:center; }
+.lv.lv-pseudo .lv-cadre { width:min(100vw, calc(100vh * 16 / 9)); width:min(100vw, calc(100dvh * 16 / 9)); height:auto; padding-bottom:0; aspect-ratio:16 / 9; }
+html.lv-pseudo-actif, html.lv-pseudo-actif body { overflow:hidden; }
 .contenu-eleve .lv button, .contenu-eleve .lv input { -webkit-user-select:auto; user-select:auto; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
 @media (max-width: 480px) {
   .lv-ctrl { gap:4px; padding:22px 8px 6px; }
@@ -309,14 +313,29 @@ function lvInit(el) {
     $('.lv-son').setAttribute('aria-label', muet ? 'Remettre le son' : 'Couper le son');
     reveil();
   });
-  const pleinPossible = !!(el.requestFullscreen || el.webkitRequestFullscreen);
-  if (!pleinPossible) $('.lv-plein').style.display = 'none';
+  // Plein écran : API native (ordinateurs, Mac, iPad). Sur iPhone, Safari
+  // ne l'autorise pas : on bascule en « grand écran » (vidéo par-dessus
+  // toute la page, à tourner en paysage pour remplir l'écran).
+  function pseudoPlein(on) {
+    el.classList.toggle('lv-pseudo', on);
+    document.documentElement.classList.toggle('lv-pseudo-actif', on);
+  }
   $('.lv-plein').addEventListener('click', () => {
+    if (el.classList.contains('lv-pseudo')) { pseudoPlein(false); reveil(); return; }
     const actif = document.fullscreenElement || document.webkitFullscreenElement;
-    if (actif) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+    if (actif) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); reveil(); return; }
+    const demande = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (demande) {
+      try {
+        const r = demande.call(el);
+        if (r && r.catch) r.catch(() => pseudoPlein(true));
+      } catch (e) { pseudoPlein(true); }
+    } else {
+      pseudoPlein(true);
+    }
     reveil();
   });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && el.classList.contains('lv-pseudo')) pseudoPlein(false); });
   barre.addEventListener('pointerdown', () => { glisse = true; });
   barre.addEventListener('input', () => {
     const d = player.getDuration ? player.getDuration() : 0;
