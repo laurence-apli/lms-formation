@@ -90,7 +90,28 @@
 /* Lecteur audio */
 .media-audio-player { background: #f8f5ff; border: 1px solid #e0d5f7; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: block !important; }
 .media-audio-player .audio-player-header { display: block; width: 100%; font-weight: 600; color: #5B21B6; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.media-audio-player audio { display: block !important; width: 100% !important; height: 40px; outline: none; accent-color: #7C3AED; }
+.media-audio-player audio { display: none !important; }
+
+/* Lecteur audio personnalisé : barre d'avancement bien visible */
+.lecteur-audio { display:flex; align-items:center; gap:12px; background:#FFFFFF; border:1px solid #e0d5f7; border-radius:999px; padding:6px 16px 6px 6px; }
+.lecteur-audio .la-play { flex-shrink:0; width:40px; height:40px; border-radius:50%; border:none; background:#7C3AED; color:#FFFFFF; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; transition:background .15s; }
+.lecteur-audio .la-play:hover { background:#5B21B6; }
+.lecteur-audio .la-play svg { width:16px; height:16px; fill:currentColor; display:block; }
+.lecteur-audio .la-temps { flex-shrink:0; font-size:13px; font-variant-numeric:tabular-nums; color:#5B21B6; min-width:38px; text-align:center; }
+.lecteur-audio .la-barre { --pct:0%; flex:1; min-width:60px; height:8px; margin:0; border-radius:999px; cursor:pointer; outline:none;
+  -webkit-appearance:none; appearance:none;
+  background:linear-gradient(to right, #7C3AED 0%, #7C3AED var(--pct), #E4DCF5 var(--pct), #E4DCF5 100%); }
+.lecteur-audio .la-barre::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:16px; height:16px; border-radius:50%; background:#FFFFFF; border:3px solid #7C3AED; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer; }
+.lecteur-audio .la-barre::-moz-range-thumb { width:12px; height:12px; border-radius:50%; background:#FFFFFF; border:3px solid #7C3AED; box-shadow:0 1px 3px rgba(0,0,0,.25); cursor:pointer; }
+.lecteur-audio .la-barre::-moz-range-track { background:transparent; height:8px; }
+.lecteur-audio .la-barre:focus-visible { box-shadow:0 0 0 3px rgba(124,58,237,.25); }
+/* Safari : user-select:none sur .contenu-eleve bloque les clics sur les éléments interactifs */
+.contenu-eleve .lecteur-audio button,
+.contenu-eleve .lecteur-audio input { -webkit-user-select:auto; user-select:auto; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+@media (max-width: 480px) {
+  .lecteur-audio { gap:8px; padding-right:12px; }
+  .lecteur-audio .la-temps { font-size:12px; min-width:32px; }
+}
 </style>
 
 <div class="topbar-eleve">
@@ -139,6 +160,71 @@
 </div>
 
 <script>
+// ===== Lecteur audio personnalisé =====
+// Remplace les contrôles natifs du navigateur (barre d'avancement illisible).
+// Délégation d'événements : fonctionne même si le chapitre est ré-affiché
+// (innerHTML). Les événements média ne remontent pas (pas de bubbling),
+// on les capte donc en phase de capture sur document.
+const LA_ICONE_PLAY  = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9.5-5.5z"/></svg>';
+const LA_ICONE_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 2.5h3.2v11H3.5zM9.3 2.5h3.2v11H9.3z"/></svg>';
+
+function laFormat(sec) {
+  if (!isFinite(sec) || sec < 0) return '--:--';
+  sec = Math.floor(sec);
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0');
+}
+function laMaj(lecteur) {
+  const a = lecteur.querySelector('audio');
+  const barre = lecteur.querySelector('.la-barre');
+  const d = a.duration;
+  const pct = (isFinite(d) && d > 0) ? (a.currentTime / d) * 100 : 0;
+  if (!lecteur.dataset.glisse) barre.value = Math.round(pct * 10);
+  barre.style.setProperty('--pct', pct + '%');
+  lecteur.querySelector('.la-courant').textContent = laFormat(a.currentTime);
+  lecteur.querySelector('.la-total').textContent = laFormat(d);
+}
+document.addEventListener('click', function (e) {
+  const btn = e.target.closest('.lecteur-audio .la-play');
+  if (!btn) return;
+  const a = btn.closest('.lecteur-audio').querySelector('audio');
+  if (a.paused) {
+    document.querySelectorAll('.lecteur-audio audio').forEach(x => { if (x !== a) x.pause(); });
+    a.play().catch(() => {});
+  } else {
+    a.pause();
+  }
+});
+document.addEventListener('input', function (e) {
+  if (!e.target.classList || !e.target.classList.contains('la-barre')) return;
+  const lecteur = e.target.closest('.lecteur-audio');
+  const a = lecteur.querySelector('audio');
+  const pct = e.target.value / 10;
+  e.target.style.setProperty('--pct', pct + '%');
+  if (isFinite(a.duration) && a.duration > 0) {
+    a.currentTime = (pct / 100) * a.duration;
+    lecteur.querySelector('.la-courant').textContent = laFormat(a.currentTime);
+  }
+});
+['pointerdown', 'touchstart'].forEach(ev => document.addEventListener(ev, function (e) {
+  if (e.target.classList && e.target.classList.contains('la-barre')) e.target.closest('.lecteur-audio').dataset.glisse = '1';
+}, { passive: true }));
+['pointerup', 'touchend', 'change'].forEach(ev => document.addEventListener(ev, function (e) {
+  if (e.target.classList && e.target.classList.contains('la-barre')) delete e.target.closest('.lecteur-audio').dataset.glisse;
+}, { passive: true }));
+['timeupdate', 'loadedmetadata', 'durationchange', 'seeked'].forEach(ev => document.addEventListener(ev, function (e) {
+  const lecteur = e.target.closest && e.target.closest('.lecteur-audio');
+  if (lecteur) laMaj(lecteur);
+}, true));
+['play', 'pause', 'ended'].forEach(ev => document.addEventListener(ev, function (e) {
+  const lecteur = e.target.closest && e.target.closest('.lecteur-audio');
+  if (!lecteur) return;
+  const btn = lecteur.querySelector('.la-play');
+  const enLecture = !e.target.paused && ev === 'play';
+  btn.innerHTML = enLecture ? LA_ICONE_PAUSE : LA_ICONE_PLAY;
+  btn.setAttribute('aria-label', enLecture ? 'Pause' : 'Lecture');
+}, true));
+
 const FORMATION_ID = {{ formation.id }};
 {% raw %}
 let noeudActif = { type: 'formation' };
@@ -324,9 +410,13 @@ async function afficherContenu() {
         if (media.type === 'audio') {
           return `<div class="media-eleve-row media-audio-player">
             <div class="audio-player-header">${icone} ${media.titre}</div>
-            <audio controls controlsList="nodownload noplaybackrate" preload="metadata" style="width:100%;margin-top:8px;display:block;border-radius:6px">
-              <source src="${media.url}" type="audio/mpeg">
-            </audio>
+            <div class="lecteur-audio">
+              <audio preload="metadata" controlsList="nodownload" src="${media.url}"></audio>
+              <button type="button" class="la-play" aria-label="Lecture">${LA_ICONE_PLAY}</button>
+              <span class="la-temps la-courant">0:00</span>
+              <input type="range" class="la-barre" min="0" max="1000" step="1" value="0" aria-label="Position de lecture">
+              <span class="la-temps la-total">--:--</span>
+            </div>
           </div>`;
         }
         return media.telechargeable
