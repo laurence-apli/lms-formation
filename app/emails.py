@@ -329,7 +329,7 @@ def email_demande_rdv_coach(
         f"<strong>{type_label}</strong> pour la formation <em>{titre_formation}</em>.</p>"
         f"<p>Un email avec le lien Resalib lui a été envoyé automatiquement.</p>"
     )
-    return _envoyer_email(EMAIL_EXPEDITEUR, sujet, corps)
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps)
 
 # ---------------------------------------------------------------------------
 # Inscription publique -- notification admin + e-mail de bienvenue a la cliente
@@ -413,3 +413,34 @@ def email_bienvenue_inscription(prenom: str, email_eleve: str) -> bool:
         '</td></tr></table></td></tr></table></body></html>'
     )
     return _envoyer_email(email_eleve, sujet, corps)
+
+
+def email_definition_mot_de_passe(destinataire: str, prenom: str, lien: str) -> bool:
+    """E-mail envoye a une nouvelle cliente dont le compte a ete cree a l'achat d'une offre :
+    lui permet de choisir son mot de passe pour acceder a la plateforme."""
+    p = _echapper_html(prenom)
+    sujet = "Créez votre mot de passe — Espace Formation"
+    corps = (
+        '<!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#F5EDD6;font-family:Georgia,serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6;padding:40px 20px;"><tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;">'
+        '<tr><td style="background:#2E2210;padding:24px 32px;text-align:center;">'
+        '<p style="margin:0;font-family:Georgia,serif;font-size:19px;font-weight:600;color:#F5EDD6;">Bienvenue !</p>'
+        '</td></tr>'
+        '<tr><td style="background:#B8922A;height:4px;"></td></tr>'
+        '<tr><td style="padding:32px;">'
+        '<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Bonjour <strong>' + p + '</strong>,</p>'
+        '<p style="margin:0 0 16px;font-size:15px;color:#2E2210;line-height:1.7;">'
+        'Votre espace de formation est prêt. Pour y accéder, choisissez votre mot de passe en cliquant sur le bouton ci-dessous. '
+        'Ce lien est valable <strong>24 heures</strong>.</p>'
+        '<p style="text-align:center;margin:28px 0;">'
+        '<a href="' + lien + '" style="display:inline-block;background:#B8922A;color:#FFFFFF;text-decoration:none;'
+        'font-family:Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
+        'padding:14px 36px;border-radius:8px;">Créer mon mot de passe</a></p>'
+        '<p style="margin:0 0 16px;font-size:12px;color:#8a7656;line-height:1.6;text-align:center;">'
+        'Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br>'
+        '<a href="' + lien + '" style="color:#B8922A;word-break:break-all;">' + lien + '</a></p>'
+        '<p style="margin:24px 0 0;font-size:11px;color:#888;">Ceci est un message automatique. Pour nous contacter : laurencemb42@gmail.com</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+    )
+    return _envoyer_email(destinataire, sujet, corps)
