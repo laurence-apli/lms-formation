@@ -330,3 +330,86 @@ def email_demande_rdv_coach(
         f"<p>Un email avec le lien Resalib lui a été envoyé automatiquement.</p>"
     )
     return _envoyer_email(EMAIL_EXPEDITEUR, sujet, corps)
+
+# ---------------------------------------------------------------------------
+# Inscription publique -- notification admin + e-mail de bienvenue a la cliente
+# ---------------------------------------------------------------------------
+from html import escape as _echapper_html
+
+
+def _maintenant_paris() -> str:
+    from datetime import datetime
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Paris")).strftime("%d/%m/%Y à %H:%M")
+    except Exception:
+        return datetime.utcnow().strftime("%d/%m/%Y à %H:%M") + " (UTC)"
+
+
+def email_nouvelle_inscription_admin(prenom: str, nom: str, email_eleve: str) -> bool:
+    """
+    Notifie Laurence qu'une cliente vient de creer son compte elle-meme
+    (auto-inscription). Envoye au moment de l'inscription, sans attendre
+    sa premiere connexion.
+    """
+    p = _echapper_html(prenom)
+    n = _echapper_html(nom)
+    e = _echapper_html(email_eleve)
+    quand = _maintenant_paris()
+    sujet = "Nouvelle inscription : " + prenom.strip() + " " + nom.strip()
+    ligne = '<td style="padding:10px 14px;color:#888;font-size:14px;width:120px;">'
+    valeur = '<td style="padding:10px 14px;font-weight:600;color:#2E2210;">'
+    corps = (
+        '<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;'
+        'background:#FDFAF5;border-radius:12px;border:1px solid #e8dfc8;">'
+        '<h2 style="color:#B8922A;margin-top:0;font-size:22px;">Nouvelle inscription</h2>'
+        '<p style="color:#2E2210;margin-bottom:20px;">'
+        'Une nouvelle cliente vient de <strong>créer son compte</strong> '
+        'sur la plateforme de formation.</p>'
+        '<table style="width:100%;border-collapse:collapse;background:#fff;'
+        'border-radius:8px;overflow:hidden;border:1px solid #e8dfc8;">'
+        '<tr style="background:#faf5e8;">' + ligne + 'Prénom</td>' + valeur + p + '</td></tr>'
+        '<tr>' + ligne + 'Nom</td>' + valeur + n + '</td></tr>'
+        '<tr style="background:#faf5e8;">' + ligne + 'E-mail</td>' + valeur + e + '</td></tr>'
+        '<tr>' + ligne + 'Inscrite le</td>' + valeur + quand + '</td></tr>'
+        '</table>'
+        '<p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #e8dfc8;padding-top:16px;">'
+        'Notification automatique — Plateforme de formation laurence-mermet-bijon.fr</p>'
+        '</div>'
+    )
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps)
+
+
+def email_bienvenue_inscription(prenom: str, email_eleve: str) -> bool:
+    """E-mail de bienvenue envoye a la cliente juste apres son auto-inscription."""
+    from .config import URL_PLATEFORME
+    p = _echapper_html(prenom)
+    e = _echapper_html(email_eleve)
+    lien = URL_PLATEFORME + "/eleve/connexion"
+    sujet = "Bienvenue sur votre espace formation"
+    corps = (
+        '<!DOCTYPE html><html lang="fr"><body style="margin:0;padding:0;background:#F5EDD6;font-family:Georgia,serif;">'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:#F5EDD6;padding:40px 20px;"><tr><td align="center">'
+        '<table width="560" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border-radius:12px;overflow:hidden;">'
+        '<tr><td style="background:#2E2210;padding:24px 32px;text-align:center;">'
+        '<p style="margin:0;font-family:Georgia,serif;font-size:19px;font-weight:600;color:#F5EDD6;">Bienvenue !</p>'
+        '</td></tr>'
+        '<tr><td style="background:#B8922A;height:4px;"></td></tr>'
+        '<tr><td style="padding:32px;">'
+        '<p style="margin:0 0 16px;font-size:15px;color:#2E2210;">Bonjour <strong>' + p + '</strong>,</p>'
+        '<p style="margin:0 0 16px;font-size:15px;color:#2E2210;line-height:1.7;">'
+        'Votre compte a bien été créé avec l\'adresse <strong>' + e + '</strong>. '
+        'Vous pouvez dès maintenant vous connecter à votre espace de formation.</p>'
+        '<p style="text-align:center;margin:28px 0;">'
+        '<a href="' + lien + '" style="display:inline-block;background:#B8922A;color:#FFFFFF;text-decoration:none;'
+        'font-family:Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:1px;text-transform:uppercase;'
+        'padding:14px 36px;border-radius:8px;">Accéder à mon espace</a></p>'
+        '<p style="margin:0 0 16px;font-size:13px;color:#7A6A56;line-height:1.7;">'
+        'Conservez cet e-mail : il confirme votre inscription. Pensez à ajouter cette adresse à vos contacts '
+        'pour ne manquer aucun message de la plateforme (et à vérifier vos courriers indésirables si besoin).</p>'
+        '<p style="margin:24px 0 0;font-size:12px;color:#8a7656;line-height:1.6;">'
+        'Si vous n\'êtes pas à l\'origine de cette inscription, vous pouvez ignorer ce message ou nous écrire : laurencemb42@gmail.com</p>'
+        '<p style="margin:24px 0 0;font-size:11px;color:#888;">Ceci est un message automatique.</p>'
+        '</td></tr></table></td></tr></table></body></html>'
+    )
+    return _envoyer_email(email_eleve, sujet, corps)

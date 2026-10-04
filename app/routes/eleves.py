@@ -40,6 +40,7 @@ def lister_eleves(session: Session = Depends(obtenir_session)):
         {
             "id": e.id, "nom": e.nom, "prenom": e.prenom, "email": e.email,
             "actif": e.actif, "nb_formations": len(e.acces_formations),
+            "cree_le": e.cree_le.isoformat() if e.cree_le else None,
         }
         for e in eleves
     ]
@@ -151,6 +152,7 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         "actif": eleve.actif,
         "mot_de_passe_actif": eleve.mot_de_passe_hash is not None,
         "compte_test": eleve.compte_test,
+        "cree_le": eleve.cree_le.isoformat() if eleve.cree_le else None,
         "acces": acces_detail,
     }
 

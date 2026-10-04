@@ -78,6 +78,15 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 .promo-input-row input { flex:1; padding:9px 12px; border:1px solid var(--sable-dk); border-radius:8px; }
 .promo-input-row button { background:var(--profond); color:var(--creme); border:none; border-radius:8px; padding:9px 16px; cursor:pointer; }
 .recap-remise { color:var(--rose); font-style:italic; }
+
+/* Popup de bienvenue apres inscription */
+.popup-fond { position:fixed; inset:0; background:rgba(46,34,16,.55); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+.popup-carte { background:#fff; border-radius:16px; max-width:460px; width:100%; padding:34px 32px; text-align:center; box-shadow:0 20px 60px rgba(46,34,16,.3); }
+.popup-icone { font-size:40px; margin-bottom:6px; }
+.popup-carte h2 { font-family:var(--serif); font-weight:600; font-size:26px; margin:0 0 12px; }
+.popup-carte p { font-size:14.5px; line-height:1.6; color:var(--doux); margin:0 0 16px; }
+.popup-important { background:var(--or-lt); border:1px solid var(--or); border-left:4px solid var(--or); border-radius:10px; padding:14px 16px; font-size:13.5px; line-height:1.6; color:var(--profond); text-align:left; margin-bottom:22px; }
+.popup-bouton { background:var(--or); color:#fff; border:none; border-radius:30px; padding:12px 34px; font-size:14px; font-weight:600; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -98,6 +107,18 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
     <h2>Récapitulatif</h2>
     <div id="recap-contenu"><p style="color:var(--leger);font-size:13px">Sélectionne une formation pour commencer</p></div>
   </div>
+</div>
+
+<div id="popup-bienvenue" class="popup-fond" style="display:none;" onclick="if (event.target === this) fermerPopupBienvenue()">
+<div class="popup-carte" role="dialog" aria-modal="true" aria-labelledby="popup-titre">
+<div class="popup-icone">✉️</div>
+<h2 id="popup-titre">Bienvenue, ton compte est créé !</h2>
+<p>Tu vas recevoir un e-mail de {{ profil.prenom }} {{ profil.nom }} dans quelques instants, à l'adresse que tu viens de renseigner.</p>
+<div class="popup-important">
+<strong>Cet e-mail est important.</strong> Il confirme ton inscription. Pense à vérifier ton dossier <strong>courriers indésirables (spam)</strong> s'il n'arrive pas dans ta boîte de réception, et si tu l'y trouves, marque-le comme « non spam » pour ne manquer aucun message.
+</div>
+<button class="popup-bouton" onclick="fermerPopupBienvenue()">J'ai compris</button>
+</div>
 </div>
 
 <script>
@@ -320,6 +341,22 @@ async function payer(tarifIds, monteeIds) {
     alert(erreur.detail || "Une erreur est survenue.");
   }
 }
+
+// Popup de bienvenue juste apres l'inscription (adresse ?bienvenue=1)
+function fermerPopupBienvenue() {
+document.getElementById('popup-bienvenue').style.display = 'none';
+}
+(function () {
+try {
+var params = new URLSearchParams(window.location.search);
+if (params.get('bienvenue') === '1') {
+document.getElementById('popup-bienvenue').style.display = 'flex';
+params.delete('bienvenue');
+var reste = params.toString();
+window.history.replaceState({}, '', window.location.pathname + (reste ? '?' + reste : ''));
+}
+} catch (e) {}
+})();
 
 chargerTout();
 </script>
