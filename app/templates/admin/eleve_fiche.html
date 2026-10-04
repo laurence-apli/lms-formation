@@ -81,6 +81,14 @@ toutesFormations = await appelApi('/admin/formations');
 render();
 }
 
+// Date d'inscription au format jj/mm/aaaa (la base stocke l'heure en UTC)
+function formaterDateInscription(iso) {
+  if (!iso) return 'non renseignée';
+  const d = new Date(iso.endsWith('Z') ? iso : iso + 'Z');
+  if (isNaN(d.getTime())) return 'non renseignée';
+  return d.toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
+}
+
 function render() {
 document.title = `${eleve.prenom} ${eleve.nom} — Administration`;
 document.getElementById('fil-ariane-nom').textContent = `${eleve.prenom} ${eleve.nom}`;
@@ -101,6 +109,7 @@ ${esc(eleve.email)}
 <span class="statut-pill ${eleve.actif ? 'statut-actif' : 'statut-inactif'}">${eleve.actif ? 'Actif' : 'Inactif'}</span>
 ${statutMdp}
 </div>
+<div class="email" style="margin-top:8px;">Date d'inscription : ${esc(formaterDateInscription(eleve.cree_le))}</div>
 `;
 
 const idsAcquis = eleve.acces.map(a => a.formation_id);
