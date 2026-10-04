@@ -31,6 +31,8 @@ from ..models import Eleve, AccesFormation, Offre
 from .boutique_models import TarifFormation, Commande, LigneCommande, calculer_panier
 from .auth import eleve_connecte
 from ..emails import email_notification_paiement_reussi, email_notification_paiement_echoue
+import logging
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MODE_SIMULATION_PAIEMENT = False # ✅ Stripe actif — paiements réels
@@ -164,7 +166,7 @@ def creer_session_paiement(
         payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
-        mode="payment", payment_method_types=payment_method_types, line_items=line_items,
+        mode="payment", line_items=line_items,
         customer_email=eleve.email,
         success_url=f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{URL_SITE_VITRINE}/pratiques.html",
@@ -226,7 +228,7 @@ def creer_session_paiement_montee_niveau(
         payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
-        mode="payment", payment_method_types=payment_method_types,
+        mode="payment",
         line_items=[{
             "price_data": {
                 "currency": "eur",

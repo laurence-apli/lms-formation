@@ -20,7 +20,7 @@ from ..models import (
     Eleve, Administrateur, TokenAuthEleve, TokenAuthAdmin,
     generer_token_reinitialisation,
 )
-from ..emails import email_reinitialisation_mot_de_passe, email_nouveau_utilisateur
+from ..emails import email_reinitialisation_mot_de_passe, email_nouveau_utilisateur, email_definition_mot_de_passe
 from ..config import URL_PLATEFORME, DUREE_VALIDITE_TOKEN_HEURES
 
 router = APIRouter()
@@ -41,6 +41,13 @@ def creer_token_premiere_connexion(session: Session, eleve: Eleve) -> str:
 
     lien = f"{URL_PLATEFORME}/eleve/definir-mot-de-passe/{token_str}"
     return lien
+
+
+def _envoyer_email_definition_mdp(eleve: Eleve, session: Session) -> bool:
+    """Envoie a une nouvelle cliente (compte cree a l'achat d'une offre) l'e-mail lui
+    permettant de choisir son mot de passe. Appelee par le webhook Stripe."""
+    lien = creer_token_premiere_connexion(session, eleve)
+    return email_definition_mot_de_passe(eleve.email, eleve.prenom, lien)
 
 
 # ---------- Connexion élève ----------
