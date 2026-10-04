@@ -30,8 +30,8 @@
   <span id="compteur" style="font-size:12px; color:var(--grey); margin-left:auto;"></span>
 </div>
 <table class="eleves-table">
-  <thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Accès</th><th></th></tr></thead>
-  <tbody id="corps-table"><tr><td colspan="5" style="text-align:center; color:var(--grey); padding:30px;">Chargement…</td></tr></tbody>
+  <thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Accès</th><th>Inscription</th><th></th></tr></thead>
+  <tbody id="corps-table"><tr><td colspan="6" style="text-align:center; color:var(--grey); padding:30px;">Chargement…</td></tr></tbody>
 </table>
 
 {% endblock %}
@@ -59,7 +59,7 @@ function appliquerFiltre() {
   document.getElementById('compteur').textContent = `${filtres.length} élève(s)`;
   const corps = document.getElementById('corps-table');
   if (filtres.length === 0) {
-    corps.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--grey); padding:30px;">Aucun élève ne correspond à cette recherche.</td></tr>`;
+    corps.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--grey); padding:30px;">Aucun élève ne correspond à cette recherche.</td></tr>`;
     return;
   }
   corps.innerHTML = filtres.map(e => `
@@ -68,9 +68,18 @@ function appliquerFiltre() {
       <td>${esc(e.email)}</td>
       <td><span class="statut-pill ${e.actif ? 'statut-actif' : 'statut-inactif'}">${e.actif ? 'Actif' : 'Inactif'}</span></td>
       <td>${e.nb_formations} formation${e.nb_formations !== 1 ? 's' : ''}</td>
+<td>${esc(formaterDate(e.cree_le) || '—')}</td>
       <td><a class="btn btn-sm" href="/admin/page/eleves/${e.id}">Voir la fiche</a></td>
     </tr>
   `).join('');
+}
+
+// Date d'inscription au format jj/mm/aaaa (la base stocke l'heure en UTC)
+function formaterDate(iso) {
+if (!iso) return '';
+const d = new Date(/(Z|[+-]\d\d:?\d\d)$/.test(iso) ? iso : iso + 'Z');
+if (isNaN(d.getTime())) return '';
+return d.toLocaleDateString('fr-FR');
 }
 
 function esc(s) {
@@ -142,7 +151,7 @@ function exporterCsv() {
     const s = String(v == null ? '' : v);
     return /["\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
-  const lignes = [['Nom','Prénom','Email','Statut'], ...tousLesEleves.map(e => [e.nom, e.prenom, e.email, e.actif ? 'Actif' : 'Inactif'])];
+  const lignes = [['Nom','Prénom','Email','Statut',"Date d'inscription"], ...tousLesEleves.map(e => [e.nom, e.prenom, e.email, e.actif ? 'Actif' : 'Inactif', formaterDate(e.cree_le)])];
   const csv = lignes.map(l => l.map(echapper).join(SEP)).join('\r\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
