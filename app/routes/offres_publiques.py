@@ -112,7 +112,6 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
     # Session Stripe Checkout
     url_base = URL_PLATEFORME.rstrip("/")
     checkout = stripe.checkout.Session.create(
-        payment_method_types=["card", "klarna"],
         line_items=[{
             "price_data": {
                 "currency": "eur",
