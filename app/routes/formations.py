@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
 from ..models import (
-    Formation, Module, Chapitre, Media, JoursAccompagnementNiveau,
+    Formation, Module, Chapitre, Media, MediaModule, MediaFormation, JoursAccompagnementNiveau,
     dupliquer_chapitre as dupliquer_chapitre_modele,
     dupliquer_formation as dupliquer_formation_modele,
     deplacer_chapitre_vers_module as deplacer_chapitre_modele,
@@ -40,6 +40,11 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
         "actif": formation.actif, "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage,
         "presentation_html": formation.presentation_html or "",
+        "medias": [
+            {"id": med.id, "type": med.type, "titre": med.titre,
+             "url": med.url, "telechargeable": med.telechargeable}
+            for med in formation.medias
+        ],
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
         "jours_visio_par_niveau": {j.niveau: j.jours_visio for j in formation.jours_par_niveau},
         "lien_visio": formation.lien_visio or "",
@@ -47,6 +52,11 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
             {
                 "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
                 "presentation_html": m.presentation_html or "",
+                "medias": [
+                    {"id": med.id, "type": med.type, "titre": med.titre,
+                     "url": med.url, "telechargeable": med.telechargeable}
+                    for med in m.medias
+                ],
                 "chapitres": [
                     {
                         "id": c.id, "titre": c.titre, "niveau_requis": c.niveau_requis,
@@ -377,6 +387,136 @@ def supprimer_media(media_id: int, session: Session = Depends(obtenir_session)):
     media = session.get(Media, media_id)
     if media is None:
         raise HTTPException(status_code=404, detail="Média introuvable.")
+    session.delete(media)
+    session.commit()
+    return {"ok": True}
+
+
+# ---------- Médias module ----------
+
+@router.post("/modules/{module_id}/medias")
+def ajouter_media_module(
+    module_id: int, type: str = Form(...), titre: str = Form(...),
+    url: str = Form(...), telechargeable: bool = Form(False),
+    session: Session = Depends(obtenir_session),
+):
+    if type not in ("pdf", "audio", "lien"):
+        raise HTTPException(status_code=400, detail="Type de média invalide.")
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    media = MediaModule(module_id=module_id, type=type, titre=titre, url=url, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.post("/modules/{module_id}/medias/upload")
+async def uploader_media_module(
+    module_id: int, type: str = Form(...), titre: str = Form(...),
+    telechargeable: bool = Form(False), fichier: UploadFile = File(...),
+    session: Session = Depends(obtenir_session),
+):
+    if type not in ("pdf", "audio"):
+        raise HTTPException(status_code=400, detail="Ce type de media ne s'importe pas par fichier.")
+    module = session.get(Module, module_id)
+    if module is None:
+        raise HTTPException(status_code=404, detail="Module introuvable.")
+    extension = "." + fichier.filename.rsplit(".", 1)[-1].lower() if "." in fichier.filename else ""
+    if extension not in EXTENSIONS_AUTORISEES.get(type, set()):
+        attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
+        raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
+    contenu = await fichier.read()
+    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
+        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (25 Mo maximum).")
+    mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
+    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+    media = MediaModule(module_id=module_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.put("/medias-module/{media_id}/telechargeable")
+def toggle_media_module_telechargeable(media_id: int, telechargeable: bool = Form(...), session: Session = Depends(obtenir_session)):
+    media = session.get(MediaModule, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media introuvable.")
+    media.telechargeable = telechargeable
+    session.commit()
+    return {"ok": True}
+
+
+@router.delete("/medias-module/{media_id}")
+def supprimer_media_module(media_id: int, session: Session = Depends(obtenir_session)):
+    media = session.get(MediaModule, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media introuvable.")
+    session.delete(media)
+    session.commit()
+    return {"ok": True}
+
+
+# ---------- Médias formation ----------
+
+@router.post("/formations/{formation_id}/medias")
+def ajouter_media_formation(
+    formation_id: int, type: str = Form(...), titre: str = Form(...),
+    url: str = Form(...), telechargeable: bool = Form(False),
+    session: Session = Depends(obtenir_session),
+):
+    if type not in ("pdf", "audio", "lien"):
+        raise HTTPException(status_code=400, detail="Type de media invalide.")
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    media = MediaFormation(formation_id=formation_id, type=type, titre=titre, url=url, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.post("/formations/{formation_id}/medias/upload")
+async def uploader_media_formation(
+    formation_id: int, type: str = Form(...), titre: str = Form(...),
+    telechargeable: bool = Form(False), fichier: UploadFile = File(...),
+    session: Session = Depends(obtenir_session),
+):
+    if type not in ("pdf", "audio"):
+        raise HTTPException(status_code=400, detail="Ce type de media ne s'importe pas par fichier.")
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    extension = "." + fichier.filename.rsplit(".", 1)[-1].lower() if "." in fichier.filename else ""
+    if extension not in EXTENSIONS_AUTORISEES.get(type, set()):
+        attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
+        raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
+    contenu = await fichier.read()
+    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
+        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (25 Mo maximum).")
+    mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
+    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+    media = MediaFormation(formation_id=formation_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.put("/medias-formation/{media_id}/telechargeable")
+def toggle_media_formation_telechargeable(media_id: int, telechargeable: bool = Form(...), session: Session = Depends(obtenir_session)):
+    media = session.get(MediaFormation, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media introuvable.")
+    media.telechargeable = telechargeable
+    session.commit()
+    return {"ok": True}
+
+
+@router.delete("/medias-formation/{media_id}")
+def supprimer_media_formation(media_id: int, session: Session = Depends(obtenir_session)):
+    media = session.get(MediaFormation, media_id)
+    if media is None:
+        raise HTTPException(status_code=404, detail="Media introuvable.")
     session.delete(media)
     session.commit()
     return {"ok": True}
