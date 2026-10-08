@@ -149,7 +149,12 @@ function renderContenu() {
       ${(function(){const h=f.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('formation', FORMATION_ID, f.titre)}
       ${zoneImportHtml('formation', FORMATION_ID, f.fichier_recu_nom)}
-      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
+      <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
+<div class="medias-liste">
+${renderMediasListe(f.medias || [], 'formation')}
+</div>
+<button class="btn btn-sm" style="margin-top:6px;" onclick="ouvrirModalAjouterMediaFormation()">+ Ajouter un média</button>
+<div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
         <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
         <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
         <button class="btn" onclick="toggleActifFormation()">${f.actif ? 'Désactiver' : 'Activer'} la formation</button>
@@ -164,7 +169,12 @@ function renderContenu() {
       ${(function(){const h=m.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
       ${zoneImport('module', m.id, m.titre)}
       ${zoneImportHtml('module', m.id, m.fichier_recu_nom)}
-      <div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
+      <label style="display:block; margin-top:22px; font-size:12px; color:var(--grey); font-weight:600;">Médias complémentaires</label>
+<div class="medias-liste">
+${renderMediasListe(m.medias || [], 'module')}
+</div>
+<button class="btn btn-sm" style="margin-top:6px;" onclick="ouvrirModalAjouterMediaModule(${m.id})">+ Ajouter un média</button>
+<div class="modal-actions" style="justify-content:flex-start; margin-top:18px;">
         <button class="btn" onclick="ouvrirModalEditerModule(${m.id})">✎ Modifier le module</button>
         <button class="btn btn-danger-outline" onclick="supprimerModule(${m.id})">Supprimer le module</button>
       </div>`;
@@ -640,6 +650,97 @@ async function toggleMediaTelechargeable(mediaId, valeur) {
 
 async function supprimerMedia(mediaId) {
   await appelApi(`/admin/medias/${mediaId}`, { method: 'DELETE' });
+  afficherToast('Média supprimé'); await charger();
+}
+
+
+// --------- Médias Formation et Module ---------
+function renderMediasListe(medias, contexte) {
+  if (!medias || !medias.length) return '<div class="helper-text">Aucun média complémentaire.</div>';
+  const prefixe = contexte;
+  return medias.map(function(media) {
+    const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || media.type;
+    const majPref = prefixe[0].toUpperCase() + prefixe.slice(1);
+    return '<div class="media-row">' +
+      '<span>' + icone + '</span>' +
+      '<span style="flex:1;">' + esc(media.titre) + '</span>' +
+      '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--grey);">' +
+      '<input type="checkbox"' + (media.telechargeable ? ' checked' : '') +
+      ' onchange="toggleMedia' + majPref + 'Telechargeable(' + media.id + ', this.checked)"> téléchargeable</label>' +
+      '<button onclick="supprimerMedia' + majPref + '(' + media.id + ')">🗑</button></div>';
+  }).join('');
+}
+
+function ouvrirModalAjouterMediaFormation() { afficherModalMediaExt('formation', FORMATION_ID); }
+function ouvrirModalAjouterMediaModule(moduleId) { afficherModalMediaExt('module', moduleId); }
+
+function afficherModalMediaExt(contexte, id) {
+  afficherOverlay(
+    '<div class="modal"><h3>Ajouter un média</h3><div id="zone-erreur-modal"></div>' +
+    '<label>Type</label>' +
+    '<select id="input-media-type" onchange="majFormulaireMedia()">' +
+    '<option value="pdf">📄 PDF</option><option value="audio">🎧 Audio</option><option value="lien">🔗 Lien externe</option>' +
+    '</select>' +
+    '<label>Titre affiché à l\'élève</label><input type="text" id="input-media-titre">' +
+    '<div id="zone-source-media"></div>' +
+    '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;">' +
+    '<input type="checkbox" id="input-media-telechargeable" style="width:auto;"> Téléchargeable par l\'élève</label>' +
+    '<div class="modal-actions">' +
+    '<button class="btn" onclick="fermerModal()">Annuler</button>' +
+    '<button class="btn btn-primary" id="btn-ajouter-media-ext" onclick="ajouterMediaExt(\''+contexte+'\', '+id+')">Ajouter</button>' +
+    '</div></div>'
+  );
+  majFormulaireMedia();
+}
+
+async function ajouterMediaExt(contexte, id) {
+  const titre = document.getElementById('input-media-titre').value.trim();
+  if (!titre) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Le titre est requis.</div>'; return; }
+  const type = document.getElementById('input-media-type').value;
+  const telechargeable = document.getElementById('input-media-telechargeable').checked;
+  const prefixe = contexte === 'formation' ? 'formations' : 'modules';
+  try {
+    if (type === 'lien') {
+      const data = new FormData();
+      data.append('type', type); data.append('titre', titre);
+      data.append('url', document.getElementById('input-media-url').value || '#');
+      data.append('telechargeable', telechargeable);
+      await appelApi('/admin/' + prefixe + '/' + id + '/medias', { method: 'POST', body: data });
+    } else {
+      if (!fichierMediaEnCours) { document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">Merci de déposer un fichier.</div>'; return; }
+      const data = new FormData();
+      data.append('type', type); data.append('titre', titre);
+      data.append('telechargeable', telechargeable);
+      data.append('fichier', fichierMediaEnCours);
+      const bouton = document.getElementById('btn-ajouter-media-ext');
+      bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
+      await appelApi('/admin/' + prefixe + '/' + id + '/medias/upload', { method: 'POST', body: data });
+    }
+    fichierMediaEnCours = null;
+    fermerModal(); afficherToast('Média ajouté'); await charger();
+  } catch(e) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+    const bouton = document.getElementById('btn-ajouter-media-ext');
+    if (bouton) { bouton.textContent = 'Ajouter'; bouton.disabled = false; }
+  }
+}
+
+async function toggleFormationTelechargeable(mediaId, valeur) {
+  const data = new FormData(); data.append('telechargeable', valeur);
+  await appelApi('/admin/medias-formation/' + mediaId + '/telechargeable', { method: 'PUT', body: data });
+  await charger();
+}
+async function supprimerMediaFormation(mediaId) {
+  await appelApi('/admin/medias-formation/' + mediaId, { method: 'DELETE' });
+  afficherToast('Média supprimé'); await charger();
+}
+async function toggleModuleTelechargeable(mediaId, valeur) {
+  const data = new FormData(); data.append('telechargeable', valeur);
+  await appelApi('/admin/medias-module/' + mediaId + '/telechargeable', { method: 'PUT', body: data });
+  await charger();
+}
+async function supprimerMediaModule(mediaId) {
+  await appelApi('/admin/medias-module/' + mediaId, { method: 'DELETE' });
   afficherToast('Média supprimé'); await charger();
 }
 
