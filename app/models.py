@@ -46,6 +46,7 @@ class Formation(Base):
 
     modules = relationship("Module", back_populates="formation", order_by="Module.ordre",
                            cascade="all, delete-orphan")
+    medias = relationship("MediaFormation", back_populates="formation", cascade="all, delete-orphan")
     acces_eleves = relationship("AccesFormation", back_populates="formation")
     jours_par_niveau = relationship("JoursAccompagnementNiveau", back_populates="formation",
                                    cascade="all, delete-orphan")
@@ -88,6 +89,7 @@ class Module(Base):
     formation = relationship("Formation", back_populates="modules")
     chapitres = relationship("Chapitre", back_populates="module", order_by="Chapitre.ordre",
                              cascade="all, delete-orphan")
+    medias = relationship("MediaModule", back_populates="module", cascade="all, delete-orphan")
 
 class Chapitre(Base):
     __tablename__ = "chapitres"
@@ -123,6 +125,36 @@ class Media(Base):
     telechargeable = Column(Boolean, default=False)
 
     chapitre = relationship("Chapitre", back_populates="medias")
+
+class MediaModule(Base):
+    """Media attache a un module (PDF, audio, lien externe).
+    Table separee de medias pour ne pas toucher aux donnees existantes."""
+    __tablename__ = "medias_module"
+
+    id = Column(Integer, primary_key=True)
+    module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
+    type = Column(String(20), nullable=False)
+    titre = Column(String(200))
+    url = Column(Text, nullable=False)
+    telechargeable = Column(Boolean, default=False)
+
+    module = relationship("Module", back_populates="medias")
+
+
+class MediaFormation(Base):
+    """Media attache a une formation (PDF, audio, lien externe).
+    Table separee de medias pour ne pas toucher aux donnees existantes."""
+    __tablename__ = "medias_formation"
+
+    id = Column(Integer, primary_key=True)
+    formation_id = Column(Integer, ForeignKey("formations.id"), nullable=False)
+    type = Column(String(20), nullable=False)
+    titre = Column(String(200))
+    url = Column(Text, nullable=False)
+    telechargeable = Column(Boolean, default=False)
+
+    formation = relationship("Formation", back_populates="medias")
+
 
 class Eleve(Base):
     __tablename__ = "eleves"
