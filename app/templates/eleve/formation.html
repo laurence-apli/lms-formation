@@ -415,6 +415,43 @@ document.addEventListener('input', function (e) {
 
 const FORMATION_ID = {{ formation.id }};
 {% raw %}
+
+function rendreMediasEleve(medias) {
+  if (!medias || !medias.length) return '';
+  return medias.map(function(media) {
+    var icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
+    var nomFichier = (media.titre || 'fichier') + ({pdf:'.pdf', audio:'.mp3'}[media.type] || '');
+    if (media.type === 'lien') {
+      var url = media.url || '';
+      var ytMatch = (/(?:youtube(?:-nocookie)?\.com|youtu\.be)\//).test(url) && url.match(/(?:[?&]v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+      if (ytMatch) {
+        var vid = ytMatch[1];
+        return '<div class="media-eleve-row media-video-embed"><div class="audio-player-header">🎬 ' + media.titre + '</div>' +
+          '<div class="lv" data-yt="' + vid + '" tabindex="0"><div class="lv-cadre"><div class="lv-iframe"></div></div>' +
+          '<div class="lv-voile"></div><div class="lv-poster" style="background-image:url('https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg')">' +
+          '<button type="button" class="lv-gros-play" aria-label="Lire la vidéo">' + LA_ICONE_PLAY + '</button></div>' +
+          '<div class="lv-ctrl"><button type="button" class="lv-btn lv-play" aria-label="Lecture">' + LA_ICONE_PLAY + '</button>' +
+          '<span class="lv-temps lv-courant">0:00</span><input type="range" class="lv-barre" min="0" max="1000" step="1" value="0">' +
+          '<span class="lv-temps lv-total">--:--</span>' +
+          '<button type="button" class="lv-btn lv-son" aria-label="Couper le son">' + LV_ICONE_SON + '</button>' +
+          '<button type="button" class="lv-btn lv-plein" aria-label="Plein écran">' + LV_ICONE_PLEIN + '</button></div></div></div>';
+      }
+      return '<a class="media-eleve-row" href="' + url + '" target="_blank" rel="noopener">🔗 ' + media.titre + ' <span class="media-eleve-action">Ouvrir →</span></a>';
+    }
+    if (media.type === 'audio') {
+      return '<div class="media-eleve-row media-audio-player"><div class="audio-player-header">' + icone + ' ' + media.titre + '</div>' +
+        '<div class="lecteur-audio"><audio preload="metadata" controlsList="nodownload" src="' + media.url + '"></audio>' +
+        '<button type="button" class="la-play" aria-label="Lecture">' + LA_ICONE_PLAY + '</button>' +
+        '<span class="la-temps la-courant">0:00</span>' +
+        '<input type="range" class="la-barre" min="0" max="1000" step="1" value="0" aria-label="Position de lecture">' +
+        '<span class="la-temps la-total">--:--</span></div></div>';
+    }
+    return media.telechargeable
+      ? '<a class="media-eleve-row" href="' + media.url + '" download="' + nomFichier + '" target="_blank">' + icone + ' ' + media.titre + ' <span class="media-eleve-action">Télécharger</span></a>'
+      : '<a class="media-eleve-row" href="' + media.url + '" target="_blank" rel="noopener">' + icone + ' ' + media.titre + ' <span class="media-eleve-action">Ouvrir →</span></a>';
+  }).join('');
+}
+
 let noeudActif = { type: 'formation' };
 let donneesFormation = null;
 const _chapCache = {}; // cache contenu chapitres
@@ -543,6 +580,11 @@ async function afficherContenu() {
     const _fEstPage = _fHtml && (_fHtml.trimStart().toLowerCase().startsWith('<!doctype') || _fHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${donneesFormation.titre}</h1>` +
       (_fEstPage ? '<div id="slot-iframe-html"></div>' : (_fHtml ? `<p>${_fHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
+    
+    if (donneesFormation.medias && donneesFormation.medias.length) {
+      zone.innerHTML += '<div class="medias-eleve">' + rendreMediasEleve(donneesFormation.medias) + '</div>';
+      initVideosYT(zone);
+    }
     if (_fEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _fHtml.replace(/<\/head>/i,'<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'module') {
     const resp = await fetch(`/api/eleve/modules/${noeudActif.moduleId}`);
@@ -552,6 +594,11 @@ async function afficherContenu() {
     const _mEstPage = _mHtml && (_mHtml.trimStart().toLowerCase().startsWith('<!doctype') || _mHtml.trimStart().toLowerCase().startsWith('<html'));
     zone.innerHTML = `<h1 class="titre-page">${m.titre}</h1>` +
       (_mEstPage ? '<div id="slot-iframe-html"></div>' : (_mHtml ? `<p>${_mHtml}</p>` : `<p style="color:var(--grey);font-style:italic;">Aucune présentation pour l'instant.</p>`));
+    
+    if (m.medias && m.medias.length) {
+      zone.innerHTML += '<div class="medias-eleve">' + rendreMediasEleve(m.medias) + '</div>';
+      initVideosYT(zone);
+    }
     if (_mEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _mHtml.replace(/<\/head>/i,'<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'chapitre') {
     const resp = await fetch(`/api/eleve/chapitres/${noeudActif.chapId}`);
@@ -630,7 +677,7 @@ async function afficherContenu() {
     }
     const _cHtml = c.contenu_html;
     const _cEstPage = _cHtml && (_cHtml.trimStart().toLowerCase().startsWith('<!doctype') || _cHtml.trimStart().toLowerCase().startsWith('<html'));
-    const _cContenuBlock = _cEstPage ? '<div id="slot-iframe-html"></div>' : (_cHtml || '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>');
+    const _cContenuBlock = _cEstPage ? '<div id="slot-iframe-html"></div>' : (_cHtml || (c.medias && c.medias.length ? '' : '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>') : '');
     zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${_cContenuBlock}${mediasHtml}` +
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
