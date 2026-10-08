@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from ..database import obtenir_session
 from ..models import (
-    Eleve, Formation, Module, Chapitre, AccesFormation,
+    Eleve, Formation, Module, Chapitre, AccesFormation, MediaModule, MediaFormation,
     sequence_chapitres, chapitre_dans_le_niveau, chapitre_est_accessible,
     progression_pourcentage, valider_chapitre as valider_chapitre_modele,
     SeanceAccompagnement,
@@ -118,6 +118,10 @@ def detail_formation(
         } if jours_visio_total > 0 else None,
         'lien_resalib': eleve.lien_resalib,
         'lien_resalib_visio': eleve.lien_resalib_visio,
+    'medias': [
+        {'id': m.id, 'type': m.type, 'titre': m.titre, 'url': m.url, 'telechargeable': m.telechargeable}
+        for m in formation.medias
+    ],
     }
 
 
@@ -134,7 +138,8 @@ def detail_module(
     if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
         raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accès.")
 
-    return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html}
+    return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html,
+            "medias": [{"id": m.id, "type": m.type, "titre": m.titre, "url": m.url, "telechargeable": m.telechargeable} for m in module.medias]}
 
 
 @router.get("/chapitres/{chapitre_id}")
