@@ -105,8 +105,7 @@ def modifier_formation(
 
     formation.titre = titre
     formation.couleur = couleur
-    if presentation_html:
-        formation.presentation_html = presentation_html
+    formation.presentation_html = presentation_html or None
     formation.ordre_affichage = ordre_affichage
     formation.lien_visio = lien_visio or None
 
@@ -119,6 +118,18 @@ def modifier_formation(
 
     session.commit()
     return {"id": formation.id, "titre": formation.titre}
+
+@router.post("/formations/{formation_id}/effacer-html")
+def effacer_html_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    """Vide le champ presentation_html d'une formation (retirer un import HTML)."""
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    formation.presentation_html = None
+    formation.fichier_recu_nom = None
+    session.commit()
+    return {"ok": True}
+
 
 @router.put("/formations/{formation_id}/jours-accompagnement")
 async def definir_jours_accompagnement(formation_id: int, request: Request, session: Session = Depends(obtenir_session)):
