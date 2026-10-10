@@ -428,7 +428,7 @@ function rendreMediasEleve(medias) {
         var vid = ytMatch[1];
         return '<div class="media-eleve-row media-video-embed"><div class="audio-player-header">🎬 ' + media.titre + '</div>' +
           '<div class="lv" data-yt="' + vid + '" tabindex="0"><div class="lv-cadre"><div class="lv-iframe"></div></div>' +
-          '<div class="lv-voile"></div><div class="lv-poster" style="background-image:url(\"https://i.ytimg.com/vi/" + vid + "/hqdefault.jpg\")">' +
+          '<div class="lv-voile"></div><div class="lv-poster" style="background-image:url(https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg)">' +
           '<button type="button" class="lv-gros-play" aria-label="Lire la vidéo">' + LA_ICONE_PLAY + '</button></div>' +
           '<div class="lv-ctrl"><button type="button" class="lv-btn lv-play" aria-label="Lecture">' + LA_ICONE_PLAY + '</button>' +
           '<span class="lv-temps lv-courant">0:00</span><input type="range" class="lv-barre" min="0" max="1000" step="1" value="0">' +
@@ -677,7 +677,7 @@ async function afficherContenu() {
     }
     const _cHtml = c.contenu_html;
     const _cEstPage = _cHtml && (_cHtml.trimStart().toLowerCase().startsWith('<!doctype') || _cHtml.trimStart().toLowerCase().startsWith('<html'));
-    const _cContenuBlock = _cEstPage ? '<div id="slot-iframe-html"></div>' : (_cHtml || (c.medias && c.medias.length ? '' : '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>') : '');
+    const _cContenuBlock = _cEstPage ? '<div id="slot-iframe-html"></div>' : (_cHtml || (c.medias && c.medias.length ? '' : '<p style="color:var(--grey);font-style:italic;">Le contenu de ce chapitre n&#39;a pas encore été importé.</p>'));
     zone.innerHTML = `<h1 class="titre-page">${c.titre}</h1>${_cContenuBlock}${mediasHtml}` +
       (c.valide
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
