@@ -344,7 +344,8 @@ def ajouter_media(
     session.commit()
     return {"id": media.id}
 
-TAILLE_MAX_MEDIA_OCTETS = 25 * 1024 * 1024
+TAILLE_MAX_MEDIA_MO = 30
+TAILLE_MAX_MEDIA_OCTETS = TAILLE_MAX_MEDIA_MO * 1024 * 1024
 
 EXTENSIONS_AUTORISEES = {
     "pdf": {".pdf"},
@@ -374,7 +375,7 @@ async def uploader_media_fichier(
 
     contenu = await fichier.read()
     if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (8 Mo maximum).")
+        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
 
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
     data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
@@ -439,7 +440,7 @@ async def uploader_media_module(
         raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
     contenu = await fichier.read()
     if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (25 Mo maximum).")
+        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
     data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
     media = MediaModule(module_id=module_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
@@ -504,7 +505,7 @@ async def uploader_media_formation(
         raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
     contenu = await fichier.read()
     if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail="Le fichier est trop volumineux (25 Mo maximum).")
+        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
     data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
     media = MediaFormation(formation_id=formation_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
