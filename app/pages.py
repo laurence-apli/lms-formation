@@ -213,7 +213,7 @@ def page_catalogue(request: Request, session: Session = Depends(obtenir_session)
 
 
 @router.get("/reveil", response_class=HTMLResponse)
-def page_reveil(request: Request, dest: str = "eleve"):
+def page_reveil(request: Request, dest: str = "eleve", formation: str = "", formule: str = ""):
     destinations = {
         "eleve": "/eleve/connexion",
         "connexion": "/eleve/connexion",
@@ -221,6 +221,13 @@ def page_reveil(request: Request, dest: str = "eleve"):
         "admin": "/admin/connexion",
     }
     url_dest = destinations.get(dest, "/eleve/connexion")
+    # Lien depuis le site : on transmet la formation (et la formule) choisie
+    # à la page d'inscription. Valeurs filtrées : chiffres / lettres uniquement.
+    if dest == "inscription" and formation.isdigit():
+        url_dest += "?formation=" + formation
+        formule_sure = "".join(c for c in formule if c.isalnum())[:30]
+        if formule_sure:
+            url_dest += "&formule=" + formule_sure
     html = f"""<!DOCTYPE html>
 <html lang="fr">
 <head>
