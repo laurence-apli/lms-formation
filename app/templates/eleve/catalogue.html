@@ -358,7 +358,35 @@ window.history.replaceState({}, '', window.location.pathname + (reste ? '?' + re
 } catch (e) {}
 })();
 
-chargerTout();
+// Présélection depuis le site vitrine : ?formation=<id>&formule=<mot de la formule>
+function preselectionDepuisSite() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('formation');
+    if (!id || !catalogue) return;
+    const f = catalogue.find(x => String(x.id) === String(id));
+    if (!f || !f.tarifs.length) return;
+    const norm = s => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const voulu = norm(params.get('formule'));
+    let el = null;
+    if (f.tarifs.length === 1) {
+      const check = document.getElementById('check-' + f.tarifs[0].id);
+      el = check ? check.closest('.formation-bloc') : null;
+      if (el && !selection[f.tarifs[0].id]) el.click();
+    } else {
+      const t = (voulu && f.tarifs.find(t => norm(t.nom_option).includes(voulu))) || null;
+      if (t) { el = document.getElementById('opt-' + t.id); if (el) el.click(); }
+      else { const o = document.getElementById('opt-' + f.tarifs[0].id); el = o ? o.closest('.formation-bloc') : null; }
+    }
+    if (el) {
+      const bloc = el.closest('.formation-bloc') || el;
+      bloc.style.boxShadow = '0 0 0 2px var(--gold, #B8922A)';
+      setTimeout(() => bloc.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+    }
+  } catch (e) {}
+}
+
+chargerTout().then(preselectionDepuisSite);
 </script>
 </body>
 </html>

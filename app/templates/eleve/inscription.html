@@ -28,6 +28,7 @@ input { width:100%; padding:11px 14px; border:1px solid var(--sable-dk); border-
   <a class="retour" href="/portail">← Retour</a>
   <h1>Crée ton compte</h1>
   <p class="sous">Accède à toutes les formations en quelques secondes</p>
+  <p id="choix-site" style="display:none;background:#FBF4E4;border:1px solid #E8D3A2;border-radius:10px;padding:10px 14px;font-size:13px;color:#6B5320;text-align:center;margin:0 0 6px"></p>
 
   <form id="form-inscription">
     <label>Prénom</label>
@@ -41,9 +42,34 @@ input { width:100%; padding:11px 14px; border:1px solid var(--sable-dk); border-
     <div class="erreur" id="zone-erreur"></div>
     <button class="btn-valider" type="submit">Créer mon compte</button>
   </form>
+  <p style="text-align:center;margin-top:18px;font-size:13px;color:var(--doux)">Tu as déjà un compte ? <a id="lien-deja-compte" href="/eleve/connexion" style="color:var(--or);font-weight:600">Me connecter</a></p>
 </div>
 
 <script>
+// Lien depuis le site vitrine : ?formation=<id>&formule=<texte> -> transmis au catalogue
+const PARAMS_SITE = new URLSearchParams(window.location.search);
+function suiteChoix(sep) {
+  const p = new URLSearchParams();
+  ['formation', 'formule'].forEach(k => { if (PARAMS_SITE.get(k)) p.set(k, PARAMS_SITE.get(k)); });
+  const q = p.toString();
+  return q ? sep + q : '';
+}
+(async function annoncerChoix() {
+  const id = PARAMS_SITE.get('formation');
+  // Lien "J'ai déjà un compte" : garde le choix après connexion
+  const lienConnexion = document.getElementById('lien-deja-compte');
+  if (lienConnexion && id) lienConnexion.href = '/eleve/connexion?suite=' + encodeURIComponent('/eleve/catalogue?' + suiteChoix('').replace(/^&/, ''));
+  if (!id) return;
+  try {
+    const cat = await fetch('/public/catalogue').then(r => r.json());
+    const f = cat.find(x => String(x.id) === String(id));
+    if (!f) return;
+    const zone = document.getElementById('choix-site');
+    zone.textContent = 'Ta formation : « ' + f.titre + ' ». Crée ton compte, elle sera déjà sélectionnée à l\'étape suivante.';
+    zone.style.display = 'block';
+  } catch (e) {}
+})();
+
 document.getElementById('form-inscription').addEventListener('submit', async function(e) {
   e.preventDefault();
   const data = new FormData();
@@ -54,7 +80,7 @@ document.getElementById('form-inscription').addEventListener('submit', async fun
 
   const resp = await fetch('/eleve/inscription', { method: 'POST', body: data });
   if (resp.redirected) {
-    window.location.href = resp.url;
+    window.location.href = resp.url + suiteChoix('&');
   } else {
     const erreur = await resp.json();
     const zone = document.getElementById('zone-erreur');

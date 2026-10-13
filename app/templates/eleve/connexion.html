@@ -111,16 +111,18 @@ document.getElementById('form-connexion').addEventListener('submit', async funct
       redirect: 'follow'
     });
 
+    const suite = new URLSearchParams(window.location.search).get('suite') || '';
+    const suiteSure = /^\/eleve\/[A-Za-z0-9_\-\/?=&%.]*$/.test(suite) ? suite : '';
     if (resp.redirected) {
       afficherInfo('Connexion réussie, redirection…');
-      window.location.href = resp.url;
+      window.location.href = suiteSure || resp.url;
       return;
     }
 
     if (resp.ok) {
       // Connexion OK mais pas de redirection explicite — on redirige manuellement
       afficherInfo('Connexion réussie, redirection…');
-      window.location.href = '/eleve/tableau-de-bord';
+      window.location.href = suiteSure || '/eleve/tableau-de-bord';
       return;
     }
 
