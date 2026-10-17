@@ -31,9 +31,17 @@ def url_media(nature: str, media) -> str:
     return media.url  # lien externe : quelques octets
 
 
+def poids_octets(media):
+    """Poids réel approximatif du fichier (base64 -> x 3/4). None pour un lien externe."""
+    if not media.est_integre or not media.taille_texte:
+        return None
+    return int(media.taille_texte * 3 / 4)
+
+
 def media_json(nature: str, media) -> dict:
     return {"id": media.id, "type": media.type, "titre": media.titre,
-            "url": url_media(nature, media), "telechargeable": media.telechargeable}
+            "url": url_media(nature, media), "telechargeable": media.telechargeable,
+            "poids_octets": poids_octets(media)}
 
 
 def _formation_du_media(nature: str, media):

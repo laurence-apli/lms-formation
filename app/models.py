@@ -128,6 +128,8 @@ class Media(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
+    taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)
 
     chapitre = relationship("Chapitre", back_populates="medias")
@@ -147,6 +149,8 @@ class MediaModule(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
+    taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)
 
     module = relationship("Module", back_populates="medias")
@@ -167,6 +171,8 @@ class MediaFormation(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
+    taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)
 
     formation = relationship("Formation", back_populates="medias")

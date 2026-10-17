@@ -202,6 +202,7 @@ ${renderMediasListe(m.medias || [], 'module')}
               <input type="checkbox" ${media.telechargeable ? 'checked' : ''} onchange="toggleMediaTelechargeable(${media.id}, this.checked)">
               téléchargeable
             </label>
+            ${badgePoids(media)}
             <button onclick="supprimerMedia(${media.id})">🗑</button>
           </div>
         `).join('') || '<div class="helper-text">Aucun média complémentaire.</div>'}
@@ -655,6 +656,18 @@ async function supprimerMedia(mediaId) {
 
 
 // --------- Médias Formation et Module ---------
+// Poids du fichier stocké sur la plateforme (vide pour un lien externe).
+// Vert < 5 Mo, orange < 15 Mo, rouge au-delà : les gros fichiers alourdissent la plateforme.
+function badgePoids(media) {
+  const o = media.poids_octets;
+  if (!o) return '';
+  const mo = o / (1024 * 1024);
+  const texte = mo < 1 ? Math.max(1, Math.round(o / 1024)) + ' Ko' : mo.toFixed(1).replace('.', ',') + ' Mo';
+  const couleur = mo < 5 ? '#2e7d4f' : (mo < 15 ? '#b8730a' : '#c0392b');
+  return '<span title="Poids du fichier sur la plateforme" style="font-size:11px;font-weight:600;color:' + couleur +
+    ';border:1px solid ' + couleur + ';border-radius:10px;padding:1px 8px;white-space:nowrap;">' + texte + '</span>';
+}
+
 function renderMediasListe(medias, contexte) {
   if (!medias || !medias.length) return '<div class="helper-text">Aucun média complémentaire.</div>';
   const prefixe = contexte;
@@ -667,6 +680,7 @@ function renderMediasListe(medias, contexte) {
       '<label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--grey);">' +
       '<input type="checkbox"' + (media.telechargeable ? ' checked' : '') +
       ' onchange="toggleMedia' + majPref + 'Telechargeable(' + media.id + ', this.checked)"> téléchargeable</label>' +
+      badgePoids(media) +
       '<button onclick="supprimerMedia' + majPref + '(' + media.id + ')">🗑</button></div>';
   }).join('');
 }
