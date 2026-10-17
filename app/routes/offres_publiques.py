@@ -115,7 +115,7 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
         line_items=[{
             "price_data": {
                 "currency": "eur",
-                "unit_amount": int(montant * 100),
+                "unit_amount": int(round(float(montant) * 100)),
                 "product_data": {
                     "name": offre.nom,
                     "description": ("Acompte — " if data.type_paiement == "acompte" else "") + (offre.description or offre.nom),
@@ -124,7 +124,7 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
             "quantity": 1,
         }],
         mode="payment",
-        success_url=f"{url_base}/eleve/connexion?inscription=ok",
+        success_url=f"{url_base}/offre/{slug}/confirmation?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{url_base}/offre/{slug}",
         customer_email=email,
         metadata={
@@ -140,3 +140,19 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
     commande.stripe_session_id = checkout.id
     session.commit()
     return {"checkout_url": checkout.url}
+
+
+@router.get("/offre/{slug}/confirmation")
+def confirmation_offre(slug: str, session_id: str = "", session: Session = Depends(obtenir_session)):
+    """Retour de Stripe après paiement d'une offre. Filet de sécurité : si le
+    webhook n'est pas (encore) passé, on vérifie la session auprès de Stripe
+    et on active l'accès (sans effet si c'est déjà fait), puis direction la
+    page de connexion comme avant."""
+    from fastapi.responses import RedirectResponse
+    if session_id.startswith("cs_"):
+        try:
+            from .boutique_paiement import traiter_session_stripe_payee, _en_dict
+            traiter_session_stripe_payee(session, _en_dict(stripe.checkout.Session.retrieve(session_id)))
+        except Exception as e:
+            logger.error("Vérification Stripe confirmation offre : %s", e)
+    return RedirectResponse(url="/eleve/connexion?inscription=ok", status_code=303)

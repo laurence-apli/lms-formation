@@ -185,6 +185,18 @@ def page_paiement_confirme(
         session.query(Commande).filter_by(stripe_session_id=session_id).first()
         if session_id else None
     )
+    # Filet de sécurité : si le webhook Stripe n'est pas (encore) passé, on
+    # demande directement à Stripe si la session est payée, et on active.
+    if commande and commande.statut != "payee" and session_id.startswith("cs_"):
+        try:
+            import stripe
+            from .routes.boutique_paiement import traiter_session_stripe_payee, _en_dict
+            if commande.eleve_id == eleve.id:
+                traiter_session_stripe_payee(session, _en_dict(stripe.checkout.Session.retrieve(session_id)))
+                session.refresh(commande)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Vérification Stripe page confirmation : %s", e)
     return templates.TemplateResponse(
         request, "eleve/paiement_confirme.html",
         {"eleve": eleve, "commande": commande, "profil": _profil_pour_affichage(session)},

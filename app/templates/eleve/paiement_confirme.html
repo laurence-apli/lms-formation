@@ -15,7 +15,10 @@
 <div class="main-eleve">
 <div class="confirmation-zone">
 <div class="coche">✓</div>
-{% if commande %}
+{% if commande and commande.statut != "payee" %}
+<h1>Merci {{ eleve.prenom }}, ton paiement est en cours de validation</h1>
+<p>Stripe est en train de confirmer ton paiement. Ton accès s'ouvrira automatiquement dans quelques instants (parfois un peu plus pour certains moyens de paiement). Tu recevras un e-mail de confirmation.</p>
+{% elif commande %}
 <h1>Merci {{ eleve.prenom }}, ton accès est activé</h1>
 <p>Ta commande a bien été enregistrée. Tu peux dès maintenant retrouver tes formations dans ton espace.</p>
 <div class="liste-lignes">

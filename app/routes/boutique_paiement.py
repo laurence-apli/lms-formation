@@ -140,11 +140,12 @@ def creer_session_paiement(
         ))
     session.commit()
 
-    if MODE_SIMULATION_PAIEMENT:
+    if MODE_SIMULATION_PAIEMENT or panier["total"] <= 0:
+        gratuit = panier["total"] <= 0
         commande.statut = "payee"
         commande.payee_le = datetime.utcnow()
-        commande.moyen_paiement = "simulation"
-        commande.stripe_session_id = f"simulation-{commande.id}"
+        commande.moyen_paiement = "gratuit" if gratuit else "simulation"
+        commande.stripe_session_id = f"{'gratuit' if gratuit else 'simulation'}-{commande.id}"
         session.commit()
         activer_acces_commande(session, commande)
         return {"checkout_url": f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={commande.stripe_session_id}"}
@@ -169,7 +170,7 @@ def creer_session_paiement(
         mode="payment", line_items=line_items,
         customer_email=eleve.email,
         success_url=f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={{CHECKOUT_SESSION_ID}}",
-        cancel_url=f"{URL_SITE_VITRINE}/pratiques.html",
+        cancel_url=f"{URL_PLATEFORME}/eleve/catalogue",
         **({"custom_text": {"submit": {"message": "Paiement en 3 fois disponible avec Klarna"}}} if "klarna" in payment_method_types else {}),
     metadata={"commande_id": str(commande.id), "eleve_id": str(eleve.id)},
     )
@@ -246,53 +247,79 @@ def creer_session_paiement_montee_niveau(
     session.commit()
     return {"checkout_url": checkout_session.url}
 
+STATUTS_PAYES = ("paid", "no_payment_required")
+
+
+def _en_dict(objet_stripe) -> dict:
+    """stripe-python >= 15 : les objets Stripe ne sont plus des dict
+    (.get() lève une erreur) -> on travaille toujours sur un vrai dict."""
+    if isinstance(objet_stripe, dict):
+        return objet_stripe
+    return objet_stripe.to_dict()
+
+
+def traiter_session_stripe_payee(session: Session, stripe_session: dict) -> bool:
+    """Active ce qui a été payé dans une session Stripe Checkout, si (et
+    seulement si) Stripe la déclare payée. Appelée par le webhook ET par les
+    pages de retour après paiement (filet de sécurité si le webhook a raté).
+    Sans effet si c'est déjà fait. Renvoie True si la session est payée."""
+    if stripe_session.get("payment_status") not in STATUTS_PAYES:
+        return False
+    metadata = stripe_session.get("metadata") or {}
+    if metadata.get("type") == "offre_publique":
+        _activer_offre_apres_paiement(session, stripe_session, metadata)
+        return True
+    commande_id = metadata.get("commande_id")
+    commande = session.get(Commande, int(commande_id)) if commande_id else None
+    if commande and commande.statut != "payee":
+        commande.statut = "payee"
+        commande.payee_le = datetime.utcnow()
+        commande.moyen_paiement = (stripe_session.get("payment_method_types") or ["card"])[0]
+        session.commit()
+        activer_acces_commande(session, commande)
+    return True
+
+
 @router.post("/webhooks/stripe")
 async def webhook_stripe(request: Request, session: Session = Depends(obtenir_session)):
     """Stripe appelle cette route automatiquement quand un paiement est
     confirmé. C'est ICI que les accès sont réellement activés (ou mis à
-    jour vers un niveau supérieur) -- jamais avant, jamais depuis le
-    navigateur du client. (En mode simulation, ce webhook n'est jamais
-    appelé -- c'est creer_session_paiement qui active directement les accès,
-    voir plus haut.)"""
+    jour vers un niveau supérieur) -- jamais depuis ce que le navigateur
+    du client affirme."""
+    import json as _json
     payload = await request.body()
     signature = request.headers.get("stripe-signature")
     webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
     try:
-        event = stripe.Webhook.construct_event(payload, signature, webhook_secret)
+        stripe.Webhook.construct_event(payload, signature, webhook_secret)
     except (ValueError, stripe.error.SignatureVerificationError):
         raise HTTPException(status_code=400, detail="Signature webhook invalide.")
+    # Signature vérifiée : on relit le contenu comme un dict simple
+    event = _json.loads(payload)
+    type_event = event.get("type", "")
+    stripe_session = event.get("data", {}).get("object", {}) or {}
 
-    if event["type"] == "checkout.session.completed":
-        stripe_session = event["data"]["object"]
-        commande_id = stripe_session["metadata"].get("commande_id")
-        commande = session.get(Commande, int(commande_id)) if commande_id else None
-        metadata = stripe_session.get("metadata", {})
+    if type_event in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+        # Paiement différé (virement, prélèvement...) : completed arrive avec
+        # payment_status "unpaid" -> l'accès sera ouvert à async_payment_succeeded
+        traiter_session_stripe_payee(session, stripe_session)
 
+    elif type_event in ("checkout.session.expired", "checkout.session.async_payment_failed"):
+        metadata = stripe_session.get("metadata") or {}
         if metadata.get("type") == "offre_publique":
-            _activer_offre_apres_paiement(session, stripe_session, metadata)
-        elif commande and commande.statut != "payee":
-            commande.statut = "payee"
-            commande.payee_le = datetime.utcnow()
-            commande.moyen_paiement = stripe_session.get("payment_method_types", ["card"])[0]
-            session.commit()
-            activer_acces_commande(session, commande)
-
-    elif event["type"] == "checkout.session.expired":
-        stripe_session = event["data"]["object"]
-        metadata = stripe_session.get("metadata", {})
-        if metadata.get("type") == "offre_publique":
-            eleve_id = int(metadata.get("eleve_id", 0))
-            offre_id = int(metadata.get("offre_id", 0))
+            eleve_id = int(metadata.get("eleve_id", 0) or 0)
+            offre_id = int(metadata.get("offre_id", 0) or 0)
             eleve = session.get(Eleve, eleve_id) if eleve_id else None
             offre = session.query(Offre).filter_by(id=offre_id).first() if offre_id else None
             if eleve and offre:
                 try:
                     from ..emails import email_notification_paiement_echoue, email_paiement_echoue_eleve
-                    montant = stripe_session.get("amount_total", 0) / 100
+                    montant = (stripe_session.get("amount_total") or 0) / 100
+                    motif = ("Paiement refusé" if type_event.endswith("failed")
+                             else "Session de paiement expirée ou abandonnée")
                     email_notification_paiement_echoue(
-                        f"{eleve.prenom} {eleve.nom}", eleve.email,
-                        offre.nom, montant, "Session de paiement expirée ou abandonnée"
+                        f"{eleve.prenom} {eleve.nom}", eleve.email, offre.nom, montant, motif
                     )
                     try:
                         email_paiement_echoue_eleve(eleve.prenom, eleve.email, offre.nom)
@@ -317,6 +344,8 @@ def _activer_offre_apres_paiement(session, stripe_session, metadata):
     if not eleve or not offre:
         logger.warning(f"Webhook offre_publique: eleve={eleve_id} ou offre={offre_id} introuvable")
         return
+    if commande and commande.statut == "payee":
+        return  # déjà traité (webhook reçu deux fois, ou page de retour passée avant)
     eleve.actif = True
     if commande and commande.statut != "payee":
         commande.statut = "payee"
@@ -339,7 +368,7 @@ def _activer_offre_apres_paiement(session, stripe_session, metadata):
     # Email de notification à l'administrateur
     try:
         from ..emails import email_notification_paiement_reussi
-        montant_paye = stripe_session.get("amount_total", 0) / 100
+        montant_paye = (stripe_session.get("amount_total") or 0) / 100
         type_p = metadata.get("type_paiement", "comptant")
         desc = f"{'Acompte' if type_p == 'acompte' else 'Paiement'} — {offre.nom}"
         email_notification_paiement_reussi(f"{eleve.prenom} {eleve.nom}", eleve.email, desc, montant_paye)
@@ -348,41 +377,8 @@ def _activer_offre_apres_paiement(session, stripe_session, metadata):
     # Email de confirmation à l'élève
     try:
         from ..emails import email_confirmation_achat_eleve
-        montant_paye = stripe_session.get("amount_total", 0) / 100
+        montant_paye = (stripe_session.get("amount_total") or 0) / 100
         est_acompte = metadata.get("type_paiement") == "acompte"
         email_confirmation_achat_eleve(eleve.prenom, eleve.email, offre.nom, montant_paye, est_acompte, compte_cree)
     except Exception as e:
         logger.error(f"Erreur email confirmation eleve offre: {e}")
-"""
-Routes de paiement -- création de la session Stripe (achat neuf OU montée en
-niveau, éventuellement combinés dans le même panier), et webhook qui active
-automatiquement les accès une fois le paiement confirmé.
-
-À placer dans app/routes/boutique_paiement.py
-
-⚠️ Nécessite d'ajouter "stripe" à requirements.txt (pip install stripe)
-⚠️ Nécessite les variables d'environnement STRIPE_SECRET_KEY et
-STRIPE_WEBHOOK_SECRET sur Render (voir instructions_stripe.txt) --
-RIEN de tout ça ne fonctionnera avant la création du compte Stripe,
-mais le code peut être installé dès maintenant sans risque.
-
-⚠️ MODE_SIMULATION_PAIEMENT (ci-dessous) : tant que Stripe n'est pas branché,
-mettre ce drapeau à True fait que "Passer au paiement" active directement les
-accès, comme si le paiement avait réussi -- pratique pour tester tout le
-parcours (achat, montée de niveau, décompte des séances...) sans compte
-Stripe. Le jour où Stripe est prêt, il suffit de repasser ce drapeau à False
--- tout le code Stripe ci-dessous reste inchangé et se réactive tel quel.
-"""
-import os
-from datetime import datetime
-
-import stripe
-from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
-
-from ..database import obtenir_session
-from ..models import Eleve, AccesFormation, Offre
-from .boutique_models import TarifFormation, Commande, LigneCommande, calculer_panier
-from .auth import eleve_connecte
-from ..emails import email_notification_paiement_reussi, email_notification_paiement_echoue
