@@ -1,0 +1,21 @@
+# Compte-rendu hebdomadaire de la plateforme (paiements, inscriptions, activité).
+# Chaque lundi à 06:00 UTC (8 h en été, 7 h en hiver à Paris), GitHub appelle
+# la plateforme qui envoie l'e-mail. Le secret CRON_TOKEN (Settings > Secrets
+# and variables > Actions) doit être identique à la variable CRON_TOKEN sur Render.
+# Lancement manuel possible : onglet Actions > rapport-hebdo > Run workflow.
+name: rapport-hebdo
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+jobs:
+  envoyer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Réveiller la plateforme (plan gratuit Render)
+        run: curl -s -o /dev/null --max-time 90 https://lms-formation.onrender.com/eleve/connexion || true
+      - name: Envoyer le compte-rendu
+        run: |
+          curl -fsS --retry 4 --retry-delay 30 --retry-all-errors --max-time 120 \
+            -X POST -H "X-Cron-Token: ${{ secrets.CRON_TOKEN }}" \
+            https://lms-formation.onrender.com/cron/rapport-hebdo
