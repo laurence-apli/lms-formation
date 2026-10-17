@@ -113,7 +113,7 @@ function renderSommaire() {
       </div>
       <span style="flex:1;" onclick="selectionner({type:'module', moduleId:${m.id}})">${esc(m.titre.toUpperCase())}</span>
       ${pictosNoeud(m.medias, !!(m.presentation_html && m.presentation_html.replace(/<[^>]*>/g, '').trim()))}
-      ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
+      ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}" title="Module accessible à partir du niveau ${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
     </div>`;
 
     m.chapitres.forEach((c, ci) => {
@@ -130,6 +130,7 @@ function renderSommaire() {
         <span style="flex:1;" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">${ci+1}. ${esc(c.titre)}</span>
         ${pictosNoeud(c.medias, !!(c.contenu_html && c.contenu_html.replace(/<[^>]*>/g, '').trim()))}
         ${c.lien_coaching ? '📧' : ''}
+        ${f.nb_niveaux > 1 ? (() => { const n = Math.max(m.niveau_requis || 1, c.niveau_requis || 1); return `<span class="niveau-badge niveau-${n}" title="Accessible à partir du niveau ${n}">N${n}</span>`; })() : ''}
       </div>`;
     });
 
