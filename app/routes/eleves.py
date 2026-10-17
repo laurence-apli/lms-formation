@@ -156,6 +156,21 @@ def fiche_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
         "acces": acces_detail,
     }
 
+@router.get("/eleves/{eleve_id}/reponses")
+def reponses_questionnaires_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
+    """Réponses de l'élève aux questionnaires de chapitre (plus récentes d'abord)."""
+    import json as _json
+    from ..models import ReponseChapitre
+    reps = (session.query(ReponseChapitre).filter_by(eleve_id=eleve_id)
+            .order_by(ReponseChapitre.maj_le.desc()).all())
+    return [{
+        "formation": r.chapitre.module.formation.titre,
+        "chapitre": r.chapitre.titre,
+        "maj_le": r.maj_le.isoformat() if r.maj_le else None,
+        "envoye_le": r.envoye_le.isoformat() if r.envoye_le else None,
+        "items": _json.loads(r.reponses or "[]"),
+    } for r in reps]
+
 # ---------- Accès aux formations ----------
 
 @router.post("/eleves/{eleve_id}/acces")

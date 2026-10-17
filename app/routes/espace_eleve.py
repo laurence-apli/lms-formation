@@ -13,6 +13,12 @@ from ..models import (
     SeanceAccompagnement,
 )
 from .auth import eleve_connecte
+import json
+from datetime import datetime
+from typing import List
+from pydantic import BaseModel
+from ..models import ReponseChapitre
+from ..emails import email_reponses_chapitre
 from .medias_fichiers import media_json
 from ..emails import email_coaching_rdv, email_demande_rdv_coach
 from .boutique_models import propositions_montee_niveau
@@ -167,6 +173,71 @@ def detail_chapitre(
         "id": chapitre.id, "titre": chapitre.titre, "contenu_html": chapitre.contenu_html,
         "valide": deja_valide, "medias": medias,
     }
+
+
+# ---------- Questionnaire de chapitre (cases ☐ et pointillés du Word) ----------
+
+class _ItemReponse(BaseModel):
+    type: str
+    libelle: str = ""
+    coche: bool = False
+    question: str = ""
+    valeur: str = ""
+
+
+class _CorpsReponses(BaseModel):
+    items: List[_ItemReponse] = []
+    envoyer: bool = False
+
+
+def _chapitre_pour_reponses(chapitre_id: int, eleve: Eleve, session: Session) -> Chapitre:
+    chapitre = session.get(Chapitre, chapitre_id)
+    if chapitre is None:
+        raise HTTPException(status_code=404, detail="Chapitre introuvable.")
+    _verifier_acces_formation(eleve, chapitre.module.formation, session)
+    return chapitre
+
+
+@router.get("/chapitres/{chapitre_id}/reponses")
+def lire_reponses_chapitre(chapitre_id: int, eleve: Eleve = Depends(eleve_connecte),
+                           session: Session = Depends(obtenir_session)):
+    _chapitre_pour_reponses(chapitre_id, eleve, session)
+    rep = session.query(ReponseChapitre).filter_by(eleve_id=eleve.id, chapitre_id=chapitre_id).first()
+    if rep is None:
+        return {"items": [], "envoye_le": None}
+    return {"items": json.loads(rep.reponses or "[]"),
+            "envoye_le": rep.envoye_le.isoformat() if rep.envoye_le else None}
+
+
+@router.post("/chapitres/{chapitre_id}/reponses")
+def enregistrer_reponses_chapitre(chapitre_id: int, corps: _CorpsReponses,
+                                  eleve: Eleve = Depends(eleve_connecte),
+                                  session: Session = Depends(obtenir_session)):
+    chapitre = _chapitre_pour_reponses(chapitre_id, eleve, session)
+    items = []
+    for it in corps.items[:100]:
+        if it.type == "case":
+            items.append({"type": "case", "libelle": it.libelle[:500], "coche": bool(it.coche)})
+        elif it.type == "texte":
+            items.append({"type": "texte", "question": it.question[:500], "valeur": it.valeur[:5000]})
+    rempli = any((i["type"] == "case" and i["coche"]) or (i["type"] == "texte" and i["valeur"].strip()) for i in items)
+
+    rep = session.query(ReponseChapitre).filter_by(eleve_id=eleve.id, chapitre_id=chapitre_id).first()
+    if rep is None:
+        rep = ReponseChapitre(eleve_id=eleve.id, chapitre_id=chapitre_id)
+        session.add(rep)
+    rep.reponses = json.dumps(items, ensure_ascii=False)
+    rep.maj_le = datetime.utcnow()
+
+    email_envoye = False
+    if corps.envoyer and rempli:
+        email_envoye = email_reponses_chapitre(
+            eleve.prenom or "", eleve.nom or "", eleve.email or "",
+            chapitre.module.formation.titre, chapitre.titre, items)
+        if email_envoye:
+            rep.envoye_le = datetime.utcnow()
+    session.commit()
+    return {"ok": True, "email_envoye": email_envoye, "rempli": rempli}
 
 
 @router.post("/chapitres/{chapitre_id}/valider")

@@ -114,6 +114,7 @@ class Chapitre(Base):
     module = relationship("Module", back_populates="chapitres")
     medias = relationship("Media", back_populates="chapitre", cascade="all, delete-orphan")
     validations = relationship("ValidationChapitre", back_populates="chapitre")
+    reponses_chapitres = relationship("ReponseChapitre", back_populates="chapitre", cascade="all, delete-orphan", passive_deletes=True)
 
 class Media(Base):
     __tablename__ = "medias"
@@ -198,6 +199,7 @@ class Eleve(Base):
     acces_formations = relationship("AccesFormation", back_populates="eleve",
                                    cascade="all, delete-orphan")
     validations = relationship("ValidationChapitre", back_populates="eleve")
+    reponses_chapitres = relationship("ReponseChapitre", back_populates="eleve", cascade="all, delete-orphan", passive_deletes=True)
     tokens = relationship("TokenAuthEleve", back_populates="eleve", cascade="all, delete-orphan")
 
     def definir_mot_de_passe(self, mot_de_passe_clair: str) -> None:
@@ -327,6 +329,28 @@ class ValidationChapitre(Base):
 
     eleve = relationship("Eleve", back_populates="validations")
     chapitre = relationship("Chapitre", back_populates="validations")
+
+class ReponseChapitre(Base):
+    """Réponses d'une élève au questionnaire d'un chapitre (cases ☐ et lignes de
+    pointillés du Word, rendues interactives sur la page élève).
+    reponses : JSON, liste d'éléments
+      {"type": "case", "libelle": "...", "coche": true}
+      {"type": "texte", "question": "...", "valeur": "..."}
+    Table créée automatiquement par create_all (nouvelle table, pas de colonne
+    ajoutée à une table existante)."""
+    __tablename__ = "reponses_chapitres"
+    __table_args__ = (UniqueConstraint("eleve_id", "chapitre_id", name="uniq_reponse_eleve_chapitre"),)
+
+    id = Column(Integer, primary_key=True)
+    eleve_id = Column(Integer, ForeignKey("eleves.id", ondelete="CASCADE"), nullable=False, index=True)
+    chapitre_id = Column(Integer, ForeignKey("chapitres.id", ondelete="CASCADE"), nullable=False)
+    reponses = Column(Text, nullable=False, default="[]")
+    maj_le = Column(DateTime, default=datetime.utcnow)
+    envoye_le = Column(DateTime, nullable=True)   # dernier e-mail envoyé à l'admin
+
+    eleve = relationship("Eleve", back_populates="reponses_chapitres")
+    chapitre = relationship("Chapitre", back_populates="reponses_chapitres")
+
 
 def sequence_chapitres(formation: Formation) -> list:
     chapitres = []

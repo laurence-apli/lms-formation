@@ -29,6 +29,14 @@
   .bloc-photo-formatrice .bloc-photo-nom { font-family:'EB Garamond',serif; font-size:14px; font-weight:600; color:var(--ink); }
 
   .contenu-eleve { flex:1; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:48px 56px; min-width:0; max-width:900px; }
+  /* Téléphone et petite tablette : sommaire au-dessus, contenu pleine largeur */
+  @media (max-width: 860px) {
+    .formation-layout-eleve { flex-direction:column; align-items:stretch; gap:16px; }
+    .colonne-sommaire-eleve { width:100%; position:static; }
+    .contenu-eleve { width:100%; max-width:none; padding:26px 18px; }
+    .contenu-eleve img, .contenu-eleve iframe, .contenu-eleve table { max-width:100%; }
+    .contenu-eleve .btn-valider-chapitre { width:100%; }
+  }
 
   .progression-container { background:#FDFAF5; border:1px solid #DDD0AE; border-radius:8px; padding:14px 18px; margin-bottom:28px; }
   .progression-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
@@ -86,6 +94,18 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
+
+/* Questionnaire de chapitre : cases ☐ et pointillés du Word rendus interactifs */
+.q-case { display:flex; gap:12px; align-items:flex-start; margin:0 0 12px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#FFFDF8; cursor:pointer; line-height:1.55; -webkit-user-select:none; user-select:none; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+.q-case:hover { border-color:var(--gold); }
+.q-case input { flex-shrink:0; width:20px; height:20px; margin:2px 0 0; accent-color:#B8922A; cursor:pointer; }
+.q-case.coche { border-color:var(--gold); background:#FBF3E2; }
+.q-texte { display:block; width:100%; box-sizing:border-box; margin:4px 0 18px; padding:12px 14px; border:1px solid var(--border); border-radius:10px; background:#FFFDF8; font:inherit; font-size:15px; line-height:1.6; color:var(--ink); resize:vertical; -webkit-user-select:text; user-select:text; }
+.q-texte:focus { outline:none; border-color:var(--gold); box-shadow:0 0 0 3px rgba(184,146,42,.15); }
+.q-info { margin-top:28px; padding:12px 16px; border-radius:10px; background:#F5EDD6; color:var(--ink); font-size:13px; line-height:1.5; }
+.q-info.ok { background:#E4F0E8; color:#2F6E47; }
+.q-info.erreur { background:#F8E1DC; color:#A1432A; }
+.btn-envoyer-reponses { margin-top:14px; margin-right:10px; padding:12px 22px; background:#fff; color:var(--gold); border:1.5px solid var(--gold); border-radius:8px; font-family:'League Spartan',sans-serif; font-weight:700; font-size:13px; cursor:pointer; }
 
 /* Lecteur audio */
 .media-audio-player { background: #f8f5ff; border: 1px solid #e0d5f7; border-radius: 10px; padding: 12px 16px; margin-bottom: 8px; display: block !important; }
@@ -683,6 +703,7 @@ async function afficherContenu() {
         ? `<button class="btn-valider-chapitre deja-valide">✓ Chapitre déjà validé</button>`
         : `<button class="btn-valider-chapitre" onclick="validerChapitre(${c.id})">J'ai terminé ce chapitre</button>`);
     initVideosYT(zone);
+    if (!_cEstPage) activerQuestionnaire(zone, c.id, c.valide);
     if (_cEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _cHtml.replace(/<\/head>/i,'<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   }
 }
@@ -690,7 +711,14 @@ async function afficherContenu() {
 function selectionner(noeud) {
   noeudActif = noeud;
   afficherSommaire();
-  afficherContenu();
+  var rendu = afficherContenu();
+  // Téléphone : le sommaire est au-dessus du contenu, on amène la lectrice au début du chapitre
+  if (window.innerWidth <= 860 && rendu && rendu.then) {
+    rendu.then(function() {
+      var z = document.getElementById('contenu');
+      if (z) window.scrollTo({ top: z.getBoundingClientRect().top + window.scrollY - 12, behavior: 'auto' });
+    });
+  }
 }
 
 // CORRECTION PERFORMANCE : on ne recharge plus TOUTE la formation après
@@ -731,7 +759,150 @@ function prechargerSuivant(chapId) {
     .catch(() => {});
 }
 
+// ---------- Questionnaire de chapitre ----------
+// Dans le Word : une ligne qui commence par ☐ devient une case à cocher,
+// une ligne de pointillés (......) devient une zone de réponse.
+// Les réponses sont envoyées à Laurence quand l'élève valide le chapitre.
+var _questionnaire = null;
+var _Q_CASE = /^\s*[☐□▢❏❑]\s*/;
+var _Q_POINTS = /^[\s.…·_]{6,}$/;
+var _Q_FIN_POINTS = /^(.*\S)\s*[.…_]{6,}\s*$/;
+
+function _qTexte(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+function _qCleBrouillon(chapId) { return 'q-brouillon-' + chapId; }
+
+function activerQuestionnaire(zone, chapId, dejaValide) {
+  _questionnaire = null;
+  var ps = Array.prototype.filter.call(zone.querySelectorAll('p'), function(p) {
+    return !p.closest('.medias-eleve, .lv, .lecteur-audio, .q-info');
+  });
+  var items = [];
+  var dernierTexte = '', avantDernier = '';
+  for (var i = 0; i < ps.length; i++) {
+    var p = ps[i], t = _qTexte(p);
+    if (!t) continue;
+    if (_Q_CASE.test(t)) {
+      var html = p.innerHTML.replace(/[☐□▢❏❑]\s*/, '').replace(/^(\s|&nbsp;)+/, '').replace(/\n/g, '<br>');
+      var lab = document.createElement('label');
+      lab.className = 'q-case';
+      lab.innerHTML = '<input type="checkbox"><span>' + html + '</span>';
+      var fort = lab.querySelector('span strong, span b');
+      var libelle = fort ? _qTexte(fort) : _qTexte(lab);
+      lab.querySelector('input').addEventListener('change', function(e) {
+        e.target.closest('.q-case').classList.toggle('coche', e.target.checked); _qSauverBrouillon();
+      });
+      p.replaceWith(lab);
+      items.push({ type: 'case', el: lab.querySelector('input'), libelle: libelle });
+      avantDernier = dernierTexte; dernierTexte = libelle;
+      continue;
+    }
+    var question = null, nbLignes = 0, aRemplacer = [p];
+    if (_Q_POINTS.test(t)) {
+      nbLignes = 1;
+      while (i + 1 < ps.length && _Q_POINTS.test(_qTexte(ps[i + 1])) && ps[i].nextElementSibling === ps[i + 1]) {
+        i++; nbLignes++; aRemplacer.push(ps[i]);
+      }
+      question = dernierTexte;
+      if (question && question.length < 25 && avantDernier) question = avantDernier + ' — ' + question;
+    } else {
+      var m = t.match(_Q_FIN_POINTS);
+      if (m && !/[.…]{6,}.*\S/.test(m[1])) { question = m[1]; nbLignes = 1; }
+    }
+    if (nbLignes) {
+      var ta = document.createElement('textarea');
+      ta.className = 'q-texte';
+      ta.rows = Math.max(2, nbLignes + 1);
+      ta.placeholder = 'Écris ta réponse ici…';
+      ta.addEventListener('input', _qSauverBrouillon);
+      if (aRemplacer[0] === p && !_Q_POINTS.test(t)) {
+        p.innerHTML = p.innerHTML.replace(/[.…_]{6,}\s*$/, '');
+        p.after(ta);
+      } else {
+        aRemplacer[0].replaceWith(ta);
+        for (var k = 1; k < aRemplacer.length; k++) aRemplacer[k].remove();
+      }
+      items.push({ type: 'texte', el: ta, question: question || 'Réponse libre' });
+      continue;
+    }
+    avantDernier = dernierTexte; dernierTexte = t;
+  }
+  if (!items.length) return;
+  _questionnaire = { chapId: chapId, items: items };
+
+  var info = document.createElement('div');
+  info.className = 'q-info';
+  info.id = 'q-info';
+  info.textContent = dejaValide
+    ? 'Tu peux modifier tes réponses et me les renvoyer quand tu veux.'
+    : 'Tes réponses me seront envoyées quand tu cliqueras sur « J’ai terminé ce chapitre ».';
+  var bouton = zone.querySelector('.btn-valider-chapitre');
+  if (bouton) bouton.before(info);
+  if (dejaValide && bouton) {
+    var renvoi = document.createElement('button');
+    renvoi.className = 'btn-envoyer-reponses';
+    renvoi.textContent = 'Envoyer mes réponses';
+    renvoi.addEventListener('click', async function() { renvoi.disabled = true; await envoyerReponses(chapId, true); renvoi.disabled = false; });
+    bouton.before(renvoi);
+  }
+
+  // Réponses déjà enregistrées, sinon brouillon local
+  fetch('/api/eleve/chapitres/' + chapId + '/reponses').then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) {
+      if (!_questionnaire || _questionnaire.chapId !== chapId) return;
+      var source = d && d.items && d.items.length ? d.items : null;
+      if (!source) { try { source = JSON.parse(localStorage.getItem(_qCleBrouillon(chapId)) || 'null'); } catch (e) { source = null; } }
+      if (source) _qAppliquer(source);
+      if (d && d.envoye_le && info) info.textContent = 'Réponses envoyées le ' + new Date(d.envoye_le + 'Z').toLocaleDateString('fr-FR') + '. Tu peux les modifier et me les renvoyer.';
+    }).catch(function() {});
+}
+
+function _qAppliquer(source) {
+  _questionnaire.items.forEach(function(it, idx) {
+    var s = source[idx];
+    if (!s || s.type !== it.type) return;
+    if (it.type === 'case') { it.el.checked = !!s.coche; it.el.closest('.q-case').classList.toggle('coche', it.el.checked); }
+    else it.el.value = s.valeur || '';
+  });
+}
+
+function _qCollecter() {
+  return _questionnaire.items.map(function(it) {
+    return it.type === 'case'
+      ? { type: 'case', libelle: it.libelle, coche: it.el.checked }
+      : { type: 'texte', question: it.question, valeur: it.el.value };
+  });
+}
+
+function _qSauverBrouillon() {
+  if (!_questionnaire) return;
+  try { localStorage.setItem(_qCleBrouillon(_questionnaire.chapId), JSON.stringify(_qCollecter())); } catch (e) {}
+}
+
+// Renvoie true si on peut continuer (envoi réussi, ou rien à envoyer)
+async function envoyerReponses(chapId, envoyer) {
+  if (!_questionnaire || _questionnaire.chapId !== chapId) return true;
+  var info = document.getElementById('q-info');
+  try {
+    var r = await fetch('/api/eleve/chapitres/' + chapId + '/reponses', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: _qCollecter(), envoyer: envoyer })
+    });
+    if (!r.ok) throw new Error('http');
+    var d = await r.json();
+    try { localStorage.removeItem(_qCleBrouillon(chapId)); } catch (e) {}
+    if (info) {
+      info.className = 'q-info ok';
+      info.textContent = d.rempli ? 'Merci, tes réponses ont bien été envoyées 🌿' : 'Aucune réponse à envoyer pour ce chapitre.';
+    }
+    return true;
+  } catch (e) {
+    if (info) { info.className = 'q-info erreur'; info.textContent = 'Tes réponses n’ont pas pu être envoyées. Vérifie ta connexion et réessaie.'; }
+    return false;
+  }
+}
+
 async function validerChapitre(chapId) {
+  if (!(await envoyerReponses(chapId, true))) return;
   const resp = await fetch(`/api/eleve/chapitres/${chapId}/valider`, { method: 'POST' });
   if (resp.ok) {
     const data = await resp.json();
@@ -771,6 +942,7 @@ document.addEventListener('contextmenu', function(e) {
   return false;
 });
 document.addEventListener('keydown', function(e) {
+  if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) return;
   if (e.ctrlKey || e.metaKey) {
     switch(e.key.toLowerCase()) {
       case 'c': case 'a': case 'x': case 'u': case 's': case 'p':

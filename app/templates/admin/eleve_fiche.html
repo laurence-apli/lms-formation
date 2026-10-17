@@ -26,6 +26,13 @@
 .coaching-pill-attente { background:#FEF3E2; color:#A05C00; font-size:11px; font-weight:600; padding:2px 9px; border-radius:10px; }
 .btn-compte-test-off { background:transparent; border:2px dashed #bbb; color:#999; font-size:12px; padding:4px 12px; border-radius:6px; cursor:pointer; }
 .btn-compte-test-on { background:#7C3AED; color:#fff !important; border:2px solid #5B21B6; font-weight:700; font-size:13px; padding:4px 14px; border-radius:6px; box-shadow:0 2px 10px rgba(124,58,237,.4); animation:pulse-test .6s ease; cursor:pointer; }
+.rep-carte { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:14px 18px; margin-bottom:10px; }
+.rep-carte summary { cursor:pointer; font-size:14px; font-weight:600; display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.rep-carte summary span { font-weight:400; font-size:12px; color:var(--grey); }
+.rep-case { font-size:13px; padding:3px 0; }
+.rep-case.non { color:#aaa; }
+.rep-question { font-size:13px; color:var(--gold); font-weight:600; margin-top:10px; }
+.rep-valeur { font-size:13px; white-space:pre-wrap; background:#FBF7EE; border:1px solid var(--border); border-radius:6px; padding:8px 10px; margin-top:4px; }
 @keyframes pulse-test { 0%{transform:scale(1)} 50%{transform:scale(1.05)} 100%{transform:scale(1)} }
 </style>
 
@@ -52,6 +59,11 @@
   <button class="btn btn-sm btn-primary" onclick="ouvrirModalCoaching()">+ Envoyer un lien coaching</button>
 </div>
 <div id="liste-coaching"></div>
+
+<div class="topbar" style="margin-bottom:12px; margin-top:28px;">
+  <h1 style="font-size:16px;">Réponses aux questionnaires</h1>
+</div>
+<div id="liste-reponses"></div>
 
 {% endblock %}
 {% block scripts %}
@@ -325,6 +337,29 @@ fermerModal();
 afficherToast('Avancement réinitialisé');
 await charger();
 }
+
+// --- Réponses aux questionnaires de chapitre ---
+
+async function chargerReponses() {
+const zone = document.getElementById('liste-reponses');
+try {
+const reps = await appelApi(`/admin/eleves/${ELEVE_ID}/reponses`);
+if (!reps.length) {
+zone.innerHTML = `<div class="empty-state" style="padding:20px;">Aucune réponse pour l'instant.</div>`;
+return;
+}
+zone.innerHTML = reps.map((r, i) => {
+const date = r.maj_le ? new Date(r.maj_le + 'Z').toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'}) : '';
+const corps = r.items.map(it => it.type === 'case'
+? `<div class="rep-case ${it.coche ? '' : 'non'}">${it.coche ? '☑' : '☐'} ${esc(it.libelle)}</div>`
+: `<div class="rep-question">${esc(it.question || 'Réponse libre')}</div><div class="rep-valeur">${it.valeur ? esc(it.valeur) : '<em style="color:#aaa;">(pas de réponse)</em>'}</div>`).join('');
+return `<details class="rep-carte" ${i === 0 ? 'open' : ''}><summary>${esc(r.formation)} — ${esc(r.chapitre)}<span>${date}</span></summary><div style="margin-top:10px;">${corps}</div></details>`;
+}).join('');
+} catch (e) {
+zone.innerHTML = `<div class="empty-state" style="padding:20px;">Erreur lors du chargement.</div>`;
+}
+}
+chargerReponses();
 
 // --- Coaching ---
 

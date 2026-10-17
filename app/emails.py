@@ -22,7 +22,7 @@ EMAIL_EXPEDITEUR = os.environ.get("EMAIL_EXPEDITEUR", "onboarding@resend.dev")
 NOM_EXPEDITEUR = os.environ.get("NOM_EXPEDITEUR", "Laurence Mermet-Bijon — Formation")
 
 
-def _envoyer_email(destinataire: str, sujet: str, corps_html: str) -> bool:
+def _envoyer_email(destinataire: str, sujet: str, corps_html: str, repondre_a: str = "") -> bool:
     """
     Envoie un email via l'API Resend.
     Retourne True si l'envoi a réussi, False sinon.
@@ -34,7 +34,7 @@ def _envoyer_email(destinataire: str, sujet: str, corps_html: str) -> bool:
 
     payload = json.dumps({
         "from": f"{NOM_EXPEDITEUR} <{EMAIL_EXPEDITEUR}>",
-        "reply_to": [EMAIL_EXPEDITEUR],
+        "reply_to": [repondre_a or EMAIL_EXPEDITEUR],
         "to": [destinataire],
         "subject": sujet,
         "html": corps_html,
@@ -444,3 +444,47 @@ def email_definition_mot_de_passe(destinataire: str, prenom: str, lien: str) -> 
         '</td></tr></table></td></tr></table></body></html>'
     )
     return _envoyer_email(destinataire, sujet, corps)
+
+
+# ---------------------------------------------------------------------------
+# Questionnaire de chapitre -- réponses d'une élève envoyées à l'admin
+# ---------------------------------------------------------------------------
+def email_reponses_chapitre(prenom: str, nom: str, email_eleve: str, formation: str,
+                            chapitre: str, items: list) -> bool:
+    """Envoie à l'admin (EMAIL_ADMIN) les réponses d'une élève au questionnaire
+    d'un chapitre (cases cochées + textes). « Répondre » écrit directement à l'élève."""
+    esc = _echapper_html
+    lignes = []
+    for it in items:
+        if it.get("type") == "case":
+            coche = bool(it.get("coche"))
+            lignes.append(
+                '<tr><td style="padding:6px 10px;width:28px;font-size:18px;color:%s;vertical-align:top;">%s</td>'
+                '<td style="padding:6px 10px;color:%s;%s">%s</td></tr>' % (
+                    "#3B8C5A" if coche else "#bbb", "☑" if coche else "☐",
+                    "#2E2210" if coche else "#999", "font-weight:600;" if coche else "",
+                    esc(it.get("libelle", ""))))
+        else:
+            valeur = (it.get("valeur") or "").strip()
+            lignes.append(
+                '<tr><td colspan="2" style="padding:12px 10px 4px;color:#B8922A;font-weight:600;">%s</td></tr>'
+                '<tr><td colspan="2" style="padding:4px 10px 10px;"><div style="background:#fff;border:1px solid #e8dfc8;'
+                'border-radius:8px;padding:10px 12px;white-space:pre-wrap;color:%s;">%s</div></td></tr>' % (
+                    esc(it.get("question") or "Réponse libre"), "#2E2210" if valeur else "#aaa",
+                    esc(valeur) if valeur else "(pas de réponse)"))
+    sujet = "Réponses de %s %s — %s" % (prenom.strip(), nom.strip(), chapitre.strip())
+    corps = (
+        '<div style="font-family:Georgia,serif;max-width:640px;margin:0 auto;padding:32px;'
+        'background:#FDFAF5;border-radius:12px;border:1px solid #e8dfc8;">'
+        '<h2 style="color:#B8922A;margin-top:0;font-size:22px;">Réponses au questionnaire</h2>'
+        '<p style="color:#2E2210;margin:0 0 6px;"><strong>%s %s</strong> (%s)</p>'
+        '<p style="color:#2E2210;margin:0 0 6px;">Formation : <strong>%s</strong></p>'
+        '<p style="color:#2E2210;margin:0 0 20px;">Chapitre : <strong>%s</strong> · %s</p>'
+        '<table style="width:100%%;border-collapse:collapse;background:#faf5e8;border-radius:8px;">%s</table>'
+        '<p style="font-size:13px;color:#2E2210;margin-top:20px;">Pour lui répondre, réponds simplement à cet e-mail.</p>'
+        '<p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #e8dfc8;padding-top:16px;">'
+        'Notification automatique — Plateforme de formation laurence-mermet-bijon.fr · '
+        'Retrouve aussi ces réponses dans la fiche de l\'élève.</p>'
+        '</div>'
+    ) % (esc(prenom), esc(nom), esc(email_eleve), esc(formation), esc(chapitre), _maintenant_paris(), "".join(lignes))
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps, repondre_a=email_eleve)
