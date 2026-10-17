@@ -53,6 +53,8 @@
 .sommaire-module.actif .btn-ordre:hover { border-color:white; color:white; }
 .sommaire-chapitre.actif .btn-ordre { border-color:rgba(255,255,255,0.4); color:rgba(255,255,255,0.7); }
 .sommaire-chapitre.actif .btn-ordre:hover { border-color:white; color:white; }
+.pictos { font-size:12px; white-space:nowrap; letter-spacing:1px; flex-shrink:0; }
+.pictos sup { font-size:9px; font-weight:700; margin-left:-1px; }
 .coaching-badge { display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; background:#E4F0E8; color:#3B8C5A; margin-left:8px; }
 </style>
 
@@ -80,9 +82,24 @@ function render() {
   renderContenu();
 }
 
+// Petits pictos dans l'arbre : ce qui a déjà été ajouté (texte, audio, vidéo, PDF, lien)
+function pictosNoeud(medias, aDuTexte) {
+  const compte = {};
+  (medias || []).forEach(med => {
+    let k = med.type;
+    if (k === 'lien' && /youtu\.?be|vimeo\.com/i.test(med.url || '')) k = 'video';
+    compte[k] = (compte[k] || 0) + 1;
+  });
+  const ICONES = [['texte','📝','Texte du chapitre'], ['audio','🎧','Audio'], ['video','🎬','Vidéo'], ['pdf','📄','PDF / pièce jointe'], ['lien','🔗','Lien']];
+  if (aDuTexte) compte.texte = 1;
+  const html = ICONES.filter(([k]) => compte[k]).map(([k, ic, nom]) =>
+    `<span title="${compte[k] > 1 ? compte[k] + ' × ' : ''}${nom}">${ic}${compte[k] > 1 ? '<sup>' + compte[k] + '</sup>' : ''}</span>`).join('');
+  return html ? `<span class="pictos">${html}</span>` : '';
+}
+
 function renderSommaire() {
   const f = donnees;
-  let html = `<div class="sommaire-item-formation ${noeudActif.type === 'formation' ? 'actif' : ''}" onclick="selectionner({type:'formation'})">${esc(f.titre)}</div>`;
+  let html = `<div class="sommaire-item-formation ${noeudActif.type === 'formation' ? 'actif' : ''}" onclick="selectionner({type:'formation'})" style="display:flex;align-items:center;gap:8px;"><span style="flex:1;">${esc(f.titre)}</span>${pictosNoeud(f.medias, false)}</div>`;
 
   f.modules.forEach((m, mi) => {
     const moduleActif = noeudActif.type === 'module' && noeudActif.moduleId === m.id;
@@ -95,6 +112,7 @@ function renderSommaire() {
         ${!estDernier ? `<button class="btn-ordre" onclick="event.stopPropagation(); deplacerModule(${m.id}, 1)" title="Descendre">▼</button>` : '<span style="height:17px;display:block;"></span>'}
       </div>
       <span style="flex:1;" onclick="selectionner({type:'module', moduleId:${m.id}})">${esc(m.titre.toUpperCase())}</span>
+      ${pictosNoeud(m.medias, !!(m.presentation_html && m.presentation_html.replace(/<[^>]*>/g, '').trim()))}
       ${f.nb_niveaux > 1 ? `<span class="niveau-badge niveau-${m.niveau_requis}">N${m.niveau_requis}</span>` : ''}
     </div>`;
 
@@ -110,6 +128,7 @@ function renderSommaire() {
         </div>
         <span class="puce"></span>
         <span style="flex:1;" onclick="selectionner({type:'chapitre', moduleId:${m.id}, chapId:${c.id}})">${ci+1}. ${esc(c.titre)}</span>
+        ${pictosNoeud(c.medias, !!(c.contenu_html && c.contenu_html.replace(/<[^>]*>/g, '').trim()))}
         ${c.lien_coaching ? '📧' : ''}
       </div>`;
     });
