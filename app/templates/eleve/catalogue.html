@@ -317,8 +317,8 @@ async function majRecap() {
   html += `<div class="recap-total"><span>Total</span><span class="val">${apercu.total} €</span></div>`;
   html += `<button class="btn-payer" onclick="payer(${JSON.stringify(tarifIds)}, ${JSON.stringify(monteeIds)})">Passer au paiement</button>`;
   const _tot = parseFloat(String(apercu.total).replace(',', '.'));
-  if (_tot >= 190) {
-    html += `<p style="margin:12px 0 0;padding:9px 12px;background:#f5eeff;border-left:3px solid #9b5fd4;border-radius:6px;font-size:12.5px;color:#5a2d82;line-height:1.5;">💳 Paiement en 3 fois avec Klarna disponible — choisis Klarna sur la page suivante.</p>`;
+  if (_tot >= 50) { // même seuil que SEUIL_MESSAGE_KLARNA (boutique_paiement.py)
+    html += `<p style="margin:12px 0 0;padding:9px 12px;background:#f5eeff;border-left:3px solid #9b5fd4;border-radius:6px;font-size:12.5px;color:#5a2d82;line-height:1.5;">💳 Paiement en 3 ou 4 fois avec Klarna disponible — choisis Klarna sur la page suivante.</p>`;
   }
   zone.innerHTML = html;
 }

@@ -37,6 +37,12 @@ router = APIRouter()
 
 MODE_SIMULATION_PAIEMENT = False # ✅ Stripe actif — paiements réels
 
+# À partir de ce montant, la page Stripe affiche « Paiement en 3 ou 4 fois
+# disponible avec Klarna ». Klarna (France) accepte le 3 fois sans frais dès
+# quelques euros ; c'est Klarna qui décide au cas par cas. Klarna doit être
+# activé dans Stripe > Paramètres > Moyens de paiement.
+SEUIL_MESSAGE_KLARNA = 50
+
 # Tant que MODE_SIMULATION_PAIEMENT est actif, seuls ces comptes de test
 # peuvent valider un paiement simulé. Tous les autres reçoivent un message
 # "paiement indisponible" -- évite que n'importe quel élève obtienne un
@@ -163,7 +169,7 @@ def creer_session_paiement(
     ]
 
     payment_method_types = ["card"]
-    if panier["total"] >= 180:
+    if panier["total"] >= SEUIL_MESSAGE_KLARNA:
         payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
@@ -171,7 +177,7 @@ def creer_session_paiement(
         customer_email=eleve.email,
         success_url=f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{URL_PLATEFORME}/eleve/catalogue",
-        **({"custom_text": {"submit": {"message": "Paiement en 3 fois disponible avec Klarna"}}} if "klarna" in payment_method_types else {}),
+        **({"custom_text": {"submit": {"message": "Paiement en 3 ou 4 fois disponible avec Klarna"}}} if "klarna" in payment_method_types else {}),
     metadata={"commande_id": str(commande.id), "eleve_id": str(eleve.id)},
     )
 
@@ -225,7 +231,7 @@ def creer_session_paiement_montee_niveau(
         return {"checkout_url": f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={commande.stripe_session_id}"}
 
     payment_method_types = ["card"]
-    if montant >= 180:
+    if montant >= SEUIL_MESSAGE_KLARNA:
         payment_method_types.append("klarna")
 
     checkout_session = stripe.checkout.Session.create(
