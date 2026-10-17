@@ -17,7 +17,7 @@ import json
 from datetime import datetime
 from typing import List
 from pydantic import BaseModel
-from ..models import ReponseChapitre
+from ..models import ReponseChapitre, ValidationChapitre
 from ..emails import email_reponses_chapitre
 from .medias_fichiers import media_json
 from ..emails import email_coaching_rdv, email_demande_rdv_coach
@@ -173,6 +173,50 @@ def detail_chapitre(
         "id": chapitre.id, "titre": chapitre.titre, "contenu_html": chapitre.contenu_html,
         "valide": deja_valide, "medias": medias,
     }
+
+
+# ---------- Outils réservés aux comptes test ----------
+
+def _formation_compte_test(formation_id: int, eleve: Eleve, session: Session):
+    if not eleve.compte_test:
+        raise HTTPException(status_code=403, detail="Réservé aux comptes test.")
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    acces = _verifier_acces_formation(eleve, formation, session)
+    return formation, acces
+
+
+@router.post("/formations/{formation_id}/test/tout-valider")
+def test_tout_valider(formation_id: int, eleve: Eleve = Depends(eleve_connecte),
+                      session: Session = Depends(obtenir_session)):
+    """Compte test : valide d'un coup tous les chapitres (de tous les modules) accessibles à son niveau."""
+    formation, acces = _formation_compte_test(formation_id, eleve, session)
+    deja = {v.chapitre_id for v in session.query(ValidationChapitre).filter_by(eleve_id=eleve.id)}
+    nb = 0
+    for c in sequence_chapitres(formation):
+        if c.id not in deja and chapitre_dans_le_niveau(formation, acces.niveau, c):
+            session.add(ValidationChapitre(eleve_id=eleve.id, chapitre_id=c.id))
+            nb += 1
+    session.commit()
+    return {"ok": True, "valides": nb}
+
+
+@router.post("/formations/{formation_id}/test/reinitialiser")
+def test_reinitialiser(formation_id: int, eleve: Eleve = Depends(eleve_connecte),
+                       session: Session = Depends(obtenir_session)):
+    """Compte test : remet la formation à zéro (validations + réponses aux questionnaires)."""
+    formation, _ = _formation_compte_test(formation_id, eleve, session)
+    ids = [c.id for m in formation.modules for c in m.chapitres]
+    if ids:
+        session.query(ValidationChapitre).filter(
+            ValidationChapitre.eleve_id == eleve.id, ValidationChapitre.chapitre_id.in_(ids)
+        ).delete(synchronize_session=False)
+        session.query(ReponseChapitre).filter(
+            ReponseChapitre.eleve_id == eleve.id, ReponseChapitre.chapitre_id.in_(ids)
+        ).delete(synchronize_session=False)
+    session.commit()
+    return {"ok": True}
 
 
 # ---------- Questionnaire de chapitre (cases ☐ et pointillés du Word) ----------

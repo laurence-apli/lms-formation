@@ -38,6 +38,10 @@
     .contenu-eleve .btn-valider-chapitre { width:100%; }
   }
 
+  .outils-test { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:-14px 0 24px; padding:10px 14px; border:2px dashed #7C3AED; border-radius:8px; background:#F7F2FF; }
+  .outils-test-label { font-family:'League Spartan',sans-serif; font-weight:700; font-size:12px; color:#5B21B6; margin-right:auto; }
+  .outils-test button { border:1px solid #7C3AED; background:#fff; color:#5B21B6; border-radius:6px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .outils-test button.danger { border-color:#C0392B; color:#C0392B; }
   .progression-container { background:#FDFAF5; border:1px solid #DDD0AE; border-radius:8px; padding:14px 18px; margin-bottom:28px; }
   .progression-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
   .progression-label { font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700; color:var(--ink); text-transform:uppercase; letter-spacing:1px; }
@@ -200,6 +204,25 @@ html.lv-pseudo-actif, html.lv-pseudo-actif body { overflow:hidden; }
       <div class="progression-bar-fill" id="progression-bar" style="width:0%"></div>
     </div>
   </div>
+
+  {% if eleve.compte_test %}
+  <div class="outils-test">
+    <span class="outils-test-label">🧪 Compte test</span>
+    <button type="button" onclick="testToutValider()">✓ Valider tous les chapitres</button>
+    <button type="button" class="danger" onclick="testReinitialiser(this)">↺ Réinitialiser la formation</button>
+  </div>
+  <script>
+  async function testToutValider() {
+    const r = await fetch('/api/eleve/formations/{{ formation.id }}/test/tout-valider', { method: 'POST' });
+    if (r.ok) location.reload();
+  }
+  async function testReinitialiser(btn) {
+    if (!btn.dataset.confirme) { btn.dataset.confirme = '1'; btn.textContent = 'Confirmer la remise à zéro ?'; setTimeout(() => { delete btn.dataset.confirme; btn.textContent = '↺ Réinitialiser la formation'; }, 4000); return; }
+    const r = await fetch('/api/eleve/formations/{{ formation.id }}/test/reinitialiser', { method: 'POST' });
+    if (r.ok) location.reload();
+  }
+  </script>
+  {% endif %}
 
   <div class="formation-layout-eleve">
     <div class="colonne-sommaire-eleve">
