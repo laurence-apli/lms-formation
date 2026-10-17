@@ -148,6 +148,7 @@ ${a.nb_niveaux_formation > 1 ? `<span class="niveau-badge niveau-${a.niveau}">Ni
 </div>
 <div style="display:flex; gap:6px; flex-wrap:wrap;">
 ${a.nb_niveaux_formation > 1 ? `<button class="btn btn-sm" onclick="ouvrirModalAcces(${a.formation_id})">✎ Niveau</button>` : ''}
+${eleve.compte_test ? `<button class="btn btn-sm" style="border-color:#7C3AED;color:#5B21B6;" title="Compte test : valide tous les chapitres de tous les modules" onclick="toutValider(${a.formation_id})">✓ Tout valider</button>` : ''}
 <button class="btn btn-sm" onclick="demanderReinitialisation(${a.formation_id}, decodeURIComponent('${encodeURIComponent(a.formation_titre)}'))">↺ Réinitialiser</button>
 <button class="btn btn-sm btn-danger-outline" onclick="retirerAcces(${a.formation_id})">Retirer</button>
 </div>
@@ -329,6 +330,14 @@ afficherOverlay(`
 <button class="btn" style="background:var(--danger); color:white; border-color:var(--danger);" onclick="confirmerReinitialisation(${formationId})">Réinitialiser</button>
 </div>
 </div>`);
+}
+
+async function toutValider(formationId) {
+try {
+const r = await appelApi(`/admin/eleves/${ELEVE_ID}/acces/${formationId}/tout-valider`, { method: 'POST' });
+afficherToast(r.valides ? r.valides + ' chapitre(s) validé(s)' : 'Tout était déjà validé');
+await charger();
+} catch (e) { afficherToast(e.message); }
 }
 
 async function confirmerReinitialisation(formationId) {

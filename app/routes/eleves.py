@@ -216,6 +216,29 @@ def retirer_acces_formation(eleve_id: int, formation_id: int, session: Session =
 
 # ---------- Réinitialisation de l'avancement ----------
 
+@router.post("/eleves/{eleve_id}/acces/{formation_id}/tout-valider")
+def tout_valider_compte_test(eleve_id: int, formation_id: int, session: Session = Depends(obtenir_session)):
+    """Compte test uniquement : valide tous les chapitres (tous modules) accessibles au niveau de l'élève."""
+    from ..models import sequence_chapitres, chapitre_dans_le_niveau
+    eleve = session.get(Eleve, eleve_id)
+    if eleve is None:
+        raise HTTPException(status_code=404, detail="Élève introuvable.")
+    if not eleve.compte_test:
+        raise HTTPException(status_code=403, detail="Réservé aux comptes test.")
+    acces = session.query(AccesFormation).filter_by(eleve_id=eleve_id, formation_id=formation_id).first()
+    if acces is None:
+        raise HTTPException(status_code=404, detail="Accès introuvable.")
+    formation = session.get(Formation, formation_id)
+    deja = {v.chapitre_id for v in session.query(ValidationChapitre).filter_by(eleve_id=eleve_id)}
+    nb = 0
+    for c in sequence_chapitres(formation):
+        if c.id not in deja and chapitre_dans_le_niveau(formation, acces.niveau, c):
+            session.add(ValidationChapitre(eleve_id=eleve_id, chapitre_id=c.id))
+            nb += 1
+    session.commit()
+    return {"ok": True, "valides": nb}
+
+
 @router.post("/eleves/{eleve_id}/acces/{formation_id}/reinitialiser-avancement")
 def reinitialiser_avancement(
     eleve_id: int, formation_id: int,
