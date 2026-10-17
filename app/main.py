@@ -8,7 +8,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .config import SECRET_KEY
 from .database import initialiser_base
-from .routes import auth, formations, import_word, eleves, espace_eleve, profil
+from .routes import auth, formations, import_word, eleves, espace_eleve, profil, medias_fichiers
 from .routes import offres_admin, offres_publiques
 from . import pages
 from . import pages_admin
@@ -31,6 +31,7 @@ app.include_router(formations.router)
 app.include_router(import_word.router)
 app.include_router(eleves.router)
 app.include_router(espace_eleve.router)
+app.include_router(medias_fichiers.router)
 app.include_router(profil.router)
 app.include_router(pages.router)
 app.include_router(pages_admin.router)

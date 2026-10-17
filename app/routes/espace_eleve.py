@@ -13,6 +13,7 @@ from ..models import (
     SeanceAccompagnement,
 )
 from .auth import eleve_connecte
+from .medias_fichiers import media_json
 from ..emails import email_coaching_rdv, email_demande_rdv_coach
 from .boutique_models import propositions_montee_niveau
 
@@ -119,7 +120,7 @@ def detail_formation(
         'lien_resalib': eleve.lien_resalib,
         'lien_resalib_visio': eleve.lien_resalib_visio,
     'medias': [
-        {'id': m.id, 'type': m.type, 'titre': m.titre, 'url': m.url, 'telechargeable': m.telechargeable}
+        media_json('formation', m)
         for m in formation.medias
     ],
     }
@@ -139,7 +140,7 @@ def detail_module(
         raise HTTPException(status_code=403, detail="Ce module n'est pas inclus dans votre niveau d'accès.")
 
     return {"id": module.id, "titre": module.titre, "presentation_html": module.presentation_html,
-            "medias": [{"id": m.id, "type": m.type, "titre": m.titre, "url": m.url, "telechargeable": m.telechargeable} for m in module.medias]}
+            "medias": [media_json("module", m) for m in module.medias]}
 
 
 @router.get("/chapitres/{chapitre_id}")
@@ -159,7 +160,7 @@ def detail_chapitre(
         raise HTTPException(status_code=403, detail=f"Chapitre non accessible : {raison}")
 
     medias = [
-        {"id": m.id, "type": m.type, "titre": m.titre, "url": m.url, "telechargeable": m.telechargeable}
+        media_json("chapitre", m)
         for m in chapitre.medias
     ]
     return {

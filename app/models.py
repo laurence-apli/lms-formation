@@ -9,7 +9,8 @@ from sqlalchemy import (
     create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, Numeric,
     UniqueConstraint, Text
 )
-from sqlalchemy.orm import declarative_base, relationship, Session, deferred
+from sqlalchemy.orm import declarative_base, relationship, Session, deferred, column_property
+from sqlalchemy import func
 
 Base = declarative_base()
 
@@ -121,7 +122,12 @@ class Media(Base):
     chapitre_id = Column(Integer, ForeignKey("chapitres.id"), nullable=False)
     type = Column(String(20), nullable=False)
     titre = Column(String(200))
-    url = Column(Text, nullable=False)
+    # url peut contenir un fichier entier encodé en base64 (audio de 30 Mo -> ~40 Mo de texte).
+    # deferred : jamais chargé dans les listes ; le fichier est servi à la demande par
+    # app/routes/medias_fichiers.py. est_integre permet de savoir si c'est un fichier
+    # (data:...) ou un lien externe sans charger la colonne entière.
+    url = deferred(Column(Text, nullable=False))
+    est_integre = column_property(func.substr(url, 1, 5) == "data:")
     telechargeable = Column(Boolean, default=False)
 
     chapitre = relationship("Chapitre", back_populates="medias")
@@ -135,7 +141,12 @@ class MediaModule(Base):
     module_id = Column(Integer, ForeignKey("modules.id"), nullable=False)
     type = Column(String(20), nullable=False)
     titre = Column(String(200))
-    url = Column(Text, nullable=False)
+    # url peut contenir un fichier entier encodé en base64 (audio de 30 Mo -> ~40 Mo de texte).
+    # deferred : jamais chargé dans les listes ; le fichier est servi à la demande par
+    # app/routes/medias_fichiers.py. est_integre permet de savoir si c'est un fichier
+    # (data:...) ou un lien externe sans charger la colonne entière.
+    url = deferred(Column(Text, nullable=False))
+    est_integre = column_property(func.substr(url, 1, 5) == "data:")
     telechargeable = Column(Boolean, default=False)
 
     module = relationship("Module", back_populates="medias")
@@ -150,7 +161,12 @@ class MediaFormation(Base):
     formation_id = Column(Integer, ForeignKey("formations.id"), nullable=False)
     type = Column(String(20), nullable=False)
     titre = Column(String(200))
-    url = Column(Text, nullable=False)
+    # url peut contenir un fichier entier encodé en base64 (audio de 30 Mo -> ~40 Mo de texte).
+    # deferred : jamais chargé dans les listes ; le fichier est servi à la demande par
+    # app/routes/medias_fichiers.py. est_integre permet de savoir si c'est un fichier
+    # (data:...) ou un lien externe sans charger la colonne entière.
+    url = deferred(Column(Text, nullable=False))
+    est_integre = column_property(func.substr(url, 1, 5) == "data:")
     telechargeable = Column(Boolean, default=False)
 
     formation = relationship("Formation", back_populates="medias")

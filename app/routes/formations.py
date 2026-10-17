@@ -14,6 +14,7 @@ from ..models import (
     deplacer_chapitre_vers_module as deplacer_chapitre_modele,
 )
 from .auth import admin_connecte
+from .medias_fichiers import media_json
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -41,8 +42,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "actif": formation.actif, "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage,
         "presentation_html": formation.presentation_html or "",
         "medias": [
-            {"id": med.id, "type": med.type, "titre": med.titre,
-             "url": med.url, "telechargeable": med.telechargeable}
+            media_json("formation", med)
             for med in formation.medias
         ],
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
@@ -53,8 +53,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
                 "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
                 "presentation_html": m.presentation_html or "",
                 "medias": [
-                    {"id": med.id, "type": med.type, "titre": med.titre,
-                     "url": med.url, "telechargeable": med.telechargeable}
+                    media_json("module", med)
                     for med in m.medias
                 ],
                 "chapitres": [
@@ -63,8 +62,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
                         "contenu_html": c.contenu_html or "",
                         "lien_coaching": c.lien_coaching or "",
                         "medias": [
-                            {"id": med.id, "type": med.type, "titre": med.titre,
-                             "url": med.url, "telechargeable": med.telechargeable}
+                            media_json("chapitre", med)
                             for med in c.medias
                         ],
                     }
