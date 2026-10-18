@@ -791,7 +791,10 @@ var _Q_CASE = /^\s*[☐□▢❏❑]\s*/;
 var _Q_POINTS = /^[\s.…·_]{6,}$/;
 var _Q_FIN_POINTS = /^(.*\S)\s*[.…_]{6,}\s*$/;
 
-function _qTexte(el) { return (el.textContent || '').replace(/\s+/g, ' ').trim(); }
+// Word remplace automatiquement « ... » par le caractère « … » : on le recompte
+// comme trois points, sinon « ........ » tapé dans Word (devenu « …….. ») n'était
+// pas reconnu comme une ligne de réponse.
+function _qTexte(el) { return (el.textContent || '').replace(/…/g, '...').replace(/\s+/g, ' ').trim(); }
 function _qCleBrouillon(chapId) { return 'q-brouillon-' + chapId; }
 
 function activerQuestionnaire(zone, chapId, dejaValide) {
@@ -838,7 +841,7 @@ function activerQuestionnaire(zone, chapId, dejaValide) {
       ta.placeholder = 'Écris ta réponse ici…';
       ta.addEventListener('input', _qSauverBrouillon);
       if (aRemplacer[0] === p && !_Q_POINTS.test(t)) {
-        p.innerHTML = p.innerHTML.replace(/[.…_]{6,}\s*$/, '');
+        p.innerHTML = p.innerHTML.replace(/[.…_](?:[.…_]|\s|&nbsp;)*$/, '');
         p.after(ta);
       } else {
         aRemplacer[0].replaceWith(ta);
