@@ -332,7 +332,7 @@ def ajouter_media(
     url: str = Form(...), telechargeable: bool = Form(False),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio", "lien"):
+    if type not in ("pdf", "word", "audio", "lien"):
         raise HTTPException(status_code=400, detail="Type de média invalide.")
     chapitre = session.get(Chapitre, chapitre_id)
     if chapitre is None:
@@ -347,10 +347,12 @@ TAILLE_MAX_MEDIA_OCTETS = TAILLE_MAX_MEDIA_MO * 1024 * 1024
 
 EXTENSIONS_AUTORISEES = {
     "pdf": {".pdf"},
+    "word": {".docx"},
     "audio": {".mp3", ".wav", ".m4a", ".ogg"},
 }
 MIME_PAR_EXTENSION = {
-    ".pdf": "application/pdf", ".mp3": "audio/mpeg", ".wav": "audio/wav",
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".mp3": "audio/mpeg", ".wav": "audio/wav",
     ".m4a": "audio/mp4", ".ogg": "audio/ogg",
 }
 
@@ -360,7 +362,7 @@ async def uploader_media_fichier(
     telechargeable: bool = Form(False), fichier: UploadFile = File(...),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio"):
+    if type not in ("pdf", "word", "audio"):
         raise HTTPException(status_code=400, detail="Ce type de média ne s'importe pas par fichier.")
     chapitre = session.get(Chapitre, chapitre_id)
     if chapitre is None:
@@ -410,7 +412,7 @@ def ajouter_media_module(
     url: str = Form(...), telechargeable: bool = Form(False),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio", "lien"):
+    if type not in ("pdf", "word", "audio", "lien"):
         raise HTTPException(status_code=400, detail="Type de média invalide.")
     module = session.get(Module, module_id)
     if module is None:
@@ -427,7 +429,7 @@ async def uploader_media_module(
     telechargeable: bool = Form(False), fichier: UploadFile = File(...),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio"):
+    if type not in ("pdf", "word", "audio"):
         raise HTTPException(status_code=400, detail="Ce type de media ne s'importe pas par fichier.")
     module = session.get(Module, module_id)
     if module is None:
@@ -475,7 +477,7 @@ def ajouter_media_formation(
     url: str = Form(...), telechargeable: bool = Form(False),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio", "lien"):
+    if type not in ("pdf", "word", "audio", "lien"):
         raise HTTPException(status_code=400, detail="Type de media invalide.")
     formation = session.get(Formation, formation_id)
     if formation is None:
@@ -492,7 +494,7 @@ async def uploader_media_formation(
     telechargeable: bool = Form(False), fichier: UploadFile = File(...),
     session: Session = Depends(obtenir_session),
 ):
-    if type not in ("pdf", "audio"):
+    if type not in ("pdf", "word", "audio"):
         raise HTTPException(status_code=400, detail="Ce type de media ne s'importe pas par fichier.")
     formation = session.get(Formation, formation_id)
     if formation is None:

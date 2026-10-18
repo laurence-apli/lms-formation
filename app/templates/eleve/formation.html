@@ -462,8 +462,8 @@ const FORMATION_ID = {{ formation.id }};
 function rendreMediasEleve(medias) {
   if (!medias || !medias.length) return '';
   return medias.map(function(media) {
-    var icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
-    var nomFichier = (media.titre || 'fichier') + ({pdf:'.pdf', audio:'.mp3'}[media.type] || '');
+    var icone = {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || '📎';
+    var nomFichier = (media.titre || 'fichier') + ({pdf:'.pdf', word:'.docx', audio:'.mp3'}[media.type] || '');
     if (media.type === 'lien') {
       var url = media.url || '';
       var ytMatch = (/(?:youtube(?:-nocookie)?\.com|youtu\.be)\//).test(url) && url.match(/(?:[?&]v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
@@ -489,7 +489,7 @@ function rendreMediasEleve(medias) {
         '<input type="range" class="la-barre" min="0" max="1000" step="1" value="0" aria-label="Position de lecture">' +
         '<span class="la-temps la-total">--:--</span></div></div>';
     }
-    return media.telechargeable
+    return (media.telechargeable || media.type === 'word')
       ? '<a class="media-eleve-row" href="' + media.url + '" download="' + nomFichier + '" target="_blank">' + icone + ' ' + media.titre + ' <span class="media-eleve-action">Télécharger</span></a>'
       : '<a class="media-eleve-row" href="' + media.url + '" target="_blank" rel="noopener">' + icone + ' ' + media.titre + ' <span class="media-eleve-action">Ouvrir →</span></a>';
   }).join('');
@@ -654,8 +654,8 @@ async function afficherContenu() {
     let mediasHtml = '';
     if (c.medias && c.medias.length) {
       mediasHtml = '<div class="medias-eleve">' + c.medias.map(media => {
-        const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || '📎';
-        const extensions = { pdf: '.pdf', audio: '.mp3' };
+        const icone = {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || '📎';
+        const extensions = { pdf: '.pdf', word: '.docx', audio: '.mp3' };
         const nomFichier = (media.titre || 'fichier') + (extensions[media.type] || '');
 
         // Détection YouTube / Vimeo pour les liens
@@ -713,7 +713,7 @@ async function afficherContenu() {
             </div>
           </div>`;
         }
-        return media.telechargeable
+        return (media.telechargeable || media.type === 'word')
           ? `<a class="media-eleve-row" href="${media.url}" download="${nomFichier}" target="_blank">${icone} ${media.titre} <span class="media-eleve-action">Télécharger</span></a>`
           : `<a class="media-eleve-row" href="${media.url}" target="_blank" rel="noopener">${icone} ${media.titre} <span class="media-eleve-action">Ouvrir →</span></a>`;
       }).join('') + '</div>';

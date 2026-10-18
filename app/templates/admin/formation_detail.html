@@ -90,7 +90,7 @@ function pictosNoeud(medias, aDuTexte) {
     if (k === 'lien' && /youtu\.?be|vimeo\.com/i.test(med.url || '')) k = 'video';
     compte[k] = (compte[k] || 0) + 1;
   });
-  const ICONES = [['texte','📝','Texte du chapitre'], ['audio','🎧','Audio'], ['video','🎬','Vidéo'], ['pdf','📄','PDF / pièce jointe'], ['lien','🔗','Lien']];
+  const ICONES = [['texte','📝','Texte du chapitre'], ['audio','🎧','Audio'], ['video','🎬','Vidéo'], ['pdf','📄','PDF / pièce jointe'], ['word','📘','Document Word'], ['lien','🔗','Lien']];
   if (aDuTexte) compte.texte = 1;
   const html = ICONES.filter(([k]) => compte[k]).map(([k, ic, nom]) =>
     `<span title="${compte[k] > 1 ? compte[k] + ' × ' : ''}${nom}">${ic}${compte[k] > 1 ? '<sup>' + compte[k] + '</sup>' : ''}</span>`).join('');
@@ -216,7 +216,7 @@ ${renderMediasListe(m.medias || [], 'module')}
       <div class="medias-liste">
         ${c.medias.map(media => `
           <div class="media-row">
-            <span>${ {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || media.type }</span>
+            <span>${ {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || media.type }</span>
             <span style="flex:1;">${esc(media.titre)}</span>
             <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--grey);">
               <input type="checkbox" ${media.telechargeable ? 'checked' : ''} onchange="toggleMediaTelechargeable(${media.id}, this.checked)">
@@ -585,7 +585,7 @@ function ouvrirModalAjouterMedia(chapId) {
       <div id="zone-erreur-modal"></div>
       <label>Type</label>
       <select id="input-media-type" onchange="majFormulaireMedia()">
-        <option value="pdf">📄 PDF</option>
+        <option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option>
         <option value="audio">🎧 Audio</option>
         <option value="lien">🔗 Lien externe</option>
       </select>
@@ -610,7 +610,7 @@ function majFormulaireMedia() {
   if (type === 'lien') {
     zone.innerHTML = `<label>URL</label><input type="text" id="input-media-url" placeholder="https://…">`;
   } else {
-    const accept = type === 'pdf' ? '.pdf' : '.mp3,.wav,.m4a,.ogg';
+    const accept = type === 'pdf' ? '.pdf' : type === 'word' ? '.docx' : '.mp3,.wav,.m4a,.ogg';
     zone.innerHTML = `
       <label>Fichier</label>
       <div class="import-zone" id="zone-fichier-media"
@@ -698,7 +698,7 @@ function renderMediasListe(medias, contexte) {
   if (!medias || !medias.length) return '<div class="helper-text">Aucun média complémentaire.</div>';
   const prefixe = contexte;
   return medias.map(function(media) {
-    const icone = {pdf:'📄', audio:'🎧', lien:'🔗'}[media.type] || media.type;
+    const icone = {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || media.type;
     const majPref = prefixe[0].toUpperCase() + prefixe.slice(1);
     return '<div class="media-row">' +
       '<span>' + icone + '</span>' +
@@ -719,7 +719,7 @@ function afficherModalMediaExt(contexte, id) {
     '<div class="modal"><h3>Ajouter un média</h3><div id="zone-erreur-modal"></div>' +
     '<label>Type</label>' +
     '<select id="input-media-type" onchange="majFormulaireMedia()">' +
-    '<option value="pdf">📄 PDF</option><option value="audio">🎧 Audio</option><option value="lien">🔗 Lien externe</option>' +
+    '<option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option><option value="audio">🎧 Audio</option><option value="lien">🔗 Lien externe</option>' +
     '</select>' +
     '<label>Titre affiché à l\'élève</label><input type="text" id="input-media-titre">' +
     '<div id="zone-source-media"></div>' +
