@@ -41,6 +41,30 @@ app.include_router(migration_web_temporaire.router)
 
 
 
+from urllib.parse import quote
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+from fastapi.exception_handlers import http_exception_handler as _gestion_par_defaut
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+async def rediriger_vers_connexion(request: Request, exc: StarletteHTTPException):
+    """Page HTML ouverte sans être connecté (ex. lien « Lire et répondre » d'un e-mail) :
+    au lieu d'afficher {"detail":"Connexion requise."}, on envoie vers la page de
+    connexion, qui ramène ensuite sur la page demandée. Les appels d'API (fetch)
+    gardent leur réponse JSON habituelle."""
+    if exc.status_code == 401 and request.method == "GET":
+        chemin = request.url.path
+        cible = chemin + (("?" + request.url.query) if request.url.query else "")
+        if chemin.startswith("/eleve/"):
+            return RedirectResponse("/eleve/connexion?suite=" + quote(cible, safe="/"), status_code=303)
+        if chemin.startswith("/admin/page/"):
+            request.session["apres_connexion_admin"] = cible
+            return RedirectResponse("/admin/connexion", status_code=303)
+    return await _gestion_par_defaut(request, exc)
+
+
 @app.on_event("startup")
 def au_demarrage():
     initialiser_base()

@@ -139,7 +139,11 @@ def connexion_admin(request: Request, email: str = Form(...), mot_de_passe: str 
         raise HTTPException(status_code=401, detail=erreur_generique)
 
     request.session["admin_id"] = admin.id
-    return RedirectResponse(url="/admin/page/formations", status_code=303)
+    # Retour à la page demandée avant la connexion (ex. lien d'un e-mail de notification)
+    suite = request.session.pop("apres_connexion_admin", "") or ""
+    if not (suite.startswith("/admin/page/") and "//" not in suite):
+        suite = "/admin/page/formations"
+    return RedirectResponse(url=suite, status_code=303)
 
 
 @router.post("/admin/mot-de-passe-oublie")

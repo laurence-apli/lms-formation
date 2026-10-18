@@ -20,6 +20,9 @@
 .carte-progress-label { font-size:11px; color:#F5EDD6; }
 .carte-bandeau-niveau { display:block; text-align:center; padding:9px 0; font-size:12.5px; font-weight:600; color:var(--gold); background:var(--cream); text-decoration:none; border-top:1px solid var(--border); }
 .carte-bandeau-niveau:hover { background:var(--gold); color:#fff; }
+.carte-bandeau-messages { display:flex; align-items:center; justify-content:center; gap:8px; padding:11px 0; min-height:44px; box-sizing:border-box; font-size:13px; font-weight:600; color:#fff; background:#B4523F; text-decoration:none; border-top:1px solid var(--border); }
+.carte-bandeau-messages:hover { background:#963F2F; }
+.carte-bandeau-messages .nb { background:#fff; color:#B4523F; border-radius:10px; padding:0 8px; font-size:12px; line-height:20px; }
 .section-dispo { margin-top:36px; }
 .section-dispo h2 { font-family:'League Spartan',sans-serif; font-size:13px; letter-spacing:.05em; color:var(--grey); margin-bottom:14px; }
 .carte-disponible .carte-visuel { opacity:.75; }
@@ -69,6 +72,9 @@
 <div class="carte-progress-label">{% if f.progression == 100 %}Terminée{% else %}{{ f.progression }}% complété{% endif %}</div>
 </div>
 </a>
+{% if f.messages_non_lus and eleve.actif %}
+<a class="carte-bandeau-messages" href="/eleve/voir-formation/{{ f.id }}/messages"><span class="nb">{{ f.messages_non_lus }}</span> {% if f.messages_non_lus > 1 %}nouveaux messages{% else %}nouveau message{% endif %} de {{ profil.prenom or "Laurence" }} →</a>
+{% endif %}
 {% if f.nb_niveaux > 1 and f.niveau < f.nb_niveaux %}
 <a class="carte-bandeau-niveau" href="/eleve/catalogue">↑ Monter de niveau</a>
 {% endif %}

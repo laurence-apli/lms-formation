@@ -130,7 +130,12 @@ def page_tableau_de_bord(
             "image_url": formation.image_url,
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
             "progression": progression_pourcentage(session, eleve.id, formation),
+            "messages_non_lus": 0,
         })
+    # Pastille « nouveaux messages » par formation (messagerie ; ne fait jamais échouer la page)
+    from .routes.messagerie import infos_onglets_eleve
+    for f in formations_acquises:
+        f["messages_non_lus"] = infos_onglets_eleve(session, eleve, f["id"])["nb_messages_non_lus"]
     formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [

@@ -60,7 +60,7 @@
 
   .col-nouveau h2 { font-family:'EB Garamond',serif; font-size:22px; margin:0; font-weight:600; }
   .etape { font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6B5A3A; margin-bottom:6px; display:block; }
-  .modes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
+  .modes { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:6px; }
   .modes button { border:1px solid #D9C9A0; background:#fff; color:var(--ink); border-radius:6px; padding:9px 4px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; min-height:44px; }
   .modes button.actif { background:var(--ink); color:#F5EDD6; border-color:var(--ink); }
   .encart { background:#fff; border-radius:8px; padding:12px 13px; font-size:13.5px; line-height:1.45; display:flex; flex-direction:column; gap:8px; }
@@ -69,6 +69,7 @@
   .puces span { background:var(--cream); border-radius:12px; padding:3px 9px; font-size:12.5px; }
   .choix-eleve { display:block; width:100%; text-align:left; border:1px solid #EFE5CB; background:#FDFAF5; border-radius:6px; padding:8px 10px; cursor:pointer; font-family:inherit; color:var(--ink); }
   .choix-eleve.actif { background:var(--cream); border-color:var(--gold); }
+  .choix-eleve .coche { display:inline-block; width:16px; text-align:center; margin-right:4px; color:#8A6A1C; font-weight:700; }
   .choix-eleve .n { display:flex; justify-content:space-between; gap:6px; font-size:13.5px; }
   .choix-eleve .barre { display:block; height:5px; background:#EFE5CB; border-radius:3px; margin-top:5px; overflow:hidden; }
   .choix-eleve .barre i { display:block; height:5px; background:var(--gold); }
@@ -156,7 +157,8 @@
       <div class="modes" role="group" aria-label="Destinataires">
         <button type="button" data-m="toutes" class="actif" onclick="choisirMode('toutes')">Toutes les actives</button>
         <button type="button" data-m="avancement" onclick="choisirMode('avancement')">Selon l'avancement</button>
-        <button type="button" data-m="une" onclick="choisirMode('une')">Une personne</button>
+        <button type="button" data-m="plusieurs" onclick="choisirMode('plusieurs')">Plusieurs personnes</button>
+        <button type="button" data-m="une" onclick="choisirMode('une')">Une personne (privé)</button>
       </div>
       <div class="encart" id="encart-avancement" style="display:none; margin-top:8px;">
         <label>Ont terminé
@@ -167,7 +169,7 @@
         </label>
       </div>
       <div class="encart" id="encart-une" style="display:none; margin-top:8px;">
-        <label>Chercher une élève
+        <label><span id="libelle-recherche">Chercher une élève</span>
           <input type="search" id="n-recherche" placeholder="Prénom, nom ou e-mail" oninput="afficherEleves()">
         </label>
         <div class="liste-eleves" id="liste-eleves"></div>
@@ -216,6 +218,8 @@ async function chargerReglage() {
     const r = await appelApi('/admin/messagerie/reglages');
     document.getElementById('reglage-visible').value = r.visible_eleves;
     document.getElementById('bandeau-test').style.display = r.visible_eleves === 'tous' ? 'none' : 'block';
+    etat.modeTest = r.visible_eleves !== 'tous';
+    if (document.getElementById('col-nouveau').style.display !== 'none') apercu();
   } catch (e) {}
 }
 async function changerReglage(v) {
@@ -329,16 +333,31 @@ async function ouvrirAnnonce(id) {
 }
 
 // ---------- Nouveau message ----------
+// Tout est chargé en UN appel à l'ouverture (formations, élèves, avancement) : ensuite
+// changer de formation, de critère ou de personnes est instantané, sans aller-retour serveur.
+// Le serveur refait le calcul au moment de l'envoi (c'est lui qui fait foi).
+etat.choisis = new Set();
+async function chargerDestinataires() {
+  const r = await appelApi('/admin/messagerie/destinataires');
+  etat.formations = r.formations;
+  etat.modeTest = r.visible_eleves !== 'tous';
+  const sel = document.getElementById('n-formation');
+  const avant = sel.value;
+  sel.innerHTML = etat.formations.map(f =>
+    `<option value="${f.id}">${esc(f.titre)}${f.actif ? '' : ' (inactive)'} — ${f.eleves.length} élève${f.eleves.length > 1 ? 's' : ''}</option>`).join('');
+  if (avant && etat.formations.find(f => String(f.id) === avant)) sel.value = avant;
+}
 async function ouvrirNouveau(preselection) {
   document.getElementById('col-nouveau').style.display = 'flex';
   vue('nouveau');
-  if (!etat.formations.length) {
-    etat.formations = await appelApi('/admin/messagerie/formations');
-    document.getElementById('n-formation').innerHTML = etat.formations.map(f =>
-      `<option value="${f.id}">${esc(f.titre)}${f.actif ? '' : ' (inactive)'}</option>`).join('');
+  const zone = document.getElementById('encart-apercu');
+  if (!etat.formations.length || !etat.formations[0].eleves) {
+    zone.innerHTML = '<span class="discret">Chargement des élèves…</span>';
+    document.getElementById('btn-envoyer').disabled = true;
+    try { await chargerDestinataires(); } catch (e) { zone.innerHTML = '<span class="erreur">' + esc(e.message) + '</span>'; return; }
   }
   if (preselection && preselection.formation) document.getElementById('n-formation').value = preselection.formation;
-  await changerFormation();
+  changerFormation();
   if (preselection && preselection.eleve) {
     choisirMode('une');
     etat.eleveChoisi = preselection.eleve;
@@ -354,14 +373,16 @@ function formationCourante() {
   const id = parseInt(document.getElementById('n-formation').value, 10);
   return etat.formations.find(f => f.id === id);
 }
-async function changerFormation() {
+function changerFormation() {
   const f = formationCourante();
   if (!f) return;
   const opts = '<option value="">— peu importe —</option>' + f.modules.map(m => `<option value="${m.id}">${esc(m.libelle)}</option>`).join('');
   document.getElementById('n-termine').innerHTML = opts;
   document.getElementById('n-noncommence').innerHTML = opts;
-  etat.eleves = await appelApi('/admin/messagerie/formations/' + f.id + '/eleves');
+  etat.eleves = f.eleves;
   if (!etat.eleves.find(e => e.id === etat.eleveChoisi)) etat.eleveChoisi = null;
+  const ids = new Set(etat.eleves.map(e => e.id));
+  etat.choisis = new Set([...etat.choisis].filter(id => ids.has(id)));
   afficherEleves();
   apercu();
 }
@@ -369,19 +390,27 @@ function choisirMode(m) {
   etat.mode = m;
   document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('actif', b.dataset.m === m));
   document.getElementById('encart-avancement').style.display = m === 'avancement' ? 'flex' : 'none';
-  document.getElementById('encart-une').style.display = m === 'une' ? 'flex' : 'none';
+  document.getElementById('encart-une').style.display = (m === 'une' || m === 'plusieurs') ? 'flex' : 'none';
+  document.getElementById('libelle-recherche').textContent = m === 'plusieurs' ? 'Coche les personnes (recherche possible)' : 'Chercher une élève';
+  afficherEleves();
   apercu();
 }
 function afficherEleves() {
   const q = (document.getElementById('n-recherche').value || '').toLowerCase().trim();
-  const liste = etat.eleves.filter(e => !q || (e.nom + ' ' + e.email).toLowerCase().includes(q));
-  document.getElementById('liste-eleves').innerHTML = liste.length ? liste.map(e => `
-    <button type="button" class="choix-eleve ${etat.eleveChoisi === e.id ? 'actif' : ''}" onclick="choisirEleve(${e.id})">
-      <span class="n"><strong>${esc(e.nom)}${e.test ? ' 🧪' : ''}</strong><span class="discret">${esc(e.avancement)} · ${e.pct} %</span></span>
+  const liste = (etat.eleves || []).filter(e => !q || (e.nom + ' ' + e.email).toLowerCase().includes(q));
+  const multi = etat.mode === 'plusieurs';
+  document.getElementById('liste-eleves').innerHTML = liste.length ? liste.map(e => {
+    const actif = multi ? etat.choisis.has(e.id) : etat.eleveChoisi === e.id;
+    return `<button type="button" class="choix-eleve ${actif ? 'actif' : ''}" aria-pressed="${actif}" onclick="choisirEleve(${e.id})">
+      <span class="n"><strong>${multi ? `<span class="coche" aria-hidden="true">${actif ? '☑' : '☐'}</span>` : ''}${esc(e.nom)}${e.test ? ' 🧪' : ''}</strong><span class="discret">${esc(e.avancement)} · ${e.pct} %</span></span>
       <span class="barre" aria-hidden="true"><i style="width:${Math.max(2, e.pct)}%"></i></span>
-    </button>`).join('') : '<div class="discret">Aucune élève active sur cette formation.</div>';
+    </button>`; }).join('') : '<div class="discret">Aucune élève active sur cette formation.</div>';
 }
-function choisirEleve(id) { etat.eleveChoisi = id; afficherEleves(); apercu(); }
+function choisirEleve(id) {
+  if (etat.mode === 'plusieurs') { etat.choisis.has(id) ? etat.choisis.delete(id) : etat.choisis.add(id); }
+  else etat.eleveChoisi = id;
+  afficherEleves(); apercu();
+}
 function cible() {
   const f = formationCourante();
   const c = { formation_id: f ? f.id : 0, mode: etat.mode };
@@ -391,26 +420,33 @@ function cible() {
     c.module_non_commence_id = n ? parseInt(n, 10) : null;
   }
   if (etat.mode === 'une') c.eleve_id = etat.eleveChoisi;
+  if (etat.mode === 'plusieurs') c.eleve_ids = [...etat.choisis];
   return c;
 }
-async function apercu() {
+function destinatairesLocaux(c) {
+  const el = etat.eleves || [];
+  if (c.mode === 'toutes') return el;
+  if (c.mode === 'une') return el.filter(e => e.id === c.eleve_id);
+  if (c.mode === 'plusieurs') return el.filter(e => etat.choisis.has(e.id));
+  return el.filter(e => (!c.module_termine_id || e.termines.includes(c.module_termine_id)) &&
+                        (!c.module_non_commence_id || !e.commences.includes(c.module_non_commence_id)));
+}
+function apercu() {
   const zone = document.getElementById('encart-apercu');
   const btn = document.getElementById('btn-envoyer');
-  etat.apercu = null;
   const c = cible();
-  if (c.mode === 'une' && !c.eleve_id) { zone.innerHTML = '<span class="discret">Choisis une élève dans la liste.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
-  if (c.mode === 'avancement' && !c.module_termine_id && !c.module_non_commence_id) { zone.innerHTML = '<span class="discret">Choisis au moins un critère d\'avancement.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
-  try {
-    const r = await appelApi('/admin/messagerie/apercu-destinataires', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(c) });
-    etat.apercu = r;
-    if (!r.nb) { zone.innerHTML = '<span class="discret">Aucune élève ne correspond.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
-    const noms = r.eleves.slice(0, 30).map(e => `<span>${esc(e.nom)}${e.test ? ' 🧪' : ''}</span>`).join('') + (r.nb > 30 ? `<span>+ ${r.nb - 30}</span>` : '');
-    const nbTest = r.eleves.filter(e => e.test).length;
-    zone.innerHTML = `<div><strong>${r.nb} personne${r.nb > 1 ? 's' : ''}</strong> ${c.mode === 'une' ? '' : (r.nb > 1 ? 'recevront ce message' : 'recevra ce message')}</div><div class="puces">${noms}</div>` +
-      (r.mode_test ? `<div class="discret">🧪 Mode test : seules les ${nbTest} élève(s) test le verront.</div>` : '');
-    btn.disabled = false;
-    btn.textContent = c.mode === 'une' ? 'Envoyer à ' + r.eleves[0].nom : 'Envoyer à ' + r.nb + ' élève' + (r.nb > 1 ? 's' : '');
-  } catch (e) { zone.innerHTML = '<span class="erreur">' + esc(e.message) + '</span>'; btn.disabled = true; }
+  const stop = (txt) => { zone.innerHTML = '<span class="discret">' + txt + '</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; };
+  if (c.mode === 'une' && !c.eleve_id) return stop('Choisis une élève dans la liste.');
+  if (c.mode === 'plusieurs' && !c.eleve_ids.length) return stop('Coche une ou plusieurs personnes dans la liste.');
+  if (c.mode === 'avancement' && !c.module_termine_id && !c.module_non_commence_id) return stop('Choisis au moins un critère d\'avancement.');
+  const d = destinatairesLocaux(c);
+  if (!d.length) return stop('Aucune élève ne correspond.');
+  const noms = d.slice(0, 30).map(e => `<span>${esc(e.nom)}${e.test ? ' 🧪' : ''}</span>`).join('') + (d.length > 30 ? `<span>+ ${d.length - 30}</span>` : '');
+  const nbTest = d.filter(e => e.test).length;
+  zone.innerHTML = `<div><strong>${d.length} personne${d.length > 1 ? 's' : ''}</strong> ${c.mode === 'une' ? '— message privé' : (d.length > 1 ? 'recevront ce message' : 'recevra ce message')}</div><div class="puces">${noms}</div>` +
+    (etat.modeTest ? `<div class="discret">🧪 Mode test : seules les ${nbTest} élève(s) test le verront.</div>` : '');
+  btn.disabled = false;
+  btn.textContent = c.mode === 'une' ? 'Envoyer à ' + d[0].nom : 'Envoyer à ' + d.length + ' élève' + (d.length > 1 ? 's' : '');
 }
 async function envoyer() {
   const err = document.getElementById('erreur-envoi');
@@ -420,15 +456,18 @@ async function envoyer() {
   if (!texte.trim()) { err.textContent = 'Écris ton message avant d\'envoyer.'; return; }
   const corps = Object.assign(cible(), { objet: document.getElementById('n-objet').value, texte, notifier: document.getElementById('n-notifier').checked });
   btn.disabled = true;
+  const libelle = btn.textContent;
+  btn.textContent = 'Envoi…';
   try {
     const r = await appelApi('/admin/messagerie/envoyer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corps) });
     document.getElementById('n-texte').value = '';
     document.getElementById('n-objet').value = '';
+    etat.choisis = new Set();
     afficherToast(r.type === 'annonce' ? 'Message envoyé à ' + r.nb + ' élève(s)' : 'Message envoyé');
     fermerNouveau();
     if (r.type === 'annonce') { choisirFiltre('annonces'); ouvrirAnnonce(r.annonce_id); }
     else { choisirFiltre('tous'); ouvrirFil(r.conversation_id); }
-  } catch (e) { err.textContent = e.message; }
+  } catch (e) { err.textContent = e.message; btn.textContent = libelle; }
   btn.disabled = false;
 }
 

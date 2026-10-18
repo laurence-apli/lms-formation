@@ -18,7 +18,7 @@ from html import escape
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel
 from sqlalchemy import func
@@ -222,7 +222,9 @@ def notifier_admin(session: Session, forcer: bool = False) -> int:
 
 
 def notifier_eleve(session: Session, eleve: Eleve, forcer: bool = False) -> int:
-    """Un seul e-mail par élève, regroupant annonces et messages privés non signalés."""
+    """Un e-mail PAR FORMATION, regroupant annonces et messages privés non signalés.
+    Le regroupement d'une heure se fait formation par formation : un message pour
+    Rebirth n'empêche pas l'e-mail d'un message pour une autre formation."""
     msgs = (
         session.query(MessagePrive).join(Conversation)
         .filter(Conversation.eleve_id == eleve.id, MessagePrive.auteur == "admin",
@@ -245,48 +247,50 @@ def notifier_eleve(session: Session, eleve: Eleve, forcer: bool = False) -> int:
             x.notifie_le = maintenant
         session.commit()
         return 0
-    if not forcer:
-        d1 = (session.query(func.max(MessagePrive.notifie_le)).join(Conversation)
-              .filter(Conversation.eleve_id == eleve.id, MessagePrive.auteur == "admin").scalar())
-        d2 = (session.query(func.max(AnnonceDestinataire.notifie_le))
-              .filter(AnnonceDestinataire.eleve_id == eleve.id).scalar())
-        dates = [d for d in (d1, d2) if d]
-        dernier = max(dates) if dates else None
-        if dernier and maintenant - dernier < DELAI_REGROUPEMENT:
-            return 0
-    elements = []  # (date, formation_id, html)
+    ids_acces = {a.formation_id for a in eleve.acces_formations}
+    par_formation = {}  # formation_id -> [(date, html, objet_a_marquer)]
     for m in msgs:
-        elements.append((m.cree_le, m.conversation.formation_id, _bloc_message("Message de Laurence", m.texte)))
+        par_formation.setdefault(m.conversation.formation_id, []).append(
+            (m.cree_le, _bloc_message("Message de Laurence", m.texte), m))
     for d in dests:
         ann = d.annonce
-        titre = "Annonce de Laurence" + (" — " + ann.objet if ann.objet else "")
-        elements.append((ann.cree_le, ann.formation_id, _bloc_message(titre, ann.texte)))
-    elements.sort(key=lambda e: e[0])
-    formations_ids = list(dict.fromkeys(e[1] for e in elements))
-    # Ne pas notifier une formation dont l'élève n'a plus l'accès
-    ids_acces = {a.formation_id for a in eleve.acces_formations}
-    elements_ok = [e for e in elements if e[1] in ids_acces]
-    if not elements_ok:
-        for x in msgs + dests:
-            x.notifie_le = maintenant
-        session.commit()
-        return 0
-    f_titre = session.get(Formation, formations_ids[0]).titre if len(formations_ids) == 1 else "tes formations"
-    lien = ("%s/eleve/voir-formation/%d/messages" % (URL_PLATEFORME.rstrip("/"), formations_ids[0])
-            if len(formations_ids) == 1 else "%s/eleve/tableau-de-bord" % URL_PLATEFORME.rstrip("/"))
-    sujet = ("Laurence t'a écrit — %s" % f_titre) if len(elements_ok) == 1 else \
-        ("%d nouveaux messages de Laurence — %s" % (len(elements_ok), f_titre))
-    corps = _cadre_email(
-        "Bonjour %s," % (eleve.prenom or ""), "Messagerie — %s" % f_titre,
-        "".join(e[2] for e in elements_ok), lien, "Lire et répondre",
-        "Pour répondre, utilise le bouton ci-dessus : ta réponse arrive directement à Laurence, "
-        "et elle seule la lit. Ne réponds pas à cet e-mail.")
-    if emails._envoyer_email(eleve.email, sujet, corps):
-        for x in msgs + dests:
-            x.notifie_le = maintenant
-        session.commit()
-        return len(elements_ok)
-    return 0
+        titre = "Message de Laurence au groupe" + (" — " + ann.objet if ann.objet else "")
+        par_formation.setdefault(ann.formation_id, []).append((ann.cree_le, _bloc_message(titre, ann.texte), d))
+    nb = 0
+    for f_id, elements in par_formation.items():
+        a_marquer = [e[2] for e in elements]
+        if f_id not in ids_acces:
+            # Plus d'accès à cette formation : rien à envoyer.
+            for x in a_marquer:
+                x.notifie_le = maintenant
+            session.commit()
+            continue
+        if not forcer:
+            d1 = (session.query(func.max(MessagePrive.notifie_le)).join(Conversation)
+                  .filter(Conversation.eleve_id == eleve.id, Conversation.formation_id == f_id,
+                          MessagePrive.auteur == "admin").scalar())
+            d2 = (session.query(func.max(AnnonceDestinataire.notifie_le)).join(Annonce)
+                  .filter(AnnonceDestinataire.eleve_id == eleve.id, Annonce.formation_id == f_id).scalar())
+            dates = [d for d in (d1, d2) if d]
+            if dates and maintenant - max(dates) < DELAI_REGROUPEMENT:
+                continue  # e-mail déjà parti pour cette formation il y a moins d'1 h : regroupé plus tard
+        elements.sort(key=lambda e: e[0])
+        f_titre = session.get(Formation, f_id).titre
+        lien = "%s/eleve/voir-formation/%d/messages" % (URL_PLATEFORME.rstrip("/"), f_id)
+        sujet = ("Laurence t'a écrit — %s" % f_titre) if len(elements) == 1 else \
+            ("%d nouveaux messages de Laurence — %s" % (len(elements), f_titre))
+        corps = _cadre_email(
+            "Bonjour %s," % (eleve.prenom or ""), "Messagerie — %s" % f_titre,
+            "".join(e[1] for e in elements), lien, "Lire et répondre",
+            "Pour répondre, utilise le bouton ci-dessus : ta réponse arrive directement à Laurence, "
+            "et elle seule la lit. Ne réponds pas à cet e-mail. Si plusieurs messages arrivent "
+            "dans la même heure, ils sont regroupés en un seul e-mail.")
+        if emails._envoyer_email(eleve.email, sujet, corps):
+            for x in a_marquer:
+                x.notifie_le = maintenant
+            session.commit()
+            nb += len(elements)
+    return nb
 
 
 def _notifier_en_arriere_plan(eleve_ids=None, admin=False):
@@ -449,6 +453,30 @@ def admin_formations(session: Session = Depends(obtenir_session)):
     return res
 
 
+@admin_router.get("/destinataires")
+def admin_tous_destinataires(session: Session = Depends(obtenir_session)):
+    """Tout ce qu'il faut pour le formulaire « Nouveau message », en UN appel :
+    formations, modules, élèves actives et leur avancement (modules terminés /
+    commencés). Le navigateur calcule ensuite l'aperçu instantanément ; l'envoi
+    refait le calcul côté serveur (c'est lui qui fait foi)."""
+    res = []
+    for f in session.query(Formation).order_by(Formation.actif.desc(), Formation.ordre_affichage, Formation.id).all():
+        acces = _acces_actifs(session, f.id)
+        av = _avancements(session, f, acces)
+        eleves = []
+        for a in acces:
+            e = a.eleve
+            v = av[e.id]
+            eleves.append({"id": e.id, "nom": _nom(e), "email": e.email, "test": bool(e.compte_test),
+                           "pct": v["pct"], "avancement": v["libelle"],
+                           "termines": sorted(v["termines"]), "commences": sorted(v["commences"])})
+        eleves.sort(key=lambda x: x["nom"].lower())
+        res.append({"id": f.id, "titre": f.titre, "actif": bool(f.actif),
+                    "modules": [{"id": m.id, "libelle": "Module %d — %s" % (i + 1, m.titre)} for i, m in enumerate(f.modules)],
+                    "eleves": eleves})
+    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "test"), "formations": res}
+
+
 @admin_router.get("/formations/{formation_id}/eleves")
 def admin_eleves_formation(formation_id: int, session: Session = Depends(obtenir_session)):
     formation = session.get(Formation, formation_id)
@@ -471,6 +499,7 @@ class Cible(BaseModel):
     module_termine_id: Optional[int] = None
     module_non_commence_id: Optional[int] = None
     eleve_id: Optional[int] = None
+    eleve_ids: Optional[List[int]] = None       # mode "plusieurs"
 
 
 def _resoudre_cible(session: Session, c: Cible):
@@ -481,6 +510,12 @@ def _resoudre_cible(session: Session, c: Cible):
     if c.mode == "une":
         acces = [a for a in acces if a.eleve_id == c.eleve_id]
         description = None
+    elif c.mode == "plusieurs":
+        choisis = set(c.eleve_ids or [])
+        if not choisis:
+            raise HTTPException(status_code=400, detail="Coche au moins une personne.")
+        acces = [a for a in acces if a.eleve_id in choisis]
+        description = "Sélection de %d personne%s" % (len(acces), "s" if len(acces) > 1 else "")
     elif c.mode == "avancement":
         if not c.module_termine_id and not c.module_non_commence_id:
             raise HTTPException(status_code=400, detail="Choisis au moins un critère d'avancement.")
