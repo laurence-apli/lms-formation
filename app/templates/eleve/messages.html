@@ -1,0 +1,154 @@
+{% extends "eleve/base.html" %}
+{% block titre %}Messages — {{ formation.titre }}{% endblock %}
+{% block contenu %}
+<style>
+  .breadcrumb-eleve { font-size:13px; color:var(--grey); margin-bottom:18px; text-decoration:none; display:inline-block; }
+  .fil-messages { max-width:760px; display:flex; flex-direction:column; gap:16px; padding-bottom:12px; }
+  .msg { max-width:82%; }
+  .msg .bulle { border-radius:14px; padding:12px 16px; font-family:'EB Garamond',serif; font-size:17px; line-height:1.5; white-space:pre-wrap; word-wrap:break-word; }
+  .msg .meta { font-size:12px; color:#6B5A3A; margin-top:4px; }
+  .msg.eleve { align-self:flex-end; }
+  .msg.eleve .bulle { background:var(--ink); color:#F5EDD6; border-radius:14px 14px 4px 14px; }
+  .msg.eleve .meta { text-align:right; }
+  .msg.admin { align-self:flex-start; }
+  .msg.admin .bulle { background:#fff; border:1px solid var(--border); border-radius:14px 14px 14px 4px; }
+  .msg.annonce { align-self:stretch; max-width:100%; }
+  .msg.annonce .bulle { background:var(--cream); border:1px solid var(--gold); border-radius:14px; }
+  .msg .etiquette { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#8A6A1C; margin-bottom:6px; white-space:normal; }
+  .msg .objet { font-weight:600; display:block; margin-bottom:4px; }
+  .vide { color:var(--grey); font-size:14px; background:#fff; border:1px dashed var(--border); border-radius:10px; padding:22px; text-align:center; line-height:1.5; }
+  .zone-ecrire { max-width:760px; background:#fff; border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-top:10px; }
+  .zone-ecrire label { display:block; font-size:13px; color:#6B5A3A; margin-bottom:6px; font-weight:600; }
+  .zone-ecrire textarea { width:100%; border:1px solid #D9C9A0; border-radius:10px; padding:10px 12px; font-size:16px; font-family:inherit; resize:vertical; min-height:84px; background:var(--bg); color:var(--ink); }
+  .zone-ecrire .ligne { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap; }
+  .zone-ecrire .discret { font-size:12px; color:#6B5A3A; }
+  .btn-envoyer { background:var(--ink); color:#F5EDD6; border:none; border-radius:8px; padding:12px 22px; font-size:15px; font-weight:600; min-height:44px; cursor:pointer; font-family:'League Spartan',sans-serif; }
+  .btn-envoyer:disabled { opacity:.6; cursor:default; }
+  .erreur { color:#A1432A; font-size:13px; margin-top:8px; }
+  @media (max-width:760px) { .msg { max-width:92%; } }
+</style>
+
+<div class="topbar-eleve">
+  <a class="brand" href="/eleve/tableau-de-bord">
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" alt="" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% endif %}
+    <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
+  </a>
+  <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
+  <div class="user-zone">
+    <span>{{ eleve.prenom }} {{ eleve.nom }}</span>
+    <form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
+  </div>
+</div>
+
+<div class="main-eleve">
+  <a class="breadcrumb-eleve" href="/eleve/tableau-de-bord">← Retour à mes formations</a>
+  {% include "eleve/_onglets_formation.html" %}
+  <h1 class="titre-page">{{ formation.titre }} — Messages</h1>
+
+  <div class="fil-messages" id="fil" aria-live="polite"><div class="vide">Chargement…</div></div>
+
+  <form class="zone-ecrire" id="form-ecrire">
+    <label for="texte">Écrire à {{ profil.prenom or "Laurence" }}</label>
+    <textarea id="texte" maxlength="5000" placeholder="Ton message…" required></textarea>
+    <div class="ligne">
+      <span class="discret">🔒 Seule {{ profil.prenom or "Laurence" }} lit tes messages. Elle reçoit une notification par e-mail.</span>
+      <button type="submit" class="btn-envoyer" id="btn-envoyer">Envoyer</button>
+    </div>
+    <div class="erreur" id="erreur" role="alert"></div>
+  </form>
+</div>
+
+<script>
+const FORMATION_ID = {{ formation.id }};
+const PRENOM_ADMIN = {{ (profil.prenom or "Laurence")|tojson }};
+
+function dateFr(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' }) + ' · ' +
+         d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+
+function elementMessage(it) {
+  const div = document.createElement('div');
+  const bulle = document.createElement('div');
+  bulle.className = 'bulle';
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  if (it.type === 'annonce') {
+    div.className = 'msg annonce';
+    const et = document.createElement('div');
+    et.className = 'etiquette';
+    et.textContent = 'Message de ' + PRENOM_ADMIN + ' au groupe';
+    bulle.appendChild(et);
+    if (it.objet) { const o = document.createElement('span'); o.className = 'objet'; o.textContent = it.objet; bulle.appendChild(o); }
+    bulle.appendChild(document.createTextNode(it.texte));
+    meta.textContent = dateFr(it.date);
+  } else {
+    div.className = 'msg ' + (it.auteur === 'eleve' ? 'eleve' : 'admin');
+    bulle.textContent = it.texte;
+    meta.textContent = (it.auteur === 'eleve' ? 'Toi' : PRENOM_ADMIN) + ' · ' + dateFr(it.date);
+  }
+  div.appendChild(bulle);
+  div.appendChild(meta);
+  return div;
+}
+
+function afficher(items) {
+  const fil = document.getElementById('fil');
+  fil.innerHTML = '';
+  if (!items.length) {
+    const v = document.createElement('div');
+    v.className = 'vide';
+    v.textContent = "Aucun message pour l'instant. Tu peux écrire à " + PRENOM_ADMIN + " ci-dessous : une question, un ressenti, un partage…";
+    fil.appendChild(v);
+    return;
+  }
+  items.forEach(it => fil.appendChild(elementMessage(it)));
+}
+
+let dernierNombre = -1;
+async function charger(defiler) {
+  try {
+    const r = await fetch('/api/eleve/formations/' + FORMATION_ID + '/messages', { cache:'no-store' });
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    if (data.items.length !== dernierNombre) {
+      afficher(data.items);
+      dernierNombre = data.items.length;
+      if (defiler) document.getElementById('form-ecrire').scrollIntoView({ block:'end' });
+    }
+  } catch (e) {
+    if (dernierNombre < 0) document.getElementById('fil').innerHTML = '<div class="vide">Impossible de charger les messages. Recharge la page dans un instant.</div>';
+  }
+}
+
+document.getElementById('form-ecrire').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const zone = document.getElementById('texte');
+  const btn = document.getElementById('btn-envoyer');
+  const err = document.getElementById('erreur');
+  err.textContent = '';
+  const texte = zone.value.trim();
+  if (!texte) return;
+  btn.disabled = true; btn.textContent = 'Envoi…';
+  try {
+    const r = await fetch('/api/eleve/formations/' + FORMATION_ID + '/messages', {
+      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ texte })
+    });
+    if (!r.ok) { let d = "L'envoi a échoué."; try { d = (await r.json()).detail || d; } catch(e){} throw new Error(d); }
+    zone.value = '';
+    dernierNombre = -1;
+    await charger(true);
+  } catch (e) {
+    err.textContent = e.message + ' Ton texte est toujours là, tu peux réessayer.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Envoyer';
+  }
+});
+
+charger(true);
+// Rafraîchissement doux tant que la page est ouverte et visible (pas de temps réel).
+setInterval(() => { if (!document.hidden) charger(false); }, 60000);
+</script>
+{% endblock %}

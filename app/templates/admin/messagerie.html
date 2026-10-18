@@ -1,0 +1,463 @@
+{% extends "admin/base.html" %}
+{% block titre %}Messagerie{% endblock %}
+{% block contenu %}
+<style>
+  .msg-entete { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+  .msg-entete .reglage { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--grey); flex-wrap:wrap; }
+  .msg-entete select { padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:13px; font-family:inherit; background:#fff; min-height:38px; }
+  .bandeau-test { background:#FFF6E0; border:1px solid #E8CF8E; color:#6B4E0E; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px; line-height:1.45; }
+
+  .msg-grille { display:flex; flex-wrap:wrap; background:#fff; border:1px solid var(--border); border-radius:10px; min-height:620px; overflow:hidden; }
+  .col-liste { flex:1 1 280px; max-width:340px; min-width:0; border-right:1px solid var(--border); display:flex; flex-direction:column; }
+  .col-fil { flex:999 1 380px; min-width:0; display:flex; flex-direction:column; background:#FDFAF5; }
+  .col-nouveau { flex:1 1 340px; max-width:420px; min-width:0; border-left:1px solid var(--border); background:var(--cream); padding:20px 22px; display:flex; flex-direction:column; gap:16px; }
+
+  .filtres { display:flex; gap:6px; flex-wrap:wrap; padding:14px 14px 10px; border-bottom:1px solid #F0E6CC; }
+  .filtres button { border:1px solid #D9C9A0; background:#fff; color:var(--ink); border-radius:14px; padding:7px 12px; font-size:13px; cursor:pointer; font-family:inherit; min-height:34px; }
+  .filtres button.actif { background:var(--ink); color:#F5EDD6; border-color:var(--ink); }
+  .liste { overflow-y:auto; flex:1; }
+  .item { display:block; width:100%; text-align:left; border:none; border-bottom:1px solid #F0E6CC; background:#fff; padding:13px 16px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .item:hover { background:#FBF6EA; }
+  .item.actif { background:var(--cream); box-shadow:inset 3px 0 0 var(--gold); }
+  .item .l1 { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+  .item .qui { font-weight:600; font-size:14.5px; }
+  .item .quand { font-size:12px; color:#6B5A3A; white-space:nowrap; }
+  .item .l2 { display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin:4px 0 5px; }
+  .tag { font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#8A6A1C; background:var(--cream); border-radius:4px; padding:2px 6px; }
+  .item .ou { font-size:12px; color:#6B5A3A; }
+  .item .l3 { display:flex; gap:8px; align-items:center; font-size:13px; color:#4A3C22; }
+  .item .l3 span.txt { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .point { width:8px; height:8px; border-radius:50%; background:#B4523F; flex:none; }
+  .liste .vide { padding:30px 18px; color:var(--grey); font-size:13px; text-align:center; line-height:1.5; }
+
+  .fil-tete { padding:16px 24px; border-bottom:1px solid var(--border); background:#fff; display:flex; gap:12px; align-items:center; }
+  .fil-tete .titre { font-family:'EB Garamond',serif; font-size:22px; font-weight:600; }
+  .fil-tete .sous { font-size:13px; color:#6B5A3A; margin-top:2px; }
+  .btn-retour { display:none; }
+  .fil-corps { flex:1; padding:22px 24px; display:flex; flex-direction:column; gap:14px; overflow-y:auto; }
+  .fil-corps .accueil { margin:auto; color:var(--grey); text-align:center; font-size:14px; line-height:1.6; max-width:340px; }
+  .bulle-w { max-width:80%; }
+  .bulle-w.admin { align-self:flex-end; }
+  .bulle-w.eleve { align-self:flex-start; }
+  .bulle { border-radius:14px; padding:11px 15px; font-family:'EB Garamond',serif; font-size:16.5px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; }
+  .bulle-w.admin .bulle { background:var(--ink); color:#F5EDD6; border-radius:14px 14px 4px 14px; }
+  .bulle-w.eleve .bulle { background:#fff; border:1px solid var(--border); border-radius:14px 14px 14px 4px; }
+  .bulle-w.annonce .bulle { background:var(--cream); color:var(--ink); border:1px solid var(--gold); }
+  .bulle .etiquette { font-family:'League Spartan',sans-serif; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#8A6A1C; margin-bottom:5px; white-space:normal; }
+  .bulle .objet { font-weight:600; display:block; margin-bottom:3px; }
+  .bulle-w .meta { font-size:12px; color:#6B5A3A; margin-top:4px; }
+  .bulle-w.admin .meta { text-align:right; }
+  .fil-pied { padding:14px 24px 18px; border-top:1px solid var(--border); background:#fff; }
+  .fil-pied label { display:block; font-size:12px; color:#6B5A3A; margin-bottom:6px; font-weight:600; }
+  .fil-pied textarea, .col-nouveau textarea, .col-nouveau input[type=text], .col-nouveau input[type=search], .col-nouveau select {
+    width:100%; border:1px solid #D9C9A0; border-radius:8px; padding:9px 11px; font-size:14.5px; font-family:inherit; background:#fff; color:var(--ink); }
+  .fil-pied textarea { min-height:70px; resize:vertical; background:#FDFAF5; }
+  .fil-pied .ligne { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap; }
+  .discret { font-size:12px; color:#6B5A3A; }
+  .table-dest { width:100%; border-collapse:collapse; font-size:13.5px; background:#fff; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .table-dest td { padding:8px 12px; border-bottom:1px solid #F0E6CC; }
+  .table-dest td:last-child { text-align:right; }
+
+  .col-nouveau h2 { font-family:'EB Garamond',serif; font-size:22px; margin:0; font-weight:600; }
+  .etape { font-size:11.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#6B5A3A; margin-bottom:6px; display:block; }
+  .modes { display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:6px; }
+  .modes button { border:1px solid #D9C9A0; background:#fff; color:var(--ink); border-radius:6px; padding:9px 4px; font-size:12.5px; font-weight:600; cursor:pointer; font-family:inherit; min-height:44px; }
+  .modes button.actif { background:var(--ink); color:#F5EDD6; border-color:var(--ink); }
+  .encart { background:#fff; border-radius:8px; padding:12px 13px; font-size:13.5px; line-height:1.45; display:flex; flex-direction:column; gap:8px; }
+  .encart label { font-size:12.5px; color:#6B5A3A; display:flex; flex-direction:column; gap:4px; }
+  .puces { display:flex; flex-wrap:wrap; gap:5px; }
+  .puces span { background:var(--cream); border-radius:12px; padding:3px 9px; font-size:12.5px; }
+  .choix-eleve { display:block; width:100%; text-align:left; border:1px solid #EFE5CB; background:#FDFAF5; border-radius:6px; padding:8px 10px; cursor:pointer; font-family:inherit; color:var(--ink); }
+  .choix-eleve.actif { background:var(--cream); border-color:var(--gold); }
+  .choix-eleve .n { display:flex; justify-content:space-between; gap:6px; font-size:13.5px; }
+  .choix-eleve .barre { display:block; height:5px; background:#EFE5CB; border-radius:3px; margin-top:5px; overflow:hidden; }
+  .choix-eleve .barre i { display:block; height:5px; background:var(--gold); }
+  .liste-eleves { display:flex; flex-direction:column; gap:5px; max-height:230px; overflow-y:auto; }
+  .case { display:flex; gap:9px; align-items:flex-start; font-size:13.5px; }
+  .case input { width:18px; height:18px; margin:1px 0 0; accent-color:#8A6A1C; }
+  .btn-grand { background:var(--ink); color:#F5EDD6; border:none; border-radius:6px; padding:13px 16px; font-size:15px; font-weight:600; min-height:46px; cursor:pointer; font-family:'League Spartan',sans-serif; }
+  .btn-grand:disabled { opacity:.55; cursor:default; }
+  .erreur { color:#A1432A; font-size:13px; }
+
+  /* Téléphone : une colonne à la fois */
+  @media (max-width: 760px) {
+    .msg-grille { min-height:0; border-radius:8px; }
+    .col-liste, .col-fil, .col-nouveau { max-width:none; flex:1 1 100%; border:none; }
+    .msg-grille.vue-fil .col-liste, .msg-grille.vue-fil .col-nouveau,
+    .msg-grille.vue-liste .col-fil, .msg-grille.vue-liste .col-nouveau,
+    .msg-grille.vue-nouveau .col-liste, .msg-grille.vue-nouveau .col-fil { display:none; }
+    .btn-retour { display:inline-flex; }
+    .fil-corps { padding:16px 14px; }
+    .fil-tete, .fil-pied { padding-left:14px; padding-right:14px; }
+    .bulle-w { max-width:92%; }
+  }
+</style>
+
+<div class="msg-entete">
+  <div>
+    <h1>Messagerie</h1>
+  </div>
+  <div class="reglage">
+    <label for="reglage-visible">Visible par :</label>
+    <select id="reglage-visible" onchange="changerReglage(this.value)">
+      <option value="test">les comptes test seulement</option>
+      <option value="tous">toutes les élèves</option>
+    </select>
+    <button class="btn btn-primary" onclick="ouvrirNouveau()">+ Nouveau message</button>
+  </div>
+</div>
+<div class="bandeau-test" id="bandeau-test" style="display:none;">
+  🧪 <strong>Mode test :</strong> seules les élèves marquées « compte test » voient l'onglet Messages et reçoivent les e-mails.
+  Les autres ne voient rien pour l'instant. Quand tout est validé, choisis « toutes les élèves » ci-dessus.
+</div>
+
+<div class="msg-grille vue-liste" id="grille">
+  <aside class="col-liste" aria-label="Conversations">
+    <div class="filtres" role="group" aria-label="Filtrer">
+      <button data-f="tous" class="actif" onclick="choisirFiltre('tous')">Tous</button>
+      <button data-f="nonlus" onclick="choisirFiltre('nonlus')">Non lus</button>
+      <button data-f="annonces" onclick="choisirFiltre('annonces')">Mes messages de groupe</button>
+    </div>
+    <div class="liste" id="liste"><div class="vide">Chargement…</div></div>
+  </aside>
+
+  <section class="col-fil" aria-label="Conversation">
+    <div class="fil-tete" id="fil-tete" style="display:none;">
+      <button class="btn btn-sm btn-retour" onclick="vue('liste')" aria-label="Retour à la liste">←</button>
+      <div><div class="titre" id="fil-titre"></div><div class="sous" id="fil-sous"></div></div>
+    </div>
+    <div class="fil-corps" id="fil-corps">
+      <div class="accueil">Choisis une conversation à gauche,<br>ou écris un nouveau message.</div>
+    </div>
+    <form class="fil-pied" id="fil-pied" style="display:none;" onsubmit="repondre(event)">
+      <label for="reponse" id="reponse-label">Répondre</label>
+      <textarea id="reponse" maxlength="5000" placeholder="Ta réponse… (elle reçoit un e-mail)"></textarea>
+      <div class="ligne">
+        <span class="discret">🔒 Réponse privée : seule cette élève la voit.</span>
+        <button type="submit" class="btn btn-primary" id="btn-repondre">Envoyer</button>
+      </div>
+      <div class="erreur" id="erreur-reponse" role="alert"></div>
+    </form>
+  </section>
+
+  <section class="col-nouveau" id="col-nouveau" aria-label="Nouveau message" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2>Nouveau message</h2>
+      <button class="btn btn-sm" onclick="fermerNouveau()" aria-label="Fermer">✕</button>
+    </div>
+
+    <div>
+      <label class="etape" for="n-formation">1 · Formation</label>
+      <select id="n-formation" onchange="changerFormation()"></select>
+    </div>
+
+    <div>
+      <span class="etape">2 · À qui ?</span>
+      <div class="modes" role="group" aria-label="Destinataires">
+        <button type="button" data-m="toutes" class="actif" onclick="choisirMode('toutes')">Toutes les actives</button>
+        <button type="button" data-m="avancement" onclick="choisirMode('avancement')">Selon l'avancement</button>
+        <button type="button" data-m="une" onclick="choisirMode('une')">Une personne</button>
+      </div>
+      <div class="encart" id="encart-avancement" style="display:none; margin-top:8px;">
+        <label>Ont terminé
+          <select id="n-termine" onchange="apercu()"></select>
+        </label>
+        <label>mais pas encore commencé
+          <select id="n-noncommence" onchange="apercu()"></select>
+        </label>
+      </div>
+      <div class="encart" id="encart-une" style="display:none; margin-top:8px;">
+        <label>Chercher une élève
+          <input type="search" id="n-recherche" placeholder="Prénom, nom ou e-mail" oninput="afficherEleves()">
+        </label>
+        <div class="liste-eleves" id="liste-eleves"></div>
+      </div>
+      <div class="encart" id="encart-apercu" style="margin-top:8px;"></div>
+    </div>
+
+    <div>
+      <label class="etape" for="n-objet">3 · Message</label>
+      <input type="text" id="n-objet" maxlength="200" placeholder="Objet (facultatif)">
+      <textarea id="n-texte" maxlength="5000" rows="6" placeholder="Ton message…" style="margin-top:8px; font-family:'EB Garamond',serif; font-size:16px; line-height:1.45;"></textarea>
+    </div>
+
+    <label class="case"><input type="checkbox" id="n-notifier" checked> Prévenir par e-mail</label>
+    <div class="discret">Les élèves te répondent en privé : elles ne voient jamais les réponses des autres.</div>
+
+    <button class="btn-grand" id="btn-envoyer" onclick="envoyer()">Envoyer</button>
+    <div class="erreur" id="erreur-envoi" role="alert"></div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const etat = { filtre:'tous', ouvert:null, formations:[], mode:'toutes', eleves:[], eleveChoisi:null, apercu:null };
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function dateCourte(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), maint = new Date();
+  if (d.toDateString() === maint.toDateString()) return d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  const hier = new Date(maint); hier.setDate(maint.getDate() - 1);
+  if (d.toDateString() === hier.toDateString()) return 'hier';
+  return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' });
+}
+function dateLongue(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-FR', { weekday:'short', day:'numeric', month:'short' }) + ' · ' + d.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+}
+function vue(v) { document.getElementById('grille').className = 'msg-grille vue-' + v; }
+
+// ---------- Réglage d'ouverture ----------
+async function chargerReglage() {
+  try {
+    const r = await appelApi('/admin/messagerie/reglages');
+    document.getElementById('reglage-visible').value = r.visible_eleves;
+    document.getElementById('bandeau-test').style.display = r.visible_eleves === 'tous' ? 'none' : 'block';
+  } catch (e) {}
+}
+async function changerReglage(v) {
+  if (v === 'tous' && !confirmerOuverture()) { chargerReglage(); return; }
+  try {
+    await appelApi('/admin/messagerie/reglages', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ visible_eleves: v }) });
+    afficherToast(v === 'tous' ? 'Messagerie ouverte à toutes les élèves' : 'Messagerie réservée aux comptes test');
+  } catch (e) { afficherToast(e.message); }
+  chargerReglage();
+}
+function confirmerOuverture() {
+  // Pas de boîte de dialogue bloquante : on demande de cliquer une seconde fois.
+  if (window._ouvertureDemandee) { window._ouvertureDemandee = false; return true; }
+  window._ouvertureDemandee = true;
+  afficherToast("Choisis à nouveau « toutes les élèves » pour confirmer l'ouverture.");
+  setTimeout(() => { window._ouvertureDemandee = false; }, 8000);
+  return false;
+}
+
+// ---------- Liste ----------
+function choisirFiltre(f) {
+  etat.filtre = f;
+  document.querySelectorAll('.filtres button').forEach(b => b.classList.toggle('actif', b.dataset.f === f));
+  chargerListe();
+}
+async function chargerListe() {
+  const liste = document.getElementById('liste');
+  try {
+    if (etat.filtre === 'annonces') {
+      const anns = await appelApi('/admin/messagerie/annonces');
+      liste.innerHTML = anns.length ? anns.map(a => `
+        <button class="item ${etat.ouvert === 'a' + a.id ? 'actif' : ''}" onclick="ouvrirAnnonce(${a.id})">
+          <div class="l1"><span class="qui">${esc(a.objet || 'Message de groupe')}</span><span class="quand">${esc(dateCourte(a.date))}</span></div>
+          <div class="l2"><span class="tag">${esc(a.formation)}</span><span class="ou">${a.nb} destinataire(s) · lu par ${a.lus}</span></div>
+          <div class="l3"><span class="txt">${esc(a.extrait)}</span></div>
+        </button>`).join('') : '<div class="vide">Aucun message de groupe envoyé pour l\'instant.</div>';
+      return;
+    }
+    const fils = await appelApi('/admin/messagerie/fils?filtre=' + etat.filtre);
+    liste.innerHTML = fils.length ? fils.map(f => `
+      <button class="item ${etat.ouvert === 'c' + f.id ? 'actif' : ''}" onclick="ouvrirFil(${f.id})">
+        <div class="l1"><span class="qui">${esc(f.eleve)}</span><span class="quand">${esc(dateCourte(f.date))}</span></div>
+        <div class="l2"><span class="tag">${esc(f.formation)}</span><span class="ou">${esc(f.avancement)}</span></div>
+        <div class="l3">${f.non_lu ? '<span class="point" aria-label="Non lu"></span>' : ''}<span class="txt">${esc(f.extrait || '—')}</span></div>
+      </button>`).join('') : `<div class="vide">${etat.filtre === 'nonlus' ? 'Aucun message non lu. 🌿' : 'Aucune conversation pour l\'instant.<br>Les élèves t\'écrivent depuis l\'onglet « Messages » de leur formation.'}</div>`;
+  } catch (e) {
+    liste.innerHTML = '<div class="vide">' + esc(e.message) + '</div>';
+  }
+}
+
+// ---------- Conversation ----------
+function bulle(it, prenomEleve) {
+  if (it.type === 'annonce') {
+    return `<div class="bulle-w admin annonce"><div class="bulle"><div class="etiquette">Message de groupe${it.cible ? ' · ' + esc(it.cible) : ''}</div>${it.objet ? '<span class="objet">' + esc(it.objet) + '</span>' : ''}${esc(it.texte)}</div><div class="meta">Toi · ${esc(dateLongue(it.date))}</div></div>`;
+  }
+  const qui = it.auteur === 'admin' ? 'Toi' : esc(prenomEleve);
+  return `<div class="bulle-w ${it.auteur}"><div class="bulle">${esc(it.texte)}</div><div class="meta">${qui} · ${esc(dateLongue(it.date))}</div></div>`;
+}
+async function ouvrirFil(id) {
+  etat.ouvert = 'c' + id;
+  vue('fil');
+  try {
+    const f = await appelApi('/admin/messagerie/fils/' + id);
+    document.getElementById('fil-tete').style.display = 'flex';
+    document.getElementById('fil-titre').textContent = f.eleve;
+    document.getElementById('fil-sous').textContent = f.formation + ' · ' + f.avancement + (f.acces_actif ? '' : ' (elle ne peut plus écrire ni lire)');
+    const corps = document.getElementById('fil-corps');
+    corps.innerHTML = f.items.map(it => bulle(it, f.prenom || f.eleve)).join('') || '<div class="accueil">Pas encore de message.</div>';
+    corps.scrollTop = corps.scrollHeight;
+    const pied = document.getElementById('fil-pied');
+    pied.style.display = f.acces_actif ? 'block' : 'none';
+    pied.dataset.conv = id;
+    document.getElementById('reponse-label').textContent = 'Répondre en privé à ' + (f.prenom || f.eleve);
+    chargerListe();
+    rafraichirBadgeMessagerie();
+  } catch (e) { afficherToast(e.message); }
+}
+async function repondre(ev) {
+  ev.preventDefault();
+  const id = document.getElementById('fil-pied').dataset.conv;
+  const zone = document.getElementById('reponse');
+  const err = document.getElementById('erreur-reponse');
+  const btn = document.getElementById('btn-repondre');
+  err.textContent = '';
+  if (!zone.value.trim()) return;
+  btn.disabled = true;
+  try {
+    await appelApi('/admin/messagerie/fils/' + id + '/repondre', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texte: zone.value }) });
+    zone.value = '';
+    afficherToast('Réponse envoyée');
+    ouvrirFil(id);
+  } catch (e) { err.textContent = e.message; }
+  btn.disabled = false;
+}
+async function ouvrirAnnonce(id) {
+  etat.ouvert = 'a' + id;
+  vue('fil');
+  try {
+    const a = await appelApi('/admin/messagerie/annonces/' + id);
+    document.getElementById('fil-tete').style.display = 'flex';
+    document.getElementById('fil-titre').textContent = a.objet || 'Message de groupe';
+    document.getElementById('fil-sous').textContent = a.formation + ' · ' + a.cible + ' · ' + dateLongue(a.date);
+    const lus = a.destinataires.filter(d => d.lu).length;
+    document.getElementById('fil-corps').innerHTML =
+      bulle({ type:'annonce', objet:a.objet, texte:a.texte, date:a.date, cible:a.cible }, '') +
+      `<div class="discret" style="margin-top:8px;">Lu par ${lus} sur ${a.destinataires.length}. Clique sur un nom pour ouvrir sa conversation.</div>` +
+      `<table class="table-dest">${a.destinataires.map(d => `<tr><td>${d.conversation_id ? `<a href="#" onclick="ouvrirFil(${d.conversation_id});return false;">${esc(d.nom)}</a>` : esc(d.nom)}</td><td>${d.lu ? '✓ lu' : '<span style="color:#9B968A">pas encore lu</span>'}</td></tr>`).join('')}</table>`;
+    document.getElementById('fil-pied').style.display = 'none';
+    chargerListe();
+  } catch (e) { afficherToast(e.message); }
+}
+
+// ---------- Nouveau message ----------
+async function ouvrirNouveau(preselection) {
+  document.getElementById('col-nouveau').style.display = 'flex';
+  vue('nouveau');
+  if (!etat.formations.length) {
+    etat.formations = await appelApi('/admin/messagerie/formations');
+    document.getElementById('n-formation').innerHTML = etat.formations.map(f =>
+      `<option value="${f.id}">${esc(f.titre)}${f.actif ? '' : ' (inactive)'}</option>`).join('');
+  }
+  if (preselection && preselection.formation) document.getElementById('n-formation').value = preselection.formation;
+  await changerFormation();
+  if (preselection && preselection.eleve) {
+    choisirMode('une');
+    etat.eleveChoisi = preselection.eleve;
+    afficherEleves();
+    apercu();
+  }
+}
+function fermerNouveau() {
+  document.getElementById('col-nouveau').style.display = 'none';
+  vue(etat.ouvert ? 'fil' : 'liste');
+}
+function formationCourante() {
+  const id = parseInt(document.getElementById('n-formation').value, 10);
+  return etat.formations.find(f => f.id === id);
+}
+async function changerFormation() {
+  const f = formationCourante();
+  if (!f) return;
+  const opts = '<option value="">— peu importe —</option>' + f.modules.map(m => `<option value="${m.id}">${esc(m.libelle)}</option>`).join('');
+  document.getElementById('n-termine').innerHTML = opts;
+  document.getElementById('n-noncommence').innerHTML = opts;
+  etat.eleves = await appelApi('/admin/messagerie/formations/' + f.id + '/eleves');
+  if (!etat.eleves.find(e => e.id === etat.eleveChoisi)) etat.eleveChoisi = null;
+  afficherEleves();
+  apercu();
+}
+function choisirMode(m) {
+  etat.mode = m;
+  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('actif', b.dataset.m === m));
+  document.getElementById('encart-avancement').style.display = m === 'avancement' ? 'flex' : 'none';
+  document.getElementById('encart-une').style.display = m === 'une' ? 'flex' : 'none';
+  apercu();
+}
+function afficherEleves() {
+  const q = (document.getElementById('n-recherche').value || '').toLowerCase().trim();
+  const liste = etat.eleves.filter(e => !q || (e.nom + ' ' + e.email).toLowerCase().includes(q));
+  document.getElementById('liste-eleves').innerHTML = liste.length ? liste.map(e => `
+    <button type="button" class="choix-eleve ${etat.eleveChoisi === e.id ? 'actif' : ''}" onclick="choisirEleve(${e.id})">
+      <span class="n"><strong>${esc(e.nom)}${e.test ? ' 🧪' : ''}</strong><span class="discret">${esc(e.avancement)} · ${e.pct} %</span></span>
+      <span class="barre" aria-hidden="true"><i style="width:${Math.max(2, e.pct)}%"></i></span>
+    </button>`).join('') : '<div class="discret">Aucune élève active sur cette formation.</div>';
+}
+function choisirEleve(id) { etat.eleveChoisi = id; afficherEleves(); apercu(); }
+function cible() {
+  const f = formationCourante();
+  const c = { formation_id: f ? f.id : 0, mode: etat.mode };
+  if (etat.mode === 'avancement') {
+    const t = document.getElementById('n-termine').value, n = document.getElementById('n-noncommence').value;
+    c.module_termine_id = t ? parseInt(t, 10) : null;
+    c.module_non_commence_id = n ? parseInt(n, 10) : null;
+  }
+  if (etat.mode === 'une') c.eleve_id = etat.eleveChoisi;
+  return c;
+}
+async function apercu() {
+  const zone = document.getElementById('encart-apercu');
+  const btn = document.getElementById('btn-envoyer');
+  etat.apercu = null;
+  const c = cible();
+  if (c.mode === 'une' && !c.eleve_id) { zone.innerHTML = '<span class="discret">Choisis une élève dans la liste.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
+  if (c.mode === 'avancement' && !c.module_termine_id && !c.module_non_commence_id) { zone.innerHTML = '<span class="discret">Choisis au moins un critère d\'avancement.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
+  try {
+    const r = await appelApi('/admin/messagerie/apercu-destinataires', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(c) });
+    etat.apercu = r;
+    if (!r.nb) { zone.innerHTML = '<span class="discret">Aucune élève ne correspond.</span>'; btn.disabled = true; btn.textContent = 'Envoyer'; return; }
+    const noms = r.eleves.slice(0, 30).map(e => `<span>${esc(e.nom)}${e.test ? ' 🧪' : ''}</span>`).join('') + (r.nb > 30 ? `<span>+ ${r.nb - 30}</span>` : '');
+    const nbTest = r.eleves.filter(e => e.test).length;
+    zone.innerHTML = `<div><strong>${r.nb} personne${r.nb > 1 ? 's' : ''}</strong> ${c.mode === 'une' ? '' : (r.nb > 1 ? 'recevront ce message' : 'recevra ce message')}</div><div class="puces">${noms}</div>` +
+      (r.mode_test ? `<div class="discret">🧪 Mode test : seules les ${nbTest} élève(s) test le verront.</div>` : '');
+    btn.disabled = false;
+    btn.textContent = c.mode === 'une' ? 'Envoyer à ' + r.eleves[0].nom : 'Envoyer à ' + r.nb + ' élève' + (r.nb > 1 ? 's' : '');
+  } catch (e) { zone.innerHTML = '<span class="erreur">' + esc(e.message) + '</span>'; btn.disabled = true; }
+}
+async function envoyer() {
+  const err = document.getElementById('erreur-envoi');
+  const btn = document.getElementById('btn-envoyer');
+  err.textContent = '';
+  const texte = document.getElementById('n-texte').value;
+  if (!texte.trim()) { err.textContent = 'Écris ton message avant d\'envoyer.'; return; }
+  const corps = Object.assign(cible(), { objet: document.getElementById('n-objet').value, texte, notifier: document.getElementById('n-notifier').checked });
+  btn.disabled = true;
+  try {
+    const r = await appelApi('/admin/messagerie/envoyer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corps) });
+    document.getElementById('n-texte').value = '';
+    document.getElementById('n-objet').value = '';
+    afficherToast(r.type === 'annonce' ? 'Message envoyé à ' + r.nb + ' élève(s)' : 'Message envoyé');
+    fermerNouveau();
+    if (r.type === 'annonce') { choisirFiltre('annonces'); ouvrirAnnonce(r.annonce_id); }
+    else { choisirFiltre('tous'); ouvrirFil(r.conversation_id); }
+  } catch (e) { err.textContent = e.message; }
+  btn.disabled = false;
+}
+
+// ---------- Démarrage ----------
+(async function () {
+  chargerReglage();
+  await chargerListe();
+  const p = new URLSearchParams(location.search);
+  const eleve = parseInt(p.get('eleve') || '', 10), formation = parseInt(p.get('formation') || '', 10);
+  if (eleve && formation) {
+    try {
+      const c = await appelApi(`/admin/messagerie/conversation?eleve_id=${eleve}&formation_id=${formation}`);
+      if (c.conversation_id) await ouvrirFil(c.conversation_id);
+    } catch (e) {}
+    ouvrirNouveau({ eleve, formation });
+  } else if (eleve) {
+    let f = null;
+    try { const ids = await appelApi('/admin/messagerie/eleves/' + eleve + '/formations'); f = ids[0] || null; } catch (e) {}
+    if (f) {
+      try {
+        const c = await appelApi(`/admin/messagerie/conversation?eleve_id=${eleve}&formation_id=${f}`);
+        if (c.conversation_id) await ouvrirFil(c.conversation_id);
+      } catch (e) {}
+      ouvrirNouveau({ eleve, formation: f });
+    } else {
+      afficherToast("Cette élève n'a accès à aucune formation : impossible de lui écrire ici.");
+    }
+  }
+  setInterval(() => { if (!document.hidden) chargerListe(); }, 60000);
+})();
+</script>
+{% endblock %}

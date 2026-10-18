@@ -1,0 +1,21 @@
+# Messagerie : envoi groupé des e-mails de notification (messages arrivés pendant l'heure).
+# Le premier message d'une heure part tout de suite depuis la plateforme ; les suivants
+# sont regroupés et envoyés ici. Toutes les heures de 7 h à 22 h (heure de Paris en été),
+# pas la nuit : la base Neon n'est pas réveillée inutilement.
+# Même secret CRON_TOKEN que le compte-rendu du lundi (rapport-hebdo.yml).
+name: messagerie-notifications
+on:
+  schedule:
+    - cron: "17 5-20 * * *"
+  workflow_dispatch:
+jobs:
+  envoyer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Réveiller la plateforme (plan gratuit Render)
+        run: curl -s -o /dev/null --max-time 90 https://lms-formation.onrender.com/eleve/connexion || true
+      - name: Envoyer les notifications en attente
+        run: |
+          curl -fsS --retry 4 --retry-delay 30 --retry-all-errors --max-time 120 \
+            -X POST -H "X-Cron-Token: ${{ secrets.CRON_TOKEN }}" \
+            https://lms-formation.onrender.com/cron/messagerie-notifications

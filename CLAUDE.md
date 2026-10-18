@@ -83,3 +83,17 @@ app/
 
 > En cas de doute sur la structure d'une réponse API ou d'un modèle,
 > **lire le fichier source** avant d'écrire du code. Ne jamais supposer.
+
+---
+
+## Messagerie élèves ↔ Laurence (ajoutée le 18/10/2026)
+
+- Modèles : `app/messagerie_models.py` — **nouvelles tables uniquement** (conversations,
+  messages_prives, annonces, annonce_destinataires, parametres), créées par create_all.
+- Routes : `app/routes/messagerie.py` (pages, API admin `/admin/messagerie/...`, API élève
+  `/api/eleve/formations/{id}/messages`, tâche `/cron/messagerie-notifications`).
+- Interrupteur : paramètre `messagerie_visible_eleves` (« test » = comptes test seuls,
+  « tous » = toutes les élèves), réglable en haut de la page Messagerie de l'admin.
+- Règle : une élève n'écrit qu'à Laurence ; sans accès à la formation, plus de messagerie.
+- Les pièces jointes viendront avec le stockage Cloudflare R2 : ne JAMAIS stocker de fichier
+  en base64 dans Neon pour la messagerie.

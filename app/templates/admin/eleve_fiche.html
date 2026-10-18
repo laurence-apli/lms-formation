@@ -39,7 +39,8 @@
 <div class="breadcrumb"><a href="/admin/page/eleves">Élèves</a> / <span id="fil-ariane-nom"></span></div>
 <div class="topbar">
 <div><h1 id="titre-page"></h1></div>
-<div style="display:flex; gap:8px;">
+<div style="display:flex; gap:8px; flex-wrap:wrap;">
+<a class="btn" href="/admin/page/messagerie?eleve={{ eleve_id }}">✉️ Écrire à cette élève</a>
 <button class="btn" onclick="ouvrirModalEditerEleve()">✎ Modifier</button>
 <button class="btn" onclick="toggleActif()" id="btn-toggle-actif"></button>
 <button class="btn" onclick="toggleTest()" id="btn-toggle-test"></button>

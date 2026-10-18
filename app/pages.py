@@ -166,9 +166,11 @@ def page_formation(
         raise HTTPException(status_code=403, detail="Vous n'avez pas accès à cette formation.")
     if not formation.actif and not eleve.compte_test:
         raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
+    from .routes.messagerie import infos_onglets_eleve  # onglet « Messages » (ne lève jamais d'erreur)
     return templates.TemplateResponse(
         request, "eleve/formation.html",
-        {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session), "url_site_vitrine": URL_SITE_VITRINE},
+        {"eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session), "url_site_vitrine": URL_SITE_VITRINE,
+         "onglet_actif": "contenu", **infos_onglets_eleve(session, eleve, formation_id)},
     )
 
 @router.get("/eleve/paiement-confirme", response_class=HTMLResponse)

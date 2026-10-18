@@ -53,6 +53,19 @@
 
   .empty-state { text-align:center; padding:60px 20px; color:var(--grey); font-size:14px; }
   .empty-state .big { font-size:32px; margin-bottom:8px; }
+
+  /* Téléphone : le menu passe en bandeau défilant en haut, le contenu prend toute la largeur.
+     Aucun effet sur ordinateur (au-delà de 760 px de large). */
+  @media (max-width: 760px) {
+    body { flex-direction:column; }
+    .sidebar { width:100%; flex-direction:row; align-items:center; padding:8px 0; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; position:sticky; top:0; z-index:40; }
+    .sidebar .brand, .sidebar .nav-group-label, .sidebar .nav-separator { display:none; }
+    .nav-item { white-space:nowrap; border-left:none; border-bottom:3px solid transparent; padding:10px 14px; min-height:44px; }
+    .nav-item.active { border-left-color:transparent; border-bottom-color:var(--gold); }
+    .sidebar form { border-top:none !important; padding-top:0 !important; }
+    .main { padding:18px 14px; }
+    .topbar { flex-wrap:wrap; gap:10px; }
+  }
 </style>
 </head>
 <body>
@@ -76,6 +89,7 @@
   <a class="nav-item {% if page_active == 'paiements' %}active{% endif %}" href="/admin/paiements">&#x1F4B3; Suivi paiements</a>
   <a class="nav-item {% if page_active == 'eleves' %}active{% endif %}" href="/admin/page/eleves">&#x1F464; &#xC9;l&#xE8;ves</a>
   <a class="nav-item {% if page_active == 'coaching' %}active{% endif %}" href="/admin/page/coaching">&#x1F91D; Coaching</a>
+  <a class="nav-item {% if page_active == 'messagerie' %}active{% endif %}" href="/admin/page/messagerie">&#x2709;&#xFE0F; Messagerie <span id="badge-messagerie" style="display:none; background:#B4523F; color:#fff; font-size:11px; font-weight:700; border-radius:10px; padding:1px 7px; margin-left:auto;"></span></a>
 
   <hr class="nav-separator">
   <div class="nav-group-label">&#x2699;&#xFE0F; Administration</div>
@@ -126,6 +140,18 @@ async function appelApi(url, options = {}) {
   }
   try { return await resp.json(); } catch (e) { return {}; }
 }
+
+async function rafraichirBadgeMessagerie() {
+  try {
+    const r = await appelApi('/admin/messagerie/non-lus');
+    const badge = document.getElementById('badge-messagerie');
+    if (badge) {
+      badge.textContent = r.nb;
+      badge.style.display = r.nb > 0 ? 'inline-block' : 'none';
+    }
+  } catch (e) {}
+}
+rafraichirBadgeMessagerie();
 
 (async function chargerBadgeDiplomes() {
   try {

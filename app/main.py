@@ -80,6 +80,11 @@ app.include_router(boutique_admin.router)
 
 from .routes import inscription_publique
 app.include_router(inscription_publique.router)
+
+# Messagerie élèves <-> Laurence (nouvelles tables uniquement, voir app/messagerie_models.py)
+from .routes import messagerie
+app.include_router(messagerie.router)
+app.include_router(messagerie.admin_router)
 # Offres publiques et paiements
 app.include_router(offres_admin.router, prefix="/admin", tags=["offres-admin"])
 app.include_router(offres_publiques.router, tags=["offres-publiques"])

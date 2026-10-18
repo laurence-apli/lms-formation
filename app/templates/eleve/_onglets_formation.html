@@ -1,0 +1,18 @@
+{# Onglets « Contenu / Messages » d'une formation côté élève.
+   Affichés seulement si la messagerie est ouverte pour cette élève
+   (messagerie_visible) : sinon rien du tout, la page reste comme avant. #}
+{% if messagerie_visible %}
+<style>
+  .onglets-formation { display:flex; gap:4px; border-bottom:1px solid var(--border); margin:0 0 22px; }
+  .onglets-formation a { font-family:'League Spartan',sans-serif; font-weight:600; font-size:14px; letter-spacing:.02em;
+    color:var(--grey); text-decoration:none; padding:12px 18px; border-bottom:3px solid transparent; margin-bottom:-1px;
+    display:inline-flex; align-items:center; gap:8px; min-height:44px; box-sizing:border-box; }
+  .onglets-formation a:hover { color:var(--ink); }
+  .onglets-formation a.actif { color:var(--ink); border-bottom-color:var(--gold); }
+  .onglets-formation .pastille { background:#B4523F; color:#fff; border-radius:10px; padding:1px 7px; font-size:12px; line-height:18px; }
+</style>
+<nav class="onglets-formation" aria-label="Sections de la formation">
+  <a href="/eleve/voir-formation/{{ formation.id }}" class="{% if onglet_actif == 'contenu' %}actif{% endif %}" {% if onglet_actif == 'contenu' %}aria-current="page"{% endif %}>Contenu de la formation</a>
+  <a href="/eleve/voir-formation/{{ formation.id }}/messages" class="{% if onglet_actif == 'messages' %}actif{% endif %}" {% if onglet_actif == 'messages' %}aria-current="page"{% endif %}>Messages{% if nb_messages_non_lus %} <span class="pastille" aria-label="{{ nb_messages_non_lus }} non lu(s)">{{ nb_messages_non_lus }}</span>{% endif %}</a>
+</nav>
+{% endif %}

@@ -1,0 +1,684 @@
+"""
+Messagerie élèves <-> Laurence : routes admin, élève, pages HTML et notifications.
+Modèles : app/messagerie_models.py (nouvelles tables uniquement).
+
+Admin  (/admin/messagerie/...) : liste des fils, annonces, envoi à un groupe
+        (toutes les actives / selon l'avancement) ou à une personne, réponses.
+Élève  (/api/eleve/formations/{id}/messages) : lire le fil (annonces + conversation
+        privée), écrire à Laurence. Visible seulement si l'élève a accès à la
+        formation ET si la messagerie est ouverte (réglage, sinon comptes test seuls).
+E-mails : envoyés juste après un message si le destinataire n'a pas reçu d'e-mail de
+        la messagerie depuis 1 h ; sinon regroupés par la tâche planifiée
+        POST /cron/messagerie-notifications (GitHub Actions, toutes les heures en journée).
+"""
+import logging
+from datetime import datetime, timedelta
+from html import escape
+
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from typing import Optional
+
+from pydantic import BaseModel
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from ..config import URL_PLATEFORME, URL_SITE_VITRINE
+from ..database import obtenir_session, SessionLocal
+from ..models import Administrateur, Eleve, Formation, AccesFormation, ValidationChapitre, chapitre_dans_le_niveau
+from ..messagerie_models import (
+    Conversation, MessagePrive, Annonce, AnnonceDestinataire,
+    lire_parametre, ecrire_parametre, messagerie_visible_pour,
+)
+from .auth import admin_connecte, eleve_connecte
+from .. import emails
+
+logger = logging.getLogger(__name__)
+router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
+
+TEXTE_MAX = 5000
+DELAI_REGROUPEMENT = timedelta(hours=1)
+
+
+# ---------------------------------------------------------------------------
+# Outils communs
+# ---------------------------------------------------------------------------
+
+def _iso(dt):
+    return dt.isoformat() + "Z" if dt else None
+
+
+def _nom(eleve):
+    return ("%s %s" % (eleve.prenom or "", eleve.nom or "")).strip() or eleve.email
+
+
+def _nettoyer(texte: str) -> str:
+    texte = (texte or "").strip()
+    if not texte:
+        raise HTTPException(status_code=400, detail="Le message est vide.")
+    if len(texte) > TEXTE_MAX:
+        raise HTTPException(status_code=400, detail="Message trop long (%d caractères maximum)." % TEXTE_MAX)
+    return texte
+
+
+def _acces_actifs(session: Session, formation_id: int) -> list:
+    """Élèves qui ont accès à la formation et dont le compte est actif."""
+    return (
+        session.query(AccesFormation).join(Eleve)
+        .filter(AccesFormation.formation_id == formation_id, Eleve.actif.is_(True))
+        .all()
+    )
+
+
+def _avancements(session: Session, formation: Formation, acces_liste: list) -> dict:
+    """eleve_id -> {pct, libelle, termines:set(module_id), commences:set(module_id)}.
+    Une seule requête pour toutes les validations de la formation."""
+    modules = list(formation.modules)
+    chap_ids = [c.id for m in modules for c in m.chapitres]
+    valides = {}
+    if chap_ids and acces_liste:
+        rows = (
+            session.query(ValidationChapitre.eleve_id, ValidationChapitre.chapitre_id)
+            .filter(ValidationChapitre.chapitre_id.in_(chap_ids),
+                    ValidationChapitre.eleve_id.in_([a.eleve_id for a in acces_liste]))
+            .all()
+        )
+        for e_id, c_id in rows:
+            valides.setdefault(e_id, set()).add(c_id)
+    res = {}
+    for a in acces_liste:
+        v = valides.get(a.eleve_id, set())
+        total = fait = 0
+        termines, commences, courant = set(), set(), None
+        for i, m in enumerate(modules):
+            visibles = [c for c in m.chapitres if chapitre_dans_le_niveau(formation, a.niveau, c)]
+            if not visibles:
+                continue
+            n_ok = sum(1 for c in visibles if c.id in v)
+            total += len(visibles)
+            fait += n_ok
+            if n_ok:
+                commences.add(m.id)
+            if n_ok == len(visibles):
+                termines.add(m.id)
+            elif courant is None:
+                courant = "Module %d — %s" % (i + 1, m.titre)
+        pct = round(100 * fait / total) if total else 0
+        if fait == 0:
+            libelle = "Pas encore commencé"
+        elif courant is None:
+            libelle = "Formation terminée"
+        else:
+            libelle = courant
+        res[a.eleve_id] = {"pct": pct, "libelle": libelle, "termines": termines, "commences": commences}
+    return res
+
+
+def _conversation(session: Session, eleve_id: int, formation_id: int, creer: bool = False):
+    conv = session.query(Conversation).filter_by(eleve_id=eleve_id, formation_id=formation_id).first()
+    if conv is None and creer:
+        conv = Conversation(eleve_id=eleve_id, formation_id=formation_id, dernier_message_le=datetime.utcnow())
+        session.add(conv)
+        session.flush()
+    return conv
+
+
+def _fil_eleve(session: Session, eleve_id: int, formation_id: int, conv) -> list:
+    """Annonces reçues + messages privés, du plus ancien au plus récent."""
+    items = []
+    lignes = (
+        session.query(AnnonceDestinataire, Annonce)
+        .join(Annonce, Annonce.id == AnnonceDestinataire.annonce_id)
+        .filter(AnnonceDestinataire.eleve_id == eleve_id, Annonce.formation_id == formation_id)
+        .all()
+    )
+    for dest, ann in lignes:
+        items.append({"type": "annonce", "id": ann.id, "auteur": "admin", "objet": ann.objet or "",
+                      "texte": ann.texte, "date": _iso(ann.cree_le), "cible": ann.cible or "", "_t": ann.cree_le})
+    if conv is not None:
+        for m in conv.messages:
+            items.append({"type": "message", "id": m.id, "auteur": m.auteur, "objet": "",
+                          "texte": m.texte, "date": _iso(m.cree_le), "cible": "", "_t": m.cree_le})
+    items.sort(key=lambda x: x["_t"] or datetime.min)
+    for it in items:
+        it.pop("_t", None)
+    return items
+
+
+# ---------------------------------------------------------------------------
+# E-mails de notification
+# ---------------------------------------------------------------------------
+
+def _cadre_email(titre: str, sous_titre: str, corps: str, bouton_lien: str, bouton_texte: str, pied: str) -> str:
+    return (
+        '<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;background:#FDFAF5;'
+        'border:1px solid #e8dfc8;border-radius:12px;overflow:hidden;">'
+        '<div style="background:#2E2210;color:#F5EDD6;padding:22px 28px;">'
+        '<div style="font-size:24px;font-style:italic;">%s</div>'
+        '<div style="font-size:13px;color:#D9C08A;margin-top:4px;font-family:Arial,sans-serif;">%s</div></div>'
+        '<div style="padding:24px 28px;color:#2E2210;">%s'
+        '<p style="margin:24px 0 8px;"><a href="%s" style="background:#B8922A;color:#1E1608;text-decoration:none;'
+        'border-radius:6px;padding:13px 22px;font-family:Arial,sans-serif;font-weight:bold;font-size:15px;'
+        'display:inline-block;">%s</a></p>'
+        '<p style="font-size:12px;color:#8a7d62;margin-top:22px;font-family:Arial,sans-serif;line-height:1.5;">%s</p>'
+        '</div></div>'
+    ) % (escape(titre), escape(sous_titre), corps, bouton_lien, escape(bouton_texte), pied)
+
+
+def _bloc_message(qui: str, texte: str) -> str:
+    extrait = texte if len(texte) <= 600 else texte[:600] + "…"
+    return ('<p style="margin:16px 0 4px;font-family:Arial,sans-serif;font-size:13px;color:#6B5A3A;">%s</p>'
+            '<div style="border-left:3px solid #B8922A;background:#fff;padding:12px 16px;font-size:17px;'
+            'line-height:1.45;white-space:pre-wrap;">%s</div>') % (escape(qui), escape(extrait))
+
+
+def _destinataire_admin() -> str:
+    return emails.EMAIL_ADMIN
+
+
+def notifier_admin(session: Session, forcer: bool = False) -> int:
+    """Regroupe les messages d'élèves pas encore signalés en un seul e-mail à Laurence."""
+    a_signaler = (
+        session.query(MessagePrive).join(Conversation)
+        .filter(MessagePrive.auteur == "eleve", MessagePrive.notifier.is_(True), MessagePrive.notifie_le.is_(None))
+        .order_by(MessagePrive.cree_le).all()
+    )
+    if not a_signaler:
+        return 0
+    if not forcer:
+        dernier = (session.query(func.max(MessagePrive.notifie_le))
+                   .filter(MessagePrive.auteur == "eleve").scalar())
+        if dernier and datetime.utcnow() - dernier < DELAI_REGROUPEMENT:
+            return 0  # un e-mail est parti il y a moins d'une heure : la tâche planifiée regroupera
+    blocs, noms = [], []
+    for m in a_signaler:
+        conv = m.conversation
+        eleve = session.get(Eleve, conv.eleve_id)
+        formation = session.get(Formation, conv.formation_id)
+        if eleve is None or formation is None:
+            continue
+        noms.append(eleve.prenom or _nom(eleve))
+        blocs.append(_bloc_message("%s · %s" % (_nom(eleve), formation.titre), m.texte))
+    noms_uniques = list(dict.fromkeys(noms))
+    if len(a_signaler) == 1:
+        sujet = "%s t'a écrit — %s" % (noms_uniques[0], session.get(Formation, a_signaler[0].conversation.formation_id).titre)
+    else:
+        sujet = "%d nouveaux messages d'élèves (%s)" % (len(a_signaler), ", ".join(noms_uniques[:4]))
+    corps = _cadre_email(
+        "Nouveau message" if len(a_signaler) == 1 else "Nouveaux messages",
+        "Messagerie de la plateforme", "".join(blocs),
+        "%s/admin/page/messagerie" % URL_PLATEFORME.rstrip("/"), "Répondre sur la plateforme",
+        "Ne réponds pas à cet e-mail : ta réponse doit être écrite sur la plateforme pour arriver à l'élève. "
+        "Les messages reçus dans la même heure sont regroupés en un seul e-mail.")
+    if emails._envoyer_email(_destinataire_admin(), sujet, corps):
+        maintenant = datetime.utcnow()
+        for m in a_signaler:
+            m.notifie_le = maintenant
+        session.commit()
+        return len(a_signaler)
+    return 0
+
+
+def notifier_eleve(session: Session, eleve: Eleve, forcer: bool = False) -> int:
+    """Un seul e-mail par élève, regroupant annonces et messages privés non signalés."""
+    msgs = (
+        session.query(MessagePrive).join(Conversation)
+        .filter(Conversation.eleve_id == eleve.id, MessagePrive.auteur == "admin",
+                MessagePrive.notifier.is_(True), MessagePrive.notifie_le.is_(None))
+        .order_by(MessagePrive.cree_le).all()
+    )
+    dests = (
+        session.query(AnnonceDestinataire).join(Annonce)
+        .filter(AnnonceDestinataire.eleve_id == eleve.id, AnnonceDestinataire.notifie_le.is_(None),
+                Annonce.notifier.is_(True))
+        .all()
+    )
+    if not msgs and not dests:
+        return 0
+    maintenant = datetime.utcnow()
+    if not eleve.actif or not messagerie_visible_pour(session, eleve):
+        # Messagerie pas encore ouverte à cette élève : on ne lui envoie rien, et on
+        # marque comme traité pour ne pas lui envoyer d'arriéré le jour de l'ouverture.
+        for x in msgs + dests:
+            x.notifie_le = maintenant
+        session.commit()
+        return 0
+    if not forcer:
+        d1 = (session.query(func.max(MessagePrive.notifie_le)).join(Conversation)
+              .filter(Conversation.eleve_id == eleve.id, MessagePrive.auteur == "admin").scalar())
+        d2 = (session.query(func.max(AnnonceDestinataire.notifie_le))
+              .filter(AnnonceDestinataire.eleve_id == eleve.id).scalar())
+        dates = [d for d in (d1, d2) if d]
+        dernier = max(dates) if dates else None
+        if dernier and maintenant - dernier < DELAI_REGROUPEMENT:
+            return 0
+    elements = []  # (date, formation_id, html)
+    for m in msgs:
+        elements.append((m.cree_le, m.conversation.formation_id, _bloc_message("Message de Laurence", m.texte)))
+    for d in dests:
+        ann = d.annonce
+        titre = "Annonce de Laurence" + (" — " + ann.objet if ann.objet else "")
+        elements.append((ann.cree_le, ann.formation_id, _bloc_message(titre, ann.texte)))
+    elements.sort(key=lambda e: e[0])
+    formations_ids = list(dict.fromkeys(e[1] for e in elements))
+    # Ne pas notifier une formation dont l'élève n'a plus l'accès
+    ids_acces = {a.formation_id for a in eleve.acces_formations}
+    elements_ok = [e for e in elements if e[1] in ids_acces]
+    if not elements_ok:
+        for x in msgs + dests:
+            x.notifie_le = maintenant
+        session.commit()
+        return 0
+    f_titre = session.get(Formation, formations_ids[0]).titre if len(formations_ids) == 1 else "tes formations"
+    lien = ("%s/eleve/voir-formation/%d/messages" % (URL_PLATEFORME.rstrip("/"), formations_ids[0])
+            if len(formations_ids) == 1 else "%s/eleve/tableau-de-bord" % URL_PLATEFORME.rstrip("/"))
+    sujet = ("Laurence t'a écrit — %s" % f_titre) if len(elements_ok) == 1 else \
+        ("%d nouveaux messages de Laurence — %s" % (len(elements_ok), f_titre))
+    corps = _cadre_email(
+        "Bonjour %s," % (eleve.prenom or ""), "Messagerie — %s" % f_titre,
+        "".join(e[2] for e in elements_ok), lien, "Lire et répondre",
+        "Pour répondre, utilise le bouton ci-dessus : ta réponse arrive directement à Laurence, "
+        "et elle seule la lit. Ne réponds pas à cet e-mail.")
+    if emails._envoyer_email(eleve.email, sujet, corps):
+        for x in msgs + dests:
+            x.notifie_le = maintenant
+        session.commit()
+        return len(elements_ok)
+    return 0
+
+
+def _notifier_en_arriere_plan(eleve_ids=None, admin=False):
+    """Lancé après la réponse HTTP : n'envoie que si aucun e-mail n'est parti depuis 1 h."""
+    session = SessionLocal()
+    try:
+        if admin:
+            notifier_admin(session)
+        for e_id in eleve_ids or []:
+            eleve = session.get(Eleve, e_id)
+            if eleve:
+                notifier_eleve(session, eleve)
+    except Exception as e:
+        logger.error("Notification messagerie : %s", e)
+    finally:
+        session.close()
+
+
+# ---------------------------------------------------------------------------
+# Pages HTML
+# ---------------------------------------------------------------------------
+
+@router.get("/admin/page/messagerie", response_class=HTMLResponse)
+def page_messagerie_admin(request: Request, admin: Administrateur = Depends(admin_connecte)):
+    return templates.TemplateResponse(request, "admin/messagerie.html", {
+        "profil": {"nom": admin.nom, "prenom": admin.prenom}, "page_active": "messagerie",
+        "url_site_vitrine": URL_SITE_VITRINE,
+    })
+
+
+@router.get("/eleve/voir-formation/{formation_id}/messages", response_class=HTMLResponse)
+def page_messages_eleve(request: Request, formation_id: int, eleve: Eleve = Depends(eleve_connecte),
+                        session: Session = Depends(obtenir_session)):
+    formation = _verifier_acces_eleve(session, eleve, formation_id)
+    from ..pages import _profil_pour_affichage
+    return templates.TemplateResponse(request, "eleve/messages.html", {
+        "eleve": eleve, "formation": formation, "profil": _profil_pour_affichage(session),
+        "url_site_vitrine": URL_SITE_VITRINE, "onglet_actif": "messages",
+        "messagerie_visible": True, "nb_messages_non_lus": 0,
+    })
+
+
+def infos_onglets_eleve(session: Session, eleve: Eleve, formation_id: int) -> dict:
+    """Pour la page Contenu : l'onglet Messages apparaît-il, et combien de non-lus ?
+    Ne lève jamais d'erreur (la page Contenu doit toujours s'afficher)."""
+    try:
+        if not messagerie_visible_pour(session, eleve):
+            return {"messagerie_visible": False, "nb_messages_non_lus": 0}
+        return {"messagerie_visible": True, "nb_messages_non_lus": _non_lus_eleve(session, eleve.id, formation_id)}
+    except Exception as e:
+        session.rollback()
+        logger.error("Onglets messagerie : %s", e)
+        return {"messagerie_visible": False, "nb_messages_non_lus": 0}
+
+
+def _non_lus_eleve(session: Session, eleve_id: int, formation_id: int) -> int:
+    n = (session.query(AnnonceDestinataire).join(Annonce)
+         .filter(AnnonceDestinataire.eleve_id == eleve_id, Annonce.formation_id == formation_id,
+                 AnnonceDestinataire.lu_le.is_(None)).count())
+    conv = _conversation(session, eleve_id, formation_id)
+    if conv is not None and conv.non_lu_eleve:
+        n += 1
+    return n
+
+
+# ---------------------------------------------------------------------------
+# API élève
+# ---------------------------------------------------------------------------
+
+def _verifier_acces_eleve(session: Session, eleve: Eleve, formation_id: int) -> Formation:
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    acces = session.query(AccesFormation).filter_by(eleve_id=eleve.id, formation_id=formation_id).first()
+    if acces is None:
+        raise HTTPException(status_code=403, detail="Tu n'as pas accès à cette formation.")
+    if not formation.actif and not eleve.compte_test:
+        raise HTTPException(status_code=403, detail="Cette formation n'est actuellement pas disponible.")
+    if not messagerie_visible_pour(session, eleve):
+        raise HTTPException(status_code=404, detail="Messagerie indisponible.")
+    return formation
+
+
+class TexteMessage(BaseModel):
+    texte: str
+
+
+@router.get("/api/eleve/formations/{formation_id}/messages")
+def lire_messages_eleve(formation_id: int, eleve: Eleve = Depends(eleve_connecte),
+                        session: Session = Depends(obtenir_session)):
+    formation = _verifier_acces_eleve(session, eleve, formation_id)
+    conv = _conversation(session, eleve.id, formation_id)
+    items = _fil_eleve(session, eleve.id, formation_id, conv)
+    maintenant = datetime.utcnow()
+    (session.query(AnnonceDestinataire)
+     .filter(AnnonceDestinataire.eleve_id == eleve.id, AnnonceDestinataire.lu_le.is_(None),
+             AnnonceDestinataire.annonce_id.in_(
+                 session.query(Annonce.id).filter(Annonce.formation_id == formation_id)))
+     .update({AnnonceDestinataire.lu_le: maintenant}, synchronize_session=False))
+    if conv is not None and conv.non_lu_eleve:
+        conv.non_lu_eleve = False
+    session.commit()
+    return {"formation": {"id": formation.id, "titre": formation.titre}, "items": items}
+
+
+@router.post("/api/eleve/formations/{formation_id}/messages")
+def ecrire_message_eleve(formation_id: int, corps: TexteMessage, taches: BackgroundTasks,
+                         eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
+    _verifier_acces_eleve(session, eleve, formation_id)
+    texte = _nettoyer(corps.texte)
+    conv = _conversation(session, eleve.id, formation_id, creer=True)
+    m = MessagePrive(conversation_id=conv.id, auteur="eleve", texte=texte, notifier=True)
+    session.add(m)
+    conv.dernier_message_le = datetime.utcnow()
+    conv.non_lu_admin = True
+    session.commit()
+    taches.add_task(_notifier_en_arriere_plan, admin=True)
+    return {"ok": True, "message": {"type": "message", "id": m.id, "auteur": "eleve", "objet": "",
+                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": ""}}
+
+
+# ---------------------------------------------------------------------------
+# API admin
+# ---------------------------------------------------------------------------
+
+admin_router = APIRouter(prefix="/admin/messagerie", dependencies=[Depends(admin_connecte)])
+
+
+@admin_router.get("/non-lus")
+def admin_non_lus(session: Session = Depends(obtenir_session)):
+    return {"nb": session.query(Conversation).filter(Conversation.non_lu_admin.is_(True)).count()}
+
+
+@admin_router.get("/reglages")
+def admin_lire_reglages(session: Session = Depends(obtenir_session)):
+    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "test")}
+
+
+class Reglages(BaseModel):
+    visible_eleves: str
+
+
+@admin_router.post("/reglages")
+def admin_ecrire_reglages(corps: Reglages, session: Session = Depends(obtenir_session)):
+    if corps.visible_eleves not in ("test", "tous"):
+        raise HTTPException(status_code=400, detail="Valeur inconnue.")
+    ecrire_parametre(session, "messagerie_visible_eleves", corps.visible_eleves)
+    return {"visible_eleves": corps.visible_eleves}
+
+
+@admin_router.get("/formations")
+def admin_formations(session: Session = Depends(obtenir_session)):
+    """Formations (actives d'abord) avec leurs modules numérotés, pour les listes de choix."""
+    res = []
+    for f in session.query(Formation).order_by(Formation.actif.desc(), Formation.ordre_affichage, Formation.id).all():
+        res.append({
+            "id": f.id, "titre": f.titre, "actif": bool(f.actif),
+            "modules": [{"id": m.id, "libelle": "Module %d — %s" % (i + 1, m.titre)} for i, m in enumerate(f.modules)],
+        })
+    return res
+
+
+@admin_router.get("/formations/{formation_id}/eleves")
+def admin_eleves_formation(formation_id: int, session: Session = Depends(obtenir_session)):
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    acces = _acces_actifs(session, formation_id)
+    av = _avancements(session, formation, acces)
+    res = []
+    for a in acces:
+        e = a.eleve
+        res.append({"id": e.id, "nom": _nom(e), "email": e.email, "test": bool(e.compte_test),
+                    "pct": av[e.id]["pct"], "avancement": av[e.id]["libelle"]})
+    res.sort(key=lambda x: x["nom"].lower())
+    return res
+
+
+class Cible(BaseModel):
+    formation_id: int
+    mode: str                                   # "toutes" | "avancement" | "une"
+    module_termine_id: Optional[int] = None
+    module_non_commence_id: Optional[int] = None
+    eleve_id: Optional[int] = None
+
+
+def _resoudre_cible(session: Session, c: Cible):
+    formation = session.get(Formation, c.formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+    acces = _acces_actifs(session, formation.id)
+    if c.mode == "une":
+        acces = [a for a in acces if a.eleve_id == c.eleve_id]
+        description = None
+    elif c.mode == "avancement":
+        if not c.module_termine_id and not c.module_non_commence_id:
+            raise HTTPException(status_code=400, detail="Choisis au moins un critère d'avancement.")
+        av = _avancements(session, formation, acces)
+        libelles = {m.id: "module %d" % (i + 1) for i, m in enumerate(formation.modules)}
+        if c.module_termine_id:
+            acces = [a for a in acces if c.module_termine_id in av[a.eleve_id]["termines"]]
+        if c.module_non_commence_id:
+            acces = [a for a in acces if c.module_non_commence_id not in av[a.eleve_id]["commences"]]
+        morceaux = []
+        if c.module_termine_id:
+            morceaux.append("%s terminé" % libelles.get(c.module_termine_id, "module"))
+        if c.module_non_commence_id:
+            morceaux.append("%s pas commencé" % libelles.get(c.module_non_commence_id, "module"))
+        description = "Selon l'avancement : " + ", ".join(morceaux)
+    elif c.mode == "toutes":
+        description = "Toutes les élèves actives"
+    else:
+        raise HTTPException(status_code=400, detail="Mode inconnu.")
+    return formation, acces, description
+
+
+@admin_router.post("/apercu-destinataires")
+def admin_apercu(c: Cible, session: Session = Depends(obtenir_session)):
+    formation, acces, _ = _resoudre_cible(session, c)
+    av = _avancements(session, formation, acces)
+    visibles = lire_parametre(session, "messagerie_visible_eleves", "test") == "tous"
+    return {"nb": len(acces), "mode_test": not visibles, "eleves": sorted([
+        {"id": a.eleve_id, "nom": _nom(a.eleve), "test": bool(a.eleve.compte_test),
+         "avancement": av[a.eleve_id]["libelle"], "pct": av[a.eleve_id]["pct"]} for a in acces
+    ], key=lambda x: x["nom"].lower())}
+
+
+class Envoi(Cible):
+    objet: str = ""
+    texte: str
+    notifier: bool = True
+
+
+@admin_router.post("/envoyer")
+def admin_envoyer(e: Envoi, taches: BackgroundTasks, session: Session = Depends(obtenir_session)):
+    texte = _nettoyer(e.texte)
+    formation, acces, description = _resoudre_cible(session, e)
+    if not acces:
+        raise HTTPException(status_code=400, detail="Aucune élève ne correspond à ce choix.")
+    maintenant = datetime.utcnow()
+    if e.mode == "une":
+        conv = _conversation(session, acces[0].eleve_id, formation.id, creer=True)
+        if e.objet.strip():
+            texte = e.objet.strip() + "\n\n" + texte
+        session.add(MessagePrive(conversation_id=conv.id, auteur="admin", texte=texte, notifier=e.notifier))
+        conv.dernier_message_le = maintenant
+        conv.non_lu_eleve = True
+        session.commit()
+        if e.notifier:
+            taches.add_task(_notifier_en_arriere_plan, eleve_ids=[acces[0].eleve_id])
+        return {"ok": True, "type": "message", "nb": 1, "conversation_id": conv.id}
+    ann = Annonce(formation_id=formation.id, objet=e.objet.strip()[:200] or None, texte=texte,
+                  cible=description, notifier=e.notifier, cree_le=maintenant)
+    session.add(ann)
+    session.flush()
+    for a in acces:
+        session.add(AnnonceDestinataire(annonce_id=ann.id, eleve_id=a.eleve_id))
+    session.commit()
+    if e.notifier:
+        taches.add_task(_notifier_en_arriere_plan, eleve_ids=[a.eleve_id for a in acces])
+    return {"ok": True, "type": "annonce", "nb": len(acces), "annonce_id": ann.id}
+
+
+@admin_router.get("/fils")
+def admin_fils(filtre: str = "tous", session: Session = Depends(obtenir_session)):
+    q = session.query(Conversation)
+    if filtre == "nonlus":
+        q = q.filter(Conversation.non_lu_admin.is_(True))
+    convs = q.order_by(Conversation.dernier_message_le.desc()).limit(200).all()
+    par_formation = {}
+    for c in convs:
+        par_formation.setdefault(c.formation_id, []).append(c)
+    avs = {}
+    for f_id, cs in par_formation.items():
+        formation = session.get(Formation, f_id)
+        acces = session.query(AccesFormation).filter(
+            AccesFormation.formation_id == f_id,
+            AccesFormation.eleve_id.in_([c.eleve_id for c in cs])).all()
+        for e_id, v in _avancements(session, formation, acces).items():
+            avs[(e_id, f_id)] = v["libelle"]
+    res = []
+    for c in convs:
+        eleve = session.get(Eleve, c.eleve_id)
+        formation = session.get(Formation, c.formation_id)
+        dernier = c.messages[-1] if c.messages else None
+        extrait = ""
+        if dernier is not None:
+            extrait = ("Toi : " if dernier.auteur == "admin" else "") + dernier.texte.replace("\n", " ")[:140]
+        res.append({"id": c.id, "eleve_id": c.eleve_id, "eleve": _nom(eleve), "formation_id": c.formation_id,
+                    "formation": formation.titre, "avancement": avs.get((c.eleve_id, c.formation_id), "Accès terminé"),
+                    "extrait": extrait, "date": _iso(c.dernier_message_le), "non_lu": bool(c.non_lu_admin)})
+    return res
+
+
+@admin_router.get("/fils/{conversation_id}")
+def admin_lire_fil(conversation_id: int, session: Session = Depends(obtenir_session)):
+    conv = session.get(Conversation, conversation_id)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    eleve = session.get(Eleve, conv.eleve_id)
+    formation = session.get(Formation, conv.formation_id)
+    acces = session.query(AccesFormation).filter_by(eleve_id=eleve.id, formation_id=formation.id).first()
+    avancement = _avancements(session, formation, [acces])[eleve.id]["libelle"] if acces else "Accès terminé"
+    items = _fil_eleve(session, eleve.id, formation.id, conv)
+    if conv.non_lu_admin:
+        conv.non_lu_admin = False
+        session.commit()
+    return {"id": conv.id, "eleve_id": eleve.id, "eleve": _nom(eleve), "prenom": eleve.prenom or "",
+            "formation_id": formation.id, "formation": formation.titre, "avancement": avancement,
+            "acces_actif": acces is not None and bool(eleve.actif), "items": items}
+
+
+@admin_router.post("/fils/{conversation_id}/repondre")
+def admin_repondre(conversation_id: int, corps: TexteMessage, taches: BackgroundTasks,
+                   session: Session = Depends(obtenir_session)):
+    conv = session.get(Conversation, conversation_id)
+    if conv is None:
+        raise HTTPException(status_code=404, detail="Conversation introuvable.")
+    texte = _nettoyer(corps.texte)
+    m = MessagePrive(conversation_id=conv.id, auteur="admin", texte=texte, notifier=True)
+    session.add(m)
+    conv.dernier_message_le = datetime.utcnow()
+    conv.non_lu_eleve = True
+    conv.non_lu_admin = False
+    session.commit()
+    taches.add_task(_notifier_en_arriere_plan, eleve_ids=[conv.eleve_id])
+    return {"ok": True, "message": {"type": "message", "id": m.id, "auteur": "admin", "objet": "",
+                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": ""}}
+
+
+@admin_router.get("/eleves/{eleve_id}/formations")
+def admin_formations_de_l_eleve(eleve_id: int, session: Session = Depends(obtenir_session)):
+    """Formations auxquelles une élève a accès (pour « Écrire à cette élève »)."""
+    return [a.formation_id for a in session.query(AccesFormation).filter_by(eleve_id=eleve_id).all()]
+
+
+@admin_router.get("/conversation")
+def admin_conversation_pour(eleve_id: int, formation_id: int, session: Session = Depends(obtenir_session)):
+    """Id de la conversation d'une élève pour une formation (null si aucun échange)."""
+    conv = _conversation(session, eleve_id, formation_id)
+    return {"conversation_id": conv.id if conv else None}
+
+
+@admin_router.get("/annonces")
+def admin_annonces(session: Session = Depends(obtenir_session)):
+    res = []
+    for ann in session.query(Annonce).order_by(Annonce.cree_le.desc()).limit(100).all():
+        formation = session.get(Formation, ann.formation_id)
+        nb = len(ann.destinataires)
+        lus = sum(1 for d in ann.destinataires if d.lu_le)
+        res.append({"id": ann.id, "formation": formation.titre if formation else "?", "objet": ann.objet or "",
+                    "extrait": ann.texte.replace("\n", " ")[:140], "date": _iso(ann.cree_le),
+                    "cible": ann.cible or "", "nb": nb, "lus": lus})
+    return res
+
+
+@admin_router.get("/annonces/{annonce_id}")
+def admin_annonce(annonce_id: int, session: Session = Depends(obtenir_session)):
+    ann = session.get(Annonce, annonce_id)
+    if ann is None:
+        raise HTTPException(status_code=404, detail="Annonce introuvable.")
+    formation = session.get(Formation, ann.formation_id)
+    dests = []
+    for d in ann.destinataires:
+        e = session.get(Eleve, d.eleve_id)
+        if e:
+            conv = _conversation(session, e.id, ann.formation_id)
+            dests.append({"eleve_id": e.id, "nom": _nom(e), "lu": d.lu_le is not None,
+                          "conversation_id": conv.id if conv else None})
+    dests.sort(key=lambda x: x["nom"].lower())
+    return {"id": ann.id, "formation": formation.titre if formation else "?", "formation_id": ann.formation_id,
+            "objet": ann.objet or "", "texte": ann.texte, "date": _iso(ann.cree_le), "cible": ann.cible or "",
+            "destinataires": dests}
+
+
+# ---------------------------------------------------------------------------
+# Tâche planifiée : regroupement des notifications
+# ---------------------------------------------------------------------------
+
+@router.post("/cron/messagerie-notifications")
+def cron_notifications(x_cron_token: str = Header(""), session: Session = Depends(obtenir_session)):
+    from .rapport_hebdo import _verifier_jeton
+    _verifier_jeton(x_cron_token)
+    nb_admin = notifier_admin(session, forcer=True)
+    ids = set(e_id for (e_id,) in session.query(Conversation.eleve_id).join(MessagePrive)
+              .filter(MessagePrive.auteur == "admin", MessagePrive.notifier.is_(True),
+                      MessagePrive.notifie_le.is_(None)).distinct().all())
+    ids |= set(e_id for (e_id,) in session.query(AnnonceDestinataire.eleve_id).join(Annonce)
+               .filter(AnnonceDestinataire.notifie_le.is_(None), Annonce.notifier.is_(True)).distinct().all())
+    nb_eleves = 0
+    for e_id in ids:
+        eleve = session.get(Eleve, e_id)
+        if eleve and notifier_eleve(session, eleve, forcer=True):
+            nb_eleves += 1
+    return {"ok": True, "messages_signales_admin": nb_admin, "eleves_prevenues": nb_eleves}
