@@ -35,13 +35,16 @@ class Formation(Base):
     id = Column(Integer, primary_key=True)
     titre = Column(String(200), nullable=False)
     couleur = Column(String(20))
-    presentation_html = Column(Text)
+    # CORRECTION TRANSFERT NEON (18/10/2026) : presentation_html et image_url peuvent peser
+    # plusieurs Mo (images base64). Sans deferred, /api/tarifs-site (appelée à chaque page
+    # du site vitrine) relisait ~4 Mo dans Neon à chaque visite. Chargés seulement si utilisés.
+    presentation_html = deferred(Column(Text))
     nb_niveaux = Column(Integer, nullable=False, default=3)
     ordre_affichage = Column(Integer, nullable=False, default=0)
     actif = Column(Boolean, default=True)
     fichier_recu_nom = Column(String(300))
     cree_le = Column(DateTime, default=datetime.utcnow)
-    image_url = Column(Text, nullable=True)
+    image_url = deferred(Column(Text, nullable=True))
     description_courte = Column(Text, nullable=True)
     lien_visio = Column(String(500), nullable=True)
 
