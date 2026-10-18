@@ -173,11 +173,10 @@ class ImporteurWord:
         if italic and not bold:
             return img_html + f'<p class="accent-line"{size_style}>{esc(text)}</p>'
 
-        parts = []
-        for r in paragraph.runs:
+        def rendu_run(r):
             t = esc(r.text)
             if not t:
-                continue
+                return ""
             run_px = self.run_font_px(r)
             if r.bold:
                 t = f"<strong>{t}</strong>"
@@ -185,7 +184,30 @@ class ImporteurWord:
                 t = f"<em>{t}</em>"
             if run_px:
                 t = f'<span style="font-size:{run_px}px;">{t}</span>'
-            parts.append(t)
+            return t
+
+        # iter_inner_content() parcourt les runs ET les liens hypertexte : avant,
+        # seul paragraph.runs était lu et le texte des liens (ex. une adresse
+        # e-mail que Word transforme en lien) disparaissait à l'import.
+        parts = []
+        try:
+            contenu = list(paragraph.iter_inner_content())
+        except AttributeError:
+            contenu = list(paragraph.runs)
+        for elt in contenu:
+            if hasattr(elt, "address") and hasattr(elt, "runs"):  # lien hypertexte
+                texte_lien = "".join(rendu_run(r) for r in elt.runs) or esc(elt.text)
+                if not texte_lien:
+                    continue
+                url = (elt.url or "").strip() if hasattr(elt, "url") else (elt.address or "").strip()
+                if url.lower().startswith(("http://", "https://", "mailto:", "tel:")):
+                    parts.append(f'<a href="{htmlmod.escape(url, quote=True)}" target="_blank" rel="noopener">{texte_lien}</a>')
+                else:
+                    parts.append(texte_lien)
+            else:
+                t = rendu_run(elt)
+                if t:
+                    parts.append(t)
         inner = "".join(parts) if parts else esc(text)
         p_style = f' style="text-align:{align_css};"' if align_css else ""
         return img_html + f"<p{p_style}>{inner}</p>"
