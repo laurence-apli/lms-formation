@@ -799,7 +799,8 @@ function _qCleBrouillon(chapId) { return 'q-brouillon-' + chapId; }
 
 function activerQuestionnaire(zone, chapId, dejaValide) {
   _questionnaire = null;
-  var ps = Array.prototype.filter.call(zone.querySelectorAll('p'), function(p) {
+  // Les titres (h2, h3…) servent seulement d'intitulé à la zone de réponse qui suit.
+  var ps = Array.prototype.filter.call(zone.querySelectorAll('p, h2, h3, h4'), function(p) {
     return !p.closest('.medias-eleve, .lv, .lecteur-audio, .q-info');
   });
   var items = [];
@@ -807,6 +808,7 @@ function activerQuestionnaire(zone, chapId, dejaValide) {
   for (var i = 0; i < ps.length; i++) {
     var p = ps[i], t = _qTexte(p);
     if (!t) continue;
+    if (p.tagName !== 'P') { avantDernier = ''; dernierTexte = t; continue; }
     if (_Q_CASE.test(t)) {
       var html = p.innerHTML.replace(/[☐□▢❏❑]\s*/, '').replace(/^(\s|&nbsp;)+/, '').replace(/\n/g, '<br>');
       var lab = document.createElement('label');
