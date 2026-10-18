@@ -487,7 +487,10 @@ async function enregistrerModule(moduleId) {
 }
 
 async function supprimerModule(moduleId) {
-  await appelApi(`/admin/modules/${moduleId}`, { method: 'DELETE' });
+  if (!confirm('Supprimer ce module et tous ses chapitres ?')) return;
+  try {
+    await appelApi(`/admin/modules/${moduleId}`, { method: 'DELETE' });
+  } catch (e) { afficherToast('Suppression impossible : ' + e.message); return; }
   afficherToast('Module supprimé');
   if (noeudActif.type !== 'formation') selectionner({ type: 'formation' });
   await charger();
@@ -550,7 +553,10 @@ async function enregistrerChapitre(moduleId, chapId) {
 }
 
 async function supprimerChapitre(chapId) {
-  await appelApi(`/admin/chapitres/${chapId}`, { method: 'DELETE' });
+  if (!confirm('Supprimer ce chapitre ?\nSes médias, les validations et les réponses des élèves à ce chapitre seront aussi supprimés.')) return;
+  try {
+    await appelApi(`/admin/chapitres/${chapId}`, { method: 'DELETE' });
+  } catch (e) { afficherToast('Suppression impossible : ' + e.message); return; }
   afficherToast('Chapitre supprimé');
   selectionner({ type: 'formation' });
   await charger();

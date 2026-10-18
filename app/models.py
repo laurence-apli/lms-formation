@@ -113,7 +113,9 @@ class Chapitre(Base):
 
     module = relationship("Module", back_populates="chapitres")
     medias = relationship("Media", back_populates="chapitre", cascade="all, delete-orphan")
-    validations = relationship("ValidationChapitre", back_populates="chapitre")
+    # cascade : sans elle, supprimer un chapitre déjà validé par une élève (ou un compte
+    # test « tout valider ») échouait (chapitre_id mis à NULL alors qu'il est obligatoire).
+    validations = relationship("ValidationChapitre", back_populates="chapitre", cascade="all, delete-orphan")
     reponses_chapitres = relationship("ReponseChapitre", back_populates="chapitre", cascade="all, delete-orphan", passive_deletes=True)
 
 class Media(Base):
