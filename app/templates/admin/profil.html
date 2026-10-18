@@ -39,57 +39,80 @@
 .lien-outil-titre { font-size:13px; font-weight:600; color:var(--ink); }
 .lien-outil-compte { font-size:12px; color:var(--grey); margin:2px 0 8px; }
 .lien-outil-btns { display:flex; flex-wrap:wrap; gap:8px; }
+.groupe-outils { font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#B8922A; margin:18px 0 2px; }
 </style>
 <div class="lien-outil" style="background:#F5EDD6; border-radius:8px; padding:10px 12px; border-bottom:none; margin-bottom:6px;">
-<div class="lien-outil-titre">🔑 Deux identifiants différents selon l'outil (vérifié le 18/10/2026)</div>
-<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Stripe (le bon compte qui encaisse)<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify (bouton « Se connecter avec Google »)<br>• Pas encore vérifiés (aucune session ouverte) : Resend, Cal.com, UptimeRobot — voir le détail de chaque outil ci-dessous</div>
+<div class="lien-outil-titre">🔑 Quel identifiant pour quel outil ? (vérifié le 18/10/2026)</div>
+<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Stripe, Resalib<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify, Google Search Console — toujours via « Se connecter avec Google »<br>• Non vérifiés (aucune session ouverte) : Resend, OVH, Cal.com, UptimeRobot</div>
 </div>
+
+<div class="groupe-outils">🖥️ La plateforme</div>
 <div class="lien-outil">
-<div class="lien-outil-titre">🔗 Code de la plateforme (GitHub)</div>
-<div class="lien-outil-compte">Compte : <strong>laurence-apli</strong> — identifiant de connexion : <strong>laurencemb@orange.fr</strong> — dépôt lms-formation</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation" target="_blank" rel="noopener">Dépôt ↗</a><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation/commits/main" target="_blank" rel="noopener">Historique des modifications ↗</a></div>
-</div>
-<div class="lien-outil">
-<div class="lien-outil-titre">🖥️ Serveur de la plateforme (Render)</div>
-<div class="lien-outil-compte">Service : <strong>lms-formation</strong> (My Workspace) — identifiant de connexion : <strong>laurencemb@orange.fr</strong></div>
+<div class="lien-outil-titre">Serveur (Render)</div>
+<div class="lien-outil-compte">Sert à : faire tourner la plateforme. Chaque modification du code y est installée automatiquement.<br>Connexion : <strong>laurencemb@orange.fr</strong> — service <strong>lms-formation</strong></div>
 <div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.render.com/web/srv-d90c5l68bjmc7393f5o0/deploys" target="_blank" rel="noopener">Déploiements ↗</a><a class="btn btn-sm" href="https://dashboard.render.com/web/srv-d90c5l68bjmc7393f5o0/logs" target="_blank" rel="noopener">Journaux (logs) ↗</a></div>
 </div>
 <div class="lien-outil">
-<div class="lien-outil-titre">🗄️ Base de données (Neon)</div>
-<div class="lien-outil-compte">Projet <strong>lms-laurence</strong> — identifiant de connexion : <strong>laurencemb@orange.fr</strong><br>⚠️ Offre gratuite : 1 Go de stockage et <strong>5 Go de transfert par mois</strong>. Chaque écoute d'un audio/vidéo stocké sur la plateforme consomme du transfert → mettre les médias longs sur YouTube. Au-delà de 5 Go, la base est coupée jusqu'au mois suivant.</div>
+<div class="lien-outil-titre">Base de données (Neon)</div>
+<div class="lien-outil-compte">Sert à : stocker élèves, formations, paiements et médias.<br>Connexion : <strong>laurencemb@orange.fr</strong> — projet <strong>lms-laurence</strong><br>⚠️ Offre gratuite : 1 Go de stockage et <strong>5 Go de transfert par mois</strong>. Chaque écoute d'un audio/vidéo stocké sur la plateforme consomme du transfert → mettre les médias longs sur YouTube. Au-delà de 5 Go, la base est coupée jusqu'au mois suivant.</div>
 <div class="lien-outil-btns"><a class="btn btn-sm" href="https://console.neon.tech/app/projects" target="_blank" rel="noopener">Console (consommation) ↗</a></div>
 </div>
 <div class="lien-outil">
-<div class="lien-outil-titre">🌐 Site vitrine (Netlify)</div>
-<div class="lien-outil-compte">Équipe : <strong>maresonance42</strong> — connexion avec <strong>Google (maresonance42@gmail.com)</strong>, pas de mot de passe Netlify</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://app.netlify.com/teams/maresonance42/projects" target="_blank" rel="noopener">Projets ↗</a></div>
+<div class="lien-outil-titre">Code (GitHub)</div>
+<div class="lien-outil-compte">Sert à : conserver le code et l'historique de toutes les modifications.<br>Connexion : <strong>laurencemb@orange.fr</strong> — compte <strong>laurence-apli</strong></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation" target="_blank" rel="noopener">Dépôt ↗</a><a class="btn btn-sm" href="https://github.com/laurence-apli/lms-formation/commits/main" target="_blank" rel="noopener">Historique des modifications ↗</a></div>
 </div>
 <div class="lien-outil">
-<div class="lien-outil-titre">🎬 Vidéos des formations (YouTube)</div>
-<div class="lien-outil-compte">Chaîne : <strong>Laurence Mermet-Bijon</strong> (@LaurenceMermet-Bijon) — vidéos en « non répertoriée » — compte Google : <strong>maresonance42@gmail.com</strong></div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA" target="_blank" rel="noopener">YouTube Studio ↗</a><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA/videos/upload" target="_blank" rel="noopener">Mes vidéos ↗</a><a class="btn btn-sm" href="https://www.youtube.com/@LaurenceMermet-Bijon" target="_blank" rel="noopener">Chaîne ↗</a></div>
-</div>
-<div class="lien-outil">
-<div class="lien-outil-titre">📧 Emails automatiques (Resend)</div>
-<div class="lien-outil-compte">Identifiant de connexion : à confirmer (pas de session ouverte lors de la vérification du 18/10/2026)</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://resend.com/emails" target="_blank" rel="noopener">Emails envoyés ↗</a></div>
-</div>
-<div class="lien-outil">
-<div class="lien-outil-titre">💳 Paiements (Stripe)</div>
-<div class="lien-outil-compte">✅ <strong>Le bon compte : « MERMET-BIJON » — acct_1TxRmrJigKV4OWoB</strong>, identifiant de connexion Stripe : <strong>laurencemb@orange.fr</strong> (mode réel, c'est lui qui encaisse — clé <code>sk_live_…2Jzo</code> et webhook « LMS Laurence » <code>whsec_…cD4d</code> sur Render, vérifiés le 17/10/2026).<br>
-⚠️ Ne pas confondre avec <strong>acct_1U6Ar3PNhqHNjUYk</strong> « laurence-mermet-bijon.fr », ouvert avec l'identifiant <strong>maresonance42@gmail.com</strong> : compte jamais vérifié, bloqué en mode test, il n'encaisse rien. Le bon compte s'ouvre avec un autre identifiant Stripe.<br>
-Si un bouton ci-dessous ouvre un écran « Environnement de test » ou un autre compte : se déconnecter de Stripe et se reconnecter avec l'identifiant du bon compte.</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/dashboard" target="_blank" rel="noopener">Dashboard ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/payments" target="_blank" rel="noopener">Paiements reçus ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/workbench/webhooks" target="_blank" rel="noopener">Webhooks ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/settings/payment_methods" target="_blank" rel="noopener">Moyens de paiement (Klarna…) ↗</a></div>
-</div>
-<div class="lien-outil">
-<div class="lien-outil-titre">🟢 Disponibilité du serveur (UptimeRobot)</div>
-<div class="lien-outil-compte">À quoi ça sert : un robot gratuit qui visite la plateforme toutes les quelques minutes, pour l'empêcher de s'endormir (Render gratuit s'endort après 15 min sans visite) et pour envoyer une alerte e-mail si elle est en panne. Ajouté en juillet 2026 ; <strong>non indispensable</strong> — le site vitrine réveille déjà la plateforme à chaque visite.<br>Identifiant de connexion : inconnu — essayer « Login with Google » (maresonance42@gmail.com) puis « Login with GitHub » (laurencemb@orange.fr). Si aucun compte n'existe, cet outil n'est pas utilisé.</div>
+<div class="lien-outil-titre">Surveillance (UptimeRobot)</div>
+<div class="lien-outil-compte">Sert à : visiter la plateforme régulièrement pour l'empêcher de s'endormir et alerter en cas de panne. Laissé tel quel.<br>Connexion : inconnue — essayer « Login with Google » (maresonance42@gmail.com) puis « Login with GitHub ».</div>
 <div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.uptimerobot.com/monitors" target="_blank" rel="noopener">Moniteurs ↗</a></div>
 </div>
+
+<div class="groupe-outils">💳 Ventes et e-mails</div>
 <div class="lien-outil">
-<div class="lien-outil-titre">📅 Rendez-vous visio (Cal.com)</div>
-<div class="lien-outil-compte">À quoi ça sert : agenda en ligne de Laurence pour les <strong>séances en visio</strong> (page publique « Séance visio », active). La plateforme l'utilise quand une élève demande un RDV visio dans une formation : elle reçoit ce lien par e-mail si le champ « Lien visio (Cal.com) » de la formation est rempli (sinon, c'est le lien Resalib qui part).<br>Identifiant de connexion : inconnu — essayer « Se connecter avec Google » avec maresonance42@gmail.com, puis laurencemb@orange.fr.</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://cal.com/laurence-mermet-bijon-energeticienne/seance-visio" target="_blank" rel="noopener">Calendrier public ↗</a><a class="btn btn-sm" href="https://app.cal.com" target="_blank" rel="noopener">Dashboard ↗</a></div>
+<div class="lien-outil-titre">Paiements (Stripe)</div>
+<div class="lien-outil-compte">Sert à : encaisser les achats (carte, Apple/Google Pay, Klarna).<br>Connexion : <strong>laurencemb@orange.fr</strong> — ✅ compte <strong>« MERMET-BIJON » acct_1TxRmrJigKV4OWoB</strong> (mode réel, clé <code>sk_live_…2Jzo</code> et webhook « LMS Laurence » <code>whsec_…cD4d</code> sur Render, vérifiés le 17/10/2026).<br>
+⚠️ Ne PAS utiliser maresonance42@gmail.com sur Stripe : il ouvre <strong>acct_1U6Ar3PNhqHNjUYk</strong>, un compte jamais vérifié, bloqué en mode test, qui n'encaisse rien. Si un bouton affiche « Environnement de test », se déconnecter et se reconnecter avec laurencemb@orange.fr.</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/dashboard" target="_blank" rel="noopener">Dashboard ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/payments" target="_blank" rel="noopener">Paiements reçus ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/workbench/webhooks" target="_blank" rel="noopener">Webhooks ↗</a><a class="btn btn-sm" href="https://dashboard.stripe.com/acct_1TxRmrJigKV4OWoB/settings/payment_methods" target="_blank" rel="noopener">Moyens de paiement ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">E-mails automatiques (Resend)</div>
+<div class="lien-outil-compte">Sert à : envoyer les e-mails de la plateforme (inscription, accès, mot de passe, compte-rendu du lundi).<br>Connexion : à confirmer — essayer laurencemb@orange.fr, puis maresonance42@gmail.com.</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://resend.com/emails" target="_blank" rel="noopener">E-mails envoyés ↗</a></div>
+</div>
+
+<div class="groupe-outils">🌐 Site et visibilité</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Site vitrine (Netlify)</div>
+<div class="lien-outil-compte">Sert à : héberger laurence-mermet-bijon.fr (mise en ligne par glisser-déposer du zip).<br>Connexion : « Se connecter avec Google » → <strong>maresonance42@gmail.com</strong> (pas de mot de passe Netlify) — équipe maresonance42</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://app.netlify.com/teams/maresonance42/projects" target="_blank" rel="noopener">Projets ↗</a><a class="btn btn-sm" href="https://laurence-mermet-bijon.fr" target="_blank" rel="noopener">Voir le site ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Nom de domaine (OVH)</div>
+<div class="lien-outil-compte">Sert à : le nom de domaine laurence-mermet-bijon.fr et ses réglages (DNS).<br>Connexion : à confirmer — Chrome propose <strong>maresonance42@gmail.com</strong>.</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://www.ovh.com/manager/" target="_blank" rel="noopener">Espace client ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Référencement Google (Search Console)</div>
+<div class="lien-outil-compte">Sert à : suivre la présence du site dans Google (clics, pages indexées).<br>Connexion : compte Google <strong>maresonance42@gmail.com</strong></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://search.google.com/search-console?resource_id=https://laurence-mermet-bijon.fr/" target="_blank" rel="noopener">Vue d'ensemble ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Vidéos et audios des formations (YouTube)</div>
+<div class="lien-outil-compte">Sert à : héberger gratuitement les médias longs, en « non répertoriée » (visibles seulement avec le lien).<br>Connexion : compte Google <strong>maresonance42@gmail.com</strong> — chaîne Laurence Mermet-Bijon</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA/videos/upload" target="_blank" rel="noopener">Mes vidéos ↗</a><a class="btn btn-sm" href="https://studio.youtube.com/channel/UCv8b9fB32-C9cJtO9d21GsA" target="_blank" rel="noopener">YouTube Studio ↗</a></div>
+</div>
+
+<div class="groupe-outils">📅 Rendez-vous</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Agenda principal (Resalib)</div>
+<div class="lien-outil-compte">Sert à : les réservations de séances (cabinet et distance). C'est aussi le lien envoyé aux élèves pour un RDV quand aucun lien visio n'est rempli dans la formation.<br>Connexion : <strong>laurencemb@orange.fr</strong></div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://www.resalib.fr/bo/home" target="_blank" rel="noopener">Mon compte praticien ↗</a><a class="btn btn-sm" href="https://www.resalib.fr/praticien/66795-laurence-mermet-bijon-energeticien-pelussin" target="_blank" rel="noopener">Page publique ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Séances visio (Cal.com) — à garder ou non, en réflexion</div>
+<div class="lien-outil-compte">Sert à : réserver une séance visio. Utilisé seulement si le champ « Lien visio (Cal.com) » d'une formation est rempli ; le vider renvoie automatiquement vers Resalib.<br>Connexion : inconnue — essayer « Se connecter avec Google » (maresonance42@gmail.com), puis laurencemb@orange.fr.</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://cal.com/laurence-mermet-bijon-energeticienne/seance-visio" target="_blank" rel="noopener">Page publique ↗</a><a class="btn btn-sm" href="https://app.cal.com" target="_blank" rel="noopener">Dashboard ↗</a></div>
 </div>
 
 </div>
