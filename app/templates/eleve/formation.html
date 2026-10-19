@@ -143,6 +143,9 @@
 .lv { position:relative; margin-top:10px; border-radius:8px; overflow:hidden; background:#000; outline:none; }
 .lv-cadre { position:relative; width:100%; padding-bottom:56.25%; height:0; }
 .lv-cadre iframe, .lv-cadre .lv-iframe { position:absolute; top:0; left:0; width:100%; height:100%; border:0; }
+.lv-cadre video.lv-iframe { object-fit:contain; background:#000; }
+/* Vidéo hébergée sur la plateforme : on voit la première image derrière le bouton lecture */
+.lv[data-src] .lv-poster { background:rgba(0,0,0,.18); }
 .lv-voile { position:absolute; inset:0; z-index:2; cursor:pointer; }
 .lv.lecture.inactif, .lv.lecture.inactif .lv-voile { cursor:none; }
 .lv-poster { position:absolute; inset:0; z-index:3; background:#000 center/cover no-repeat; display:flex; align-items:center; justify-content:center; cursor:pointer; }
@@ -266,6 +269,17 @@ const LV_ICONE_PLEIN = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 
 // capte souris et clics : YouTube n'affiche donc plus rien par-dessus
 // l'image. Nos contrôles disparaissent après 2 s d'inactivité en lecture.
 let _lvApi = null;
+// Lecteur maison pour une vidéo hébergée sur la plateforme (même habillage que YouTube)
+function lvHtmlHeberge(url) {
+  return '<div class="lv" data-src="' + url + '" tabindex="0"><div class="lv-cadre"><div class="lv-iframe"></div></div>' +
+    '<div class="lv-voile"></div><div class="lv-poster">' +
+    '<button type="button" class="lv-gros-play" aria-label="Lire la vidéo">' + LA_ICONE_PLAY + '</button></div>' +
+    '<div class="lv-ctrl"><button type="button" class="lv-btn lv-play" aria-label="Lecture">' + LA_ICONE_PLAY + '</button>' +
+    '<span class="lv-temps lv-courant">0:00</span><input type="range" class="lv-barre" min="0" max="1000" step="1" value="0" aria-label="Position de lecture">' +
+    '<span class="lv-temps lv-total">--:--</span>' +
+    '<button type="button" class="lv-btn lv-son" aria-label="Couper le son">' + LV_ICONE_SON + '</button>' +
+    '<button type="button" class="lv-btn lv-plein" aria-label="Plein écran">' + LV_ICONE_PLEIN + '</button></div></div>';
+}
 function lvChargerApi() {
   if (window.YT && window.YT.Player) return Promise.resolve();
   if (!_lvApi) _lvApi = new Promise(res => {
@@ -282,26 +296,53 @@ function lvPauseToutes(sauf) {
     if (v !== sauf && v._player && v._player.pauseVideo && v.classList.contains('lecture')) v._player.pauseVideo();
   });
 }
+// Mêmes codes que YT.PlayerState (le lecteur maison sert aussi aux vidéos hébergées)
+const LV_ETATS = { UNSTARTED: -1, ENDED: 0, PLAYING: 1, PAUSED: 2, BUFFERING: 3 };
 function initVideosYT(racine) {
-  const els = racine.querySelectorAll('.lv:not([data-init])');
+  const els = Array.from(racine.querySelectorAll('.lv:not([data-init])'));
   if (!els.length) return;
   els.forEach(el => { el.dataset.init = '1'; });
-  lvChargerApi().then(() => els.forEach(lvInit));
+  els.filter(el => el.dataset.src).forEach(lvInit);          // vidéo hébergée (Cloudflare R2)
+  const yt = els.filter(el => el.dataset.yt);
+  if (yt.length) lvChargerApi().then(() => yt.forEach(lvInit));
+}
+// Vidéo hébergée : <video> HTML5 qui imite l'API du lecteur YouTube utilisée par lvInit
+function lvLecteurHtml5(el, evts) {
+  const v = document.createElement('video');
+  v.className = 'lv-iframe';
+  v.setAttribute('playsinline', ''); v.playsInline = true;
+  v.preload = 'metadata';
+  v.setAttribute('controlsList', 'nodownload');
+  v.addEventListener('contextmenu', e => e.preventDefault());
+  v.src = el.dataset.src + '#t=0.5';
+  el.querySelector('.lv-iframe').replaceWith(v);
+  const emettre = etat => evts.onStateChange({ data: etat });
+  v.addEventListener('playing', () => emettre(LV_ETATS.PLAYING));
+  v.addEventListener('pause', () => { if (!v.ended) emettre(LV_ETATS.PAUSED); });
+  v.addEventListener('ended', () => emettre(LV_ETATS.ENDED));
+  v.addEventListener('waiting', () => emettre(LV_ETATS.BUFFERING));
+  v.addEventListener('loadedmetadata', () => evts.onReady && evts.onReady());
+  return {
+    getDuration: () => (isFinite(v.duration) ? v.duration : 0),
+    getCurrentTime: () => v.currentTime,
+    seekTo: t => { v.currentTime = t; },
+    playVideo: () => { v.play().catch(() => {}); },
+    pauseVideo: () => v.pause(),
+    getPlayerState: () => (v.ended ? LV_ETATS.ENDED : (v.paused ? LV_ETATS.PAUSED : LV_ETATS.PLAYING)),
+    mute: () => { v.muted = true; },
+    unMute: () => { v.muted = false; },
+    destroy: () => { v.pause(); v.removeAttribute('src'); v.load(); },
+  };
 }
 function lvInit(el) {
   const $ = sel => el.querySelector(sel);
   const barre = $('.lv-barre');
   let minuteur = null, suivi = null, glisse = false, muet = false;
 
-  const player = new YT.Player($('.lv-iframe'), {
-    host: 'https://www.youtube-nocookie.com',
-    videoId: el.dataset.yt,
-    width: '100%', height: '100%',
-    playerVars: { controls: 0, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, hl: 'fr' },
-    events: {
+  const evenements = {
       onReady: majTemps,
       onStateChange: e => {
-        const S = YT.PlayerState;
+        const S = LV_ETATS;
         if (e.data === S.PLAYING) {
           el.classList.add('lecture', 'demarre'); el.classList.remove('fini');
           lvPauseToutes(el);
@@ -318,7 +359,13 @@ function lvInit(el) {
         btn.setAttribute('aria-label', enLecture ? 'Pause' : 'Lecture');
         majTemps();
       }
-    }
+  };
+  const player = el.dataset.src ? lvLecteurHtml5(el, evenements) : new YT.Player($('.lv-iframe'), {
+    host: 'https://www.youtube-nocookie.com',
+    videoId: el.dataset.yt,
+    width: '100%', height: '100%',
+    playerVars: { controls: 0, rel: 0, playsinline: 1, disablekb: 1, fs: 0, iv_load_policy: 3, modestbranding: 1, hl: 'fr' },
+    events: evenements
   });
   el._player = player;
 
@@ -338,8 +385,8 @@ function lvInit(el) {
   function basculer() {
     if (!player.getPlayerState) return;
     const st = player.getPlayerState();
-    if (st === YT.PlayerState.PLAYING || st === YT.PlayerState.BUFFERING) player.pauseVideo();
-    else { if (st === YT.PlayerState.ENDED) player.seekTo(0, true); player.playVideo(); }
+    if (st === LV_ETATS.PLAYING || st === LV_ETATS.BUFFERING) player.pauseVideo();
+    else { if (st === LV_ETATS.ENDED) player.seekTo(0, true); player.playVideo(); }
   }
   function reveil() {
     el.classList.remove('inactif');
@@ -485,6 +532,9 @@ function rendreMediasEleve(medias) {
           '<button type="button" class="lv-btn lv-plein" aria-label="Plein écran">' + LV_ICONE_PLEIN + '</button></div></div></div>';
       }
       return '<a class="media-eleve-row" href="' + url + '" target="_blank" rel="noopener">🔗 ' + media.titre + ' <span class="media-eleve-action">Ouvrir →</span></a>';
+    }
+    if (media.type === 'video') {
+      return '<div class="media-eleve-row media-video-embed"><div class="audio-player-header">🎬 ' + media.titre + '</div>' + lvHtmlHeberge(media.url) + '</div>';
     }
     if (media.type === 'audio') {
       return '<div class="media-eleve-row media-audio-player"><div class="audio-player-header">' + icone + ' ' + media.titre + '</div>' +
@@ -688,6 +738,10 @@ async function afficherContenu() {
           return `<a class="media-eleve-row" href="${url}" target="_blank" rel="noopener">🔗 ${media.titre} <span class="media-eleve-action">Ouvrir →</span></a>`;
         }
 
+        if (media.type === 'video') {
+          return `<div class="media-eleve-row media-video-embed">
+            <div class="audio-player-header">🎬 ${media.titre}</div>${lvHtmlHeberge(media.url)}</div>`;
+        }
         if (media.type === 'audio') {
           return `<div class="media-eleve-row media-audio-player">
             <div class="audio-player-header">${icone} ${media.titre}</div>

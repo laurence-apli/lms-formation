@@ -389,11 +389,13 @@ EXTENSIONS_AUTORISEES = {
     "pdf": {".pdf"},
     "word": {".docx"},
     "audio": {".mp3", ".wav", ".m4a", ".ogg"},
+    "video": {".mp4", ".m4v", ".mov", ".webm"},
 }
 MIME_PAR_EXTENSION = {
     ".pdf": "application/pdf",
     ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".mp3": "audio/mpeg", ".wav": "audio/wav",
     ".m4a": "audio/mp4", ".ogg": "audio/ogg",
+    ".mp4": "video/mp4", ".m4v": "video/mp4", ".mov": "video/quicktime", ".webm": "video/webm",
 }
 
 @router.post("/chapitres/{chapitre_id}/medias/upload")
@@ -673,6 +675,8 @@ def restaurer_media_base64(nature: str, media_id: int, session: Session = Depend
     if media is None or sauvegarde is None:
         raise HTTPException(status_code=404, detail="Rien à restaurer.")
     media.url = sauvegarde.ancienne_url
+    if not media.url.startswith(("data:", stockage_r2.PREFIXE)):
+        media.type = "lien"  # c'était un lien externe (ex. YouTube) avant le remplacement
     session.commit()
     return {"ok": True}
 
@@ -683,3 +687,90 @@ def purger_sauvegardes(session: Session = Depends(obtenir_session)):
     n = session.query(SauvegardeMediaBase64).delete()
     session.commit()
     return {"ok": True, "supprimees": n}
+
+
+
+# ---------- Dépôt direct navigateur -> R2 (vidéos, gros fichiers) ----------
+# 1) /admin/televersement/preparer donne une URL de dépôt signée (le fichier ne passe pas par Render)
+# 2) le navigateur envoie le fichier (PUT) avec une barre de progression
+# 3) /admin/medias-r2/{nature}/{parent_id} crée le média, ou /admin/medias-r2/remplacer/{nature}/{id}
+#    remplace le fichier d'un média existant (ex. un lien YouTube devient une vidéo hébergée)
+
+TAILLE_MAX_DEPOT_MO = 1024
+_PARENTS = {"chapitre": Chapitre, "module": Module, "formation": Formation}
+
+
+def _verifier_extension(type_media: str, nom_fichier: str) -> str:
+    extension = "." + nom_fichier.rsplit(".", 1)[-1].lower() if "." in nom_fichier else ""
+    if extension not in EXTENSIONS_AUTORISEES.get(type_media, set()):
+        attendu = ", ".join(sorted(EXTENSIONS_AUTORISEES.get(type_media, set())))
+        raise HTTPException(status_code=400, detail=f"Format non reconnu pour ce type (attendu : {attendu}).")
+    return extension
+
+
+@router.post("/televersement/preparer")
+async def preparer_televersement(request: Request, session: Session = Depends(obtenir_session)):
+    if not stockage_r2.r2_actif():
+        raise HTTPException(status_code=409, detail="R2 non configuré.")
+    d = await request.json()
+    nature, parent_id = d.get("nature"), int(d.get("parent_id") or 0)
+    nom, type_media, taille = str(d.get("nom_fichier") or ""), d.get("type"), int(d.get("taille") or 0)
+    modele = _PARENTS.get(nature)
+    if modele is None or session.get(modele, parent_id) is None:
+        raise HTTPException(status_code=404, detail="Emplacement introuvable.")
+    extension = _verifier_extension(type_media, nom)
+    if taille <= 0 or taille > TAILLE_MAX_DEPOT_MO * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"Fichier vide ou trop volumineux ({TAILLE_MAX_DEPOT_MO} Mo maximum).")
+    cle = stockage_r2.nouvelle_cle(f"medias/{nature}/{parent_id}", nom)
+    return {"cle": cle, "url": stockage_r2.url_depot(cle),
+            "type_mime": MIME_PAR_EXTENSION.get(extension, "application/octet-stream")}
+
+
+def _verifier_depot(nature: str, parent_id: int, cle: str) -> str:
+    if not cle.startswith(f"medias/{nature}/{parent_id}/") or ".." in cle:
+        raise HTTPException(status_code=400, detail="Clé de fichier invalide.")
+    taille, _ = stockage_r2.infos_objet(cle)
+    if not taille:
+        raise HTTPException(status_code=400, detail="Le fichier n'est pas arrivé sur le stockage. Réessayez.")
+    return stockage_r2.PREFIXE + cle
+
+
+@router.post("/medias-r2/{nature}/{parent_id}")
+async def creer_media_depuis_r2(nature: str, parent_id: int, request: Request,
+                                session: Session = Depends(obtenir_session)):
+    d = await request.json()
+    type_media, titre = d.get("type"), (d.get("titre") or "").strip()
+    if type_media not in EXTENSIONS_AUTORISEES or not titre:
+        raise HTTPException(status_code=400, detail="Type ou titre manquant.")
+    modele_parent = _PARENTS.get(nature)
+    if modele_parent is None or session.get(modele_parent, parent_id) is None:
+        raise HTTPException(status_code=404, detail="Emplacement introuvable.")
+    url = _verifier_depot(nature, parent_id, str(d.get("cle") or ""))
+    champ = {"chapitre": "chapitre_id", "module": "module_id", "formation": "formation_id"}[nature]
+    media = _MODELES_MEDIAS[nature](**{champ: parent_id}, type=type_media, titre=titre[:200], url=url,
+                                     telechargeable=bool(d.get("telechargeable")))
+    session.add(media)
+    session.commit()
+    return {"id": media.id}
+
+
+@router.post("/medias-r2/remplacer/{nature}/{media_id}")
+async def remplacer_fichier_media(nature: str, media_id: int, request: Request,
+                                  session: Session = Depends(obtenir_session)):
+    """Remplace le contenu d'un média existant (même titre, même place) par un fichier
+    déposé sur R2. L'ancienne valeur (lien YouTube, base64…) est gardée en sauvegarde."""
+    d = await request.json()
+    type_media = d.get("type")
+    if type_media not in EXTENSIONS_AUTORISEES:
+        raise HTTPException(status_code=400, detail="Type invalide.")
+    modele = _MODELES_MEDIAS.get(nature)
+    media = session.get(modele, media_id) if modele else None
+    if media is None:
+        raise HTTPException(status_code=404, detail="Média introuvable.")
+    url = _verifier_depot(nature, _dossier_id(nature, media), str(d.get("cle") or ""))
+    ancienne = media.url
+    session.add(SauvegardeMediaBase64(nature=nature, media_id=media.id, ancienne_url=ancienne, nouvelle_url=url))
+    media.url = url
+    media.type = type_media
+    session.commit()
+    return {"ok": True}

@@ -153,7 +153,16 @@ def supprimer(url: str) -> None:
 
 def url_signee(url: str, telecharger_sous: str = None, duree: int = DUREE_URL_SIGNEE) -> str:
     """URL de lecture temporaire pour un média "r2:<clé>"."""
-    cle = url[len(PREFIXE):]
+    return _url_presignee("GET", url[len(PREFIXE):], telecharger_sous, duree)
+
+
+def url_depot(cle: str, duree: int = 3 * 3600) -> str:
+    """URL temporaire permettant au NAVIGATEUR d'envoyer un fichier directement sur R2
+    (PUT), sans passer par Render : indispensable pour les vidéos (jusqu'à 1 Go)."""
+    return _url_presignee("PUT", cle, None, duree)
+
+
+def _url_presignee(methode: str, cle: str, telecharger_sous, duree: int) -> str:
     maintenant = datetime.datetime.utcnow()
     chemin = _chemin(cle)
     portee_date = maintenant.strftime("%Y%m%d")
@@ -166,7 +175,7 @@ def url_signee(url: str, telecharger_sous: str = None, duree: int = DUREE_URL_SI
     }
     if telecharger_sous:
         requete["response-content-disposition"] = f'attachment; filename="{_nom_propre(telecharger_sous)}"'
-    signature, _, _, _ = _signer("GET", chemin, requete, {"host": _hote()}, "UNSIGNED-PAYLOAD", maintenant)
+    signature, _, _, _ = _signer(methode, chemin, requete, {"host": _hote()}, "UNSIGNED-PAYLOAD", maintenant)
     requete["X-Amz-Signature"] = signature
     qs = "&".join(f"{quote(k, safe='-_.~')}={quote(str(v), safe='-_.~')}" for k, v in sorted(requete.items()))
     return f"https://{_hote()}{chemin}?{qs}"

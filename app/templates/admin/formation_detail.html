@@ -216,13 +216,14 @@ ${renderMediasListe(m.medias || [], 'module')}
       <div class="medias-liste">
         ${c.medias.map(media => `
           <div class="media-row">
-            <span>${ {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || media.type }</span>
+            <span>${ {pdf:'📄', word:'📘', audio:'🎧', video:'🎬', lien:'🔗'}[media.type] || media.type }</span>
             <span style="flex:1;">${esc(media.titre)}</span>
             <label style="display:flex; align-items:center; gap:5px; font-size:11px; color:var(--grey);">
               <input type="checkbox" ${media.telechargeable ? 'checked' : ''} onchange="toggleMediaTelechargeable(${media.id}, this.checked)">
               téléchargeable
             </label>
             ${badgePoids(media)}
+            <button title="Remplacer par un fichier (garde le titre et la place)" onclick="ouvrirModalRemplacer('chapitre', ${media.id})">⇄</button>
             <button onclick="supprimerMedia(${media.id})">🗑</button>
           </div>
         `).join('') || '<div class="helper-text">Aucun média complémentaire.</div>'}
@@ -587,6 +588,7 @@ function ouvrirModalAjouterMedia(chapId) {
       <select id="input-media-type" onchange="majFormulaireMedia()">
         <option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option>
         <option value="audio">🎧 Audio</option>
+        <option value="video">🎬 Vidéo (fichier)</option>
         <option value="lien">🔗 Lien externe</option>
       </select>
       <label>Titre affiché à l'élève</label>
@@ -610,7 +612,7 @@ function majFormulaireMedia() {
   if (type === 'lien') {
     zone.innerHTML = `<label>URL</label><input type="text" id="input-media-url" placeholder="https://…">`;
   } else {
-    const accept = type === 'pdf' ? '.pdf' : type === 'word' ? '.docx' : '.mp3,.wav,.m4a,.ogg';
+    const accept = ACCEPT_PAR_TYPE[type] || '';
     zone.innerHTML = `
       <label>Fichier</label>
       <div class="import-zone" id="zone-fichier-media"
@@ -621,11 +623,103 @@ function majFormulaireMedia() {
         <label for="input-fichier-media" style="color:var(--gold); text-decoration:underline; cursor:pointer;">parcourir</label>
         <input type="file" id="input-fichier-media" accept="${accept}" style="display:none;" onchange="recevoirFichierMedia(this.files[0])">
         <div id="nom-fichier-media" style="margin-top:8px; font-weight:600; color:var(--ink);"></div>
-      </div>`;
+      </div>
+      <div id="progression-depot"></div>`;
   }
 }
 
 let fichierMediaEnCours = null;
+
+const ACCEPT_PAR_TYPE = { pdf: '.pdf', word: '.docx', audio: '.mp3,.wav,.m4a,.ogg', video: '.mp4,.m4v,.mov,.webm' };
+
+async function appelApiJson(url, corps) {
+  return appelApi(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+}
+
+// Envoi direct du navigateur vers Cloudflare R2 (le fichier ne passe pas par le serveur).
+// Renvoie la clé du fichier, ou null si R2 n'est pas configuré (ancien envoi utilisé).
+async function televerserR2(fichier, type, nature, parentId) {
+  const resp = await fetch('/admin/televersement/preparer', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ nature, parent_id: parentId, nom_fichier: fichier.name, type, taille: fichier.size }) });
+  if (resp.status === 409) {
+    if (type === 'video') throw new Error("L'hébergement des vidéos n'est pas encore activé.");
+    return null;
+  }
+  if (!resp.ok) { let d = "Préparation de l'envoi impossible."; try { d = (await resp.json()).detail || d; } catch (e) {} throw new Error(d); }
+  const prep = await resp.json();
+  const zone = document.getElementById('progression-depot');
+  if (zone) zone.innerHTML = '<div style="margin-top:12px;font-size:12px;color:var(--grey);">Envoi : <span id="pct-depot">0</span> % — ' +
+    (fichier.size / 1048576).toFixed(1).replace('.', ',') + ' Mo. Laissez cette page ouverte.</div>' +
+    '<div style="height:6px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;"><div id="barre-depot" style="height:100%;width:0;background:var(--gold);transition:width .2s;"></div></div>';
+  await new Promise((ok, ko) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', prep.url);
+    xhr.setRequestHeader('Content-Type', prep.type_mime);
+    xhr.upload.onprogress = e => {
+      if (!e.lengthComputable) return;
+      const pct = Math.round(e.loaded / e.total * 100);
+      const p = document.getElementById('pct-depot'), b = document.getElementById('barre-depot');
+      if (p) p.textContent = pct;
+      if (b) b.style.width = pct + '%';
+    };
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? ok() : ko(new Error('Envoi refusé par le stockage (' + xhr.status + ').'));
+    xhr.onerror = () => ko(new Error('Envoi interrompu (connexion ?). Réessayez.'));
+    xhr.send(fichier);
+  });
+  return prep.cle;
+}
+
+// Remplacer le fichier d'un média existant (ex. lien YouTube -> vidéo ou audio hébergé)
+function ouvrirModalRemplacer(nature, mediaId) {
+  fichierMediaEnCours = null;
+  afficherOverlay(`
+    <div class="modal">
+      <h3>Remplacer par un fichier</h3>
+      <div class="helper-text" style="margin-bottom:10px;">Le titre et la place du média restent les mêmes : seul le contenu change. L'ancien contenu est conservé en sauvegarde.</div>
+      <div id="zone-erreur-modal"></div>
+      <label>Type du nouveau fichier</label>
+      <select id="input-media-type" onchange="majFormulaireMedia()">
+        <option value="video">🎬 Vidéo</option><option value="audio">🎧 Audio</option>
+        <option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option>
+      </select>
+      <input type="hidden" id="input-media-titre" value="-">
+      <div id="zone-source-media"></div>
+      <div class="modal-actions">
+        <button class="btn" onclick="fermerModal()">Annuler</button>
+        <button class="btn btn-primary" id="btn-remplacer-media" onclick="remplacerMedia('${nature}', ${mediaId})">Remplacer</button>
+      </div>
+    </div>`);
+  majFormulaireMedia();
+}
+
+async function remplacerMedia(nature, mediaId) {
+  const type = document.getElementById('input-media-type').value;
+  const bouton = document.getElementById('btn-remplacer-media');
+  try {
+    if (!fichierMediaEnCours) throw new Error('Merci de déposer un fichier.');
+    bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
+    const parentId = remplacementParent(nature, mediaId);
+    const cle = await televerserR2(fichierMediaEnCours, type, nature, parentId);
+    if (!cle) throw new Error("Le stockage R2 n'est pas activé.");
+    await appelApiJson('/admin/medias-r2/remplacer/' + nature + '/' + mediaId, { type, cle });
+    fichierMediaEnCours = null;
+    fermerModal(); afficherToast('Média remplacé'); await charger();
+  } catch (e) {
+    document.getElementById('zone-erreur-modal').innerHTML = '<div class="message-erreur">' + e.message + '</div>';
+    bouton.textContent = 'Remplacer'; bouton.disabled = false;
+  }
+}
+
+// Retrouve le chapitre / module / formation qui contient le média (dossier de rangement sur R2)
+function remplacementParent(nature, mediaId) {
+  if (nature === 'formation') return FORMATION_ID;
+  for (const m of (donnees.modules || [])) {
+    if (nature === 'module' && (m.medias || []).some(x => x.id === mediaId)) return m.id;
+    if (nature === 'chapitre') for (const c of (m.chapitres || [])) if ((c.medias || []).some(x => x.id === mediaId)) return c.id;
+  }
+  throw new Error('Média introuvable dans la page, rechargez-la.');
+}
+
 
 function recevoirFichierMedia(fichier) {
   if (!fichier) return;
@@ -657,7 +751,12 @@ async function ajouterMedia(chapId) {
       data.append('fichier', fichierMediaEnCours);
       const bouton = document.getElementById('btn-ajouter-media');
       bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
-      await appelApi(`/admin/chapitres/${chapId}/medias/upload`, { method: 'POST', body: data });
+      const cle = await televerserR2(fichierMediaEnCours, type, 'chapitre', chapId);
+      if (cle) {
+        await appelApiJson('/admin/medias-r2/chapitre/' + chapId, { type, titre, telechargeable, cle });
+      } else {
+        await appelApi(`/admin/chapitres/${chapId}/medias/upload`, { method: 'POST', body: data });
+      }
     }
     fichierMediaEnCours = null;
     fermerModal(); afficherToast('Média ajouté'); await charger();
@@ -701,7 +800,7 @@ function renderMediasListe(medias, contexte) {
   if (!medias || !medias.length) return '<div class="helper-text">Aucun média complémentaire.</div>';
   const prefixe = contexte;
   return medias.map(function(media) {
-    const icone = {pdf:'📄', word:'📘', audio:'🎧', lien:'🔗'}[media.type] || media.type;
+    const icone = {pdf:'📄', word:'📘', audio:'🎧', video:'🎬', lien:'🔗'}[media.type] || media.type;
     const majPref = prefixe[0].toUpperCase() + prefixe.slice(1);
     return '<div class="media-row">' +
       '<span>' + icone + '</span>' +
@@ -710,6 +809,7 @@ function renderMediasListe(medias, contexte) {
       '<input type="checkbox"' + (media.telechargeable ? ' checked' : '') +
       ' onchange="toggleMedia' + majPref + 'Telechargeable(' + media.id + ', this.checked)"> téléchargeable</label>' +
       badgePoids(media) +
+      '<button title="Remplacer par un fichier (garde le titre et la place)" onclick="ouvrirModalRemplacer(\'' + prefixe + '\', ' + media.id + ')">⇄</button>' +
       '<button onclick="supprimerMedia' + majPref + '(' + media.id + ')">🗑</button></div>';
   }).join('');
 }
@@ -722,7 +822,7 @@ function afficherModalMediaExt(contexte, id) {
     '<div class="modal"><h3>Ajouter un média</h3><div id="zone-erreur-modal"></div>' +
     '<label>Type</label>' +
     '<select id="input-media-type" onchange="majFormulaireMedia()">' +
-    '<option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option><option value="audio">🎧 Audio</option><option value="lien">🔗 Lien externe</option>' +
+    '<option value="pdf">📄 PDF</option><option value="word">📘 Word (.docx)</option><option value="audio">🎧 Audio</option><option value="video">🎬 Vidéo (fichier)</option><option value="lien">🔗 Lien externe</option>' +
     '</select>' +
     '<label>Titre affiché à l\'élève</label><input type="text" id="input-media-titre">' +
     '<div id="zone-source-media"></div>' +
@@ -757,7 +857,12 @@ async function ajouterMediaExt(contexte, id) {
       data.append('fichier', fichierMediaEnCours);
       const bouton = document.getElementById('btn-ajouter-media-ext');
       bouton.textContent = 'Envoi en cours…'; bouton.disabled = true;
-      await appelApi('/admin/' + prefixe + '/' + id + '/medias/upload', { method: 'POST', body: data });
+      const cle = await televerserR2(fichierMediaEnCours, type, contexte, id);
+      if (cle) {
+        await appelApiJson('/admin/medias-r2/' + contexte + '/' + id, { type, titre, telechargeable, cle });
+      } else {
+        await appelApi('/admin/' + prefixe + '/' + id + '/medias/upload', { method: 'POST', body: data });
+      }
     }
     fichierMediaEnCours = null;
     fermerModal(); afficherToast('Média ajouté'); await charger();
