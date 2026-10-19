@@ -127,11 +127,16 @@ def envoyer(cle: str, contenu, type_mime: str, taille: int) -> str:
     return PREFIXE + cle
 
 
-def taille_objet(cle: str):
+def infos_objet(cle: str):
+    """(taille en octets, ETag sans guillemets = MD5 du fichier pour un envoi simple) ou (None, None)."""
     r = _requete("HEAD", cle)
     if r.status_code != 200:
-        return None
-    return int(r.headers.get("content-length", "0"))
+        return None, None
+    return int(r.headers.get("content-length", "0")), r.headers.get("etag", "").strip('"')
+
+
+def taille_objet(cle: str):
+    return infos_objet(cle)[0]
 
 
 def supprimer(url: str) -> None:

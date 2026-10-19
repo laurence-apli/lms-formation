@@ -190,6 +190,20 @@ class MediaFormation(Base):
     formation = relationship("Formation", back_populates="medias")
 
 
+class SauvegardeMediaBase64(Base):
+    """Copie de sécurité d'un média déplacé de Neon vers Cloudflare R2 (19/10/2026).
+    Nouvelle table (create_all). Permet de revenir en arrière ; à vider une fois
+    la lecture depuis R2 testée (POST /admin/stockage-r2/purger-sauvegardes)."""
+    __tablename__ = "sauvegardes_medias_base64"
+
+    id = Column(Integer, primary_key=True)
+    nature = Column(String(20), nullable=False)      # chapitre | module | formation
+    media_id = Column(Integer, nullable=False)
+    ancienne_url = deferred(Column(Text, nullable=False))
+    nouvelle_url = Column(Text, nullable=False)       # r2:<clé>
+    migre_le = Column(DateTime, default=datetime.utcnow)
+
+
 class Eleve(Base):
     __tablename__ = "eleves"
 

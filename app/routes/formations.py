@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import (
     Formation, Module, Chapitre, Media, MediaModule, MediaFormation, JoursAccompagnementNiveau,
+    SauvegardeMediaBase64,
     dupliquer_chapitre as dupliquer_chapitre_modele,
     dupliquer_formation as dupliquer_formation_modele,
     deplacer_chapitre_vers_module as deplacer_chapitre_modele,
@@ -586,3 +587,99 @@ def verifier_stockage_r2():
     except Exception as e:  # noqa: BLE001
         return {"actif": True, "ok": False, "message": str(e)}
     return {"actif": True, "ok": taille == 2, "bucket": stockage_r2.R2_BUCKET}
+
+
+
+# ---------- Transfert des médias base64 (Neon) vers R2 ----------
+
+_MODELES_MEDIAS = {"chapitre": Media, "module": MediaModule, "formation": MediaFormation}
+
+
+def _formation_titre(nature, media):
+    try:
+        if nature == "chapitre":
+            return media.chapitre.module.formation.titre
+        if nature == "module":
+            return media.module.formation.titre
+        return media.formation.titre
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+@router.get("/stockage-r2/inventaire")
+def inventaire_medias(session: Session = Depends(obtenir_session)):
+    """Médias encore en base64 dans Neon, déjà sur R2, et copies de sécurité restantes."""
+    restants, sur_r2 = [], 0
+    for nature, modele in _MODELES_MEDIAS.items():
+        for m in session.query(modele).all():
+            if m.est_r2:
+                sur_r2 += 1
+            elif m.est_integre:
+                restants.append({"nature": nature, "id": m.id, "type": m.type, "titre": m.titre,
+                                 "formation": _formation_titre(nature, m),
+                                 "octets": int((m.taille_texte or 0) * 3 / 4)})
+    restants.sort(key=lambda x: x["octets"])
+    return {"r2_actif": stockage_r2.r2_actif(), "restants": restants, "deja_sur_r2": sur_r2,
+            "sauvegardes": session.query(SauvegardeMediaBase64).count()}
+
+
+@router.post("/stockage-r2/migrer/{nature}/{media_id}")
+def migrer_media_vers_r2(nature: str, media_id: int, session: Session = Depends(obtenir_session)):
+    """Envoie UN média base64 sur R2, vérifie taille + MD5, garde une copie de sécurité,
+    puis seulement fait pointer le média vers R2."""
+    import hashlib
+    import re as _re
+    if not stockage_r2.r2_actif():
+        raise HTTPException(status_code=400, detail="R2 non configuré.")
+    modele = _MODELES_MEDIAS.get(nature)
+    media = session.get(modele, media_id) if modele else None
+    if media is None:
+        raise HTTPException(status_code=404, detail="Média introuvable.")
+    if not media.est_integre:
+        return {"ok": True, "deja": True}
+    ancienne = media.url
+    m = _re.match(r"^data:([^;,]*)(;[^,]*)?,", ancienne[:300])
+    if m is None:
+        raise HTTPException(status_code=500, detail="Data URI illisible.")
+    mime = m.group(1) or "application/octet-stream"
+    contenu = base64.b64decode(ancienne[m.end():])
+    md5 = hashlib.md5(contenu).hexdigest()
+    ext = {v: k for k, v in MIME_PAR_EXTENSION.items()}.get(mime, "")
+    cle = stockage_r2.nouvelle_cle(f"medias/{nature}/{_dossier_id(nature, media)}", (media.titre or "fichier") + ext)
+    nouvelle = stockage_r2.envoyer(cle, contenu, mime, len(contenu))
+    taille, etag = stockage_r2.infos_objet(cle)
+    if taille != len(contenu) or etag != md5:
+        stockage_r2.supprimer(nouvelle)
+        raise HTTPException(status_code=500, detail=f"Vérification échouée (taille {taille}/{len(contenu)}, md5 {etag}/{md5}).")
+    session.add(SauvegardeMediaBase64(nature=nature, media_id=media.id, ancienne_url=ancienne, nouvelle_url=nouvelle))
+    media.url = nouvelle
+    session.commit()
+    return {"ok": True, "octets": len(contenu), "md5": md5, "cle": cle}
+
+
+def _dossier_id(nature, media):
+    return {"chapitre": media.chapitre_id if nature == "chapitre" else None,
+            "module": getattr(media, "module_id", None),
+            "formation": getattr(media, "formation_id", None)}[nature]
+
+
+@router.post("/stockage-r2/restaurer/{nature}/{media_id}")
+def restaurer_media_base64(nature: str, media_id: int, session: Session = Depends(obtenir_session)):
+    """Retour arrière : remet le fichier base64 d'origine (l'objet R2 reste, sans gêne)."""
+    modele = _MODELES_MEDIAS.get(nature)
+    media = session.get(modele, media_id) if modele else None
+    sauvegarde = (session.query(SauvegardeMediaBase64).filter_by(nature=nature, media_id=media_id)
+                  .order_by(SauvegardeMediaBase64.id.desc()).first())
+    if media is None or sauvegarde is None:
+        raise HTTPException(status_code=404, detail="Rien à restaurer.")
+    media.url = sauvegarde.ancienne_url
+    session.commit()
+    return {"ok": True}
+
+
+@router.post("/stockage-r2/purger-sauvegardes")
+def purger_sauvegardes(session: Session = Depends(obtenir_session)):
+    """À lancer une fois la lecture depuis R2 testée : libère la place dans Neon."""
+    n = session.query(SauvegardeMediaBase64).delete()
+    session.commit()
+    return {"ok": True, "supprimees": n}
