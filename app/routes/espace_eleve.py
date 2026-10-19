@@ -13,6 +13,7 @@ from ..models import (
     SeanceAccompagnement,
 )
 from .auth import eleve_connecte
+from ..resalib import RESALIB_SUIVI
 import json
 from datetime import datetime
 from typing import List
@@ -125,6 +126,8 @@ def detail_formation(
         } if jours_visio_total > 0 else None,
         'lien_resalib': eleve.lien_resalib,
         'lien_resalib_visio': eleve.lien_resalib_visio,
+        # Séances de suivi comprises : réservation directe dans Resalib (seul agenda utilisé)
+        'rdv_suivi': RESALIB_SUIVI if (jours_cabinet_total > 0 or jours_visio_total > 0) else None,
     'medias': [
         media_json('formation', m)
         for m in formation.medias
@@ -357,37 +360,14 @@ def montees_de_niveau(
     return propositions_montee_niveau(session, eleve.id)
 
 @router.post("/formations/{formation_id}/demander-rdv")
-async def demander_rdv(
+def demander_rdv(
     formation_id: int,
-    request: Request,
     eleve: Eleve = Depends(eleve_connecte),
     session: Session = Depends(obtenir_session),
 ):
-    """Envoie un email de confirmation RDV à l’élève et à Laurence."""
-    donnees = await request.json()
-    type_rdv = donnees.get("type", "cabinet")
-    acces = session.query(AccesFormation).filter_by(
-        eleve_id=eleve.id, formation_id=formation_id
-    ).first()
+    """Ancien bouton « Prendre RDV » : renvoie simplement le lien Resalib de la séance
+    de suivi (plus d'e-mails ni de lien par élève : tout passe par Resalib)."""
+    acces = session.query(AccesFormation).filter_by(eleve_id=eleve.id, formation_id=formation_id).first()
     if not acces:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
-    formation = acces.formation
-    if type_rdv == "visio":
-        lien = formation.lien_visio or eleve.lien_resalib_visio or eleve.lien_resalib or ""
-    else:
-        lien = eleve.lien_resalib or ""
-    email_coaching_rdv(
-        destinataire=eleve.email,
-        prenom=eleve.prenom,
-        lien_resalib=lien or "",
-        titre_formation=formation.titre,
-        type_rdv=type_rdv,
-    )
-    email_demande_rdv_coach(
-        prenom_eleve=eleve.prenom,
-        nom_eleve=eleve.nom,
-        email_eleve=eleve.email,
-        type_rdv=type_rdv,
-        titre_formation=formation.titre,
-    )
-    return {"ok": True, "lien": lien}
+    return {"ok": True, "lien": RESALIB_SUIVI}

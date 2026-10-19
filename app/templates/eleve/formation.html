@@ -576,46 +576,20 @@ function afficherSommaire() {
       colSom.scrollTop = Math.max(0, hautItem - colSom.clientHeight / 3);
   }
 
-  window.demanderRdv = async function(e, type) {
-    const btn = e.currentTarget; btn.disabled = true;
-    const orig = btn.textContent; btn.textContent = '...';
-    try {
-      const resp = await fetch('/api/eleve/formations/' + FORMATION_ID + '/demander-rdv', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({type})
-      });
-      const data = await resp.json();
-      if (data.lien) window.open(data.lien, '_blank');
-      const toast = document.createElement('div');
-      toast.textContent = 'Email de confirmation envoyé !';
-      toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#4a7c59;color:white;padding:12px 20px;border-radius:8px;z-index:9999;font-size:14px;';
-      document.body.appendChild(toast);
-      setTimeout(function(){ toast.remove(); }, 3000);
-    } catch(err) { console.error('Erreur RDV', err); }
-    finally { btn.disabled = false; btn.textContent = orig; }
-  };
-
+  // Séances de suivi comprises dans l'accompagnement : réservation directe sur Resalib
+  // (l'ancien compteur de jours cabinet / visio et les e-mails de demande sont supprimés).
   const zoneAccomp = document.getElementById('bloc-accompagnement-zone');
-  if (f.accompagnement_cabinet || f.accompagnement_visio) {
-    let _html = '<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-    if (f.accompagnement_cabinet) {
-      const _c = f.accompagnement_cabinet;
-      _html += '<div class="bloc-accompagnement-eleve">'
-        + '<div class="bloc-accompagnement-valeur">' + _c.restants + '</div>'
-        + '<div class="bloc-accompagnement-label">jours cabinet<br>sur ' + _c.total + '</div>'
-        + '<button onclick="demanderRdv(event,\'cabinet\')" style="display:inline-block;margin-top:8px;padding:6px 14px;border:none;border-radius:6px;font-size:12px;cursor:pointer;color:white;background:var(--gold);">Prendre RDV cabinet</button>'
-        + '</div>';
-    }
-    if (f.accompagnement_visio) {
-      const _v = f.accompagnement_visio;
-      _html += '<div class="bloc-accompagnement-eleve">'
-        + '<div class="bloc-accompagnement-valeur">' + _v.restants + '</div>'
-        + '<div class="bloc-accompagnement-label">jours visio<br>sur ' + _v.total + '</div>'
-        + '<button onclick="demanderRdv(event,\'visio\')" style="display:inline-block;margin-top:8px;padding:6px 14px;border:none;border-radius:6px;font-size:12px;cursor:pointer;color:white;background:var(--green);">Prendre RDV visio</button>'
-        + '</div>';
-    }
-    _html += '</div>';
-    zoneAccomp.innerHTML = _html;
+  if (f.rdv_suivi) {
+    const nbCab = f.accompagnement_cabinet ? f.accompagnement_cabinet.total : 0;
+    const nbVis = f.accompagnement_visio ? f.accompagnement_visio.total : 0;
+    const detail = [nbCab ? nbCab + ' en cabinet' : '', nbVis ? nbVis + ' en visio' : ''].filter(Boolean).join(' et ');
+    zoneAccomp.innerHTML = '<div class="bloc-accompagnement-eleve" style="text-align:left;max-width:520px;">'
+      + '<div style="font-weight:600;margin-bottom:4px;">Tes séances de suivi avec Laurence</div>'
+      + '<div style="font-size:13px;color:var(--grey);margin-bottom:10px;">'
+      + (detail ? 'Ton accompagnement comprend ' + detail + '. ' : '')
+      + 'Choisis ton créneau directement dans l\'agenda de Laurence.</div>'
+      + '<a href="' + f.rdv_suivi + '" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">Réserver une séance de suivi ↗</a>'
+      + '</div>';
   } else {
     zoneAccomp.innerHTML = '';
   }

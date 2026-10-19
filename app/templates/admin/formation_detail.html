@@ -358,9 +358,9 @@ function ouvrirModalEditerFormation() {
         <option value="2" ${f.nb_niveaux===2?'selected':''}>2 niveaux</option>
         <option value="3" ${f.nb_niveaux===3?'selected':''}>3 niveaux</option>
       </select>
-      <label>Jours d'accompagnement par niveau (Cabinet &amp; Visio)</label>
+      <label>Séances de suivi comprises, par niveau (Cabinet &amp; Visio)</label>
+      <div style="font-size:12px;color:var(--grey);margin:-2px 0 8px;">Si au moins une séance est indiquée, l'élève voit un bouton « Réserver une séance de suivi » qui ouvre Resalib (prestation « Séance de suivi – accompagnement en cours »).</div>
       <div id="bloc-jours">${joursHtml}</div>
-      <label>Lien visio (Cal.com)</label><input type="url" id="input-lien-visio" value="${esc(f.lien_visio || '')}" placeholder="https://cal.com/..." style="width:100%">
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
         <button class="btn btn-primary" onclick="enregistrerFormation()">Enregistrer</button>
@@ -390,7 +390,7 @@ async function enregistrerFormation() {
   data.append('couleur', document.getElementById('input-couleur').value);
   data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
-  data.append('lien_visio', document.getElementById('input-lien-visio').value || '');
+  data.append('lien_visio', '');  // Cal.com abandonné : tout passe par Resalib
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
     const dataJours = new URLSearchParams();
