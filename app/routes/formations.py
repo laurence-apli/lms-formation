@@ -91,7 +91,7 @@ def creer_formation(
 @router.put("/formations/{formation_id}")
 def modifier_formation(
     formation_id: int, titre: str = Form(...), couleur: str = Form(...),
-    nb_niveaux: int = Form(...), presentation_html: str = Form(""),
+    nb_niveaux: int = Form(...), presentation_html: str = Form(None),
     ordre_affichage: int = Form(0), lien_visio: str = Form(""),
     session: Session = Depends(obtenir_session),
 ):
@@ -103,7 +103,10 @@ def modifier_formation(
 
     formation.titre = titre
     formation.couleur = couleur
-    formation.presentation_html = presentation_html or None
+    # La fenêtre « Modifier la formation » n'envoie pas la présentation : sans ce test,
+    # enregistrer le titre ou les séances effaçait la présentation importée.
+    if presentation_html is not None:
+        formation.presentation_html = presentation_html or None
     formation.ordre_affichage = ordre_affichage
     formation.lien_visio = lien_visio or None
 
