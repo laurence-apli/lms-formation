@@ -43,7 +43,7 @@
 </style>
 <div class="lien-outil" style="background:#F5EDD6; border-radius:8px; padding:10px 12px; border-bottom:none; margin-bottom:6px;">
 <div class="lien-outil-titre">🔑 Quel identifiant pour quel outil ? (vérifié le 18/10/2026)</div>
-<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Stripe, Resalib<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify, Google Search Console, Bing Webmaster Tools — toujours via « Se connecter avec Google »<br>• Non vérifiés (aucune session ouverte) : Resend, OVH, Cal.com, UptimeRobot</div>
+<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Cloudflare (R2), Stripe, Resalib<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify, Google Search Console, Bing Webmaster Tools — toujours via « Se connecter avec Google »<br>• Non vérifiés (aucune session ouverte) : Resend, OVH, Cal.com, UptimeRobot</div>
 </div>
 
 <div class="groupe-outils">🖥️ La plateforme</div>
@@ -56,6 +56,11 @@
 <div class="lien-outil-titre">Base de données (Neon)</div>
 <div class="lien-outil-compte">Sert à : stocker élèves, formations, paiements et médias.<br>Connexion : <strong>laurencemb@orange.fr</strong> — projet <strong>lms-laurence</strong><br>⚠️ Offre gratuite : 1 Go de stockage et <strong>5 Go de transfert par mois</strong>. Chaque écoute d'un audio/vidéo stocké sur la plateforme consomme du transfert → mettre les médias longs sur YouTube. Au-delà de 5 Go, la base est coupée jusqu'au mois suivant.</div>
 <div class="lien-outil-btns"><a class="btn btn-sm" href="https://console.neon.tech/app/projects" target="_blank" rel="noopener">Console (consommation) ↗</a></div>
+</div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Stockage des médias (Cloudflare R2)</div>
+<div class="lien-outil-compte">Sert à : stocker les audios, PDF et vidéos importés sur la plateforme, hors de la base Neon. Bucket privé <strong>lms-medias</strong> (Europe de l'Ouest) : chaque fichier n'est lisible que par une élève ayant accès, via un lien temporaire.<br>Connexion : <strong>laurencemb@orange.fr</strong> — compte créé le 19/10/2026<br>Offre gratuite : <strong>10 Go</strong> de stockage, transfert (écoutes) <strong>gratuit et illimité</strong>. Facturation seulement au-delà (≈ 0,015 $ par Go et par mois).<br>Clés d'accès : token « lms-formation » (R2 → API Tokens), recopiées dans Render (variables R2_…).</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dash.cloudflare.com/8acb4e43632d3c5d8f3346e2d4f162aa/r2/default/buckets/lms-medias" target="_blank" rel="noopener">Fichiers (bucket) ↗</a><a class="btn btn-sm" href="https://dash.cloudflare.com/8acb4e43632d3c5d8f3346e2d4f162aa/r2/overview" target="_blank" rel="noopener">Consommation ↗</a><a class="btn btn-sm" href="https://dash.cloudflare.com/8acb4e43632d3c5d8f3346e2d4f162aa/r2/api-tokens" target="_blank" rel="noopener">Clés d'accès ↗</a></div>
 </div>
 <div class="lien-outil">
 <div class="lien-outil-titre">Code (GitHub)</div>

@@ -15,6 +15,7 @@ from ..models import (
 )
 from .auth import admin_connecte
 from .medias_fichiers import media_json
+from .. import stockage_r2
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -347,6 +348,41 @@ def ajouter_media(
 
 TAILLE_MAX_MEDIA_MO = 30
 TAILLE_MAX_MEDIA_OCTETS = TAILLE_MAX_MEDIA_MO * 1024 * 1024
+# Sur Cloudflare R2 (si configuré), le fichier ne pèse plus sur Neon : limite plus large
+TAILLE_MAX_R2_MO = 300
+
+
+def _supprimer_r2_si_orphelin(session: Session, url) -> None:
+    """Efface le fichier R2 seulement si plus aucun média ne l'utilise
+    (une formation ou un chapitre dupliqué partage le même fichier)."""
+    if not url:
+        return
+    for modele in (Media, MediaModule, MediaFormation):
+        if session.query(modele.id).filter(modele.url == url).first() is not None:
+            return
+    stockage_r2.supprimer(url)
+
+
+async def _stocker_fichier(fichier: UploadFile, mime: str, dossier: str) -> str:
+    """Renvoie la valeur à mettre dans media.url : "r2:<clé>" si R2 est configuré
+    (fichier envoyé en flux, sans le garder en mémoire), sinon l'ancien data URI base64."""
+    taille = fichier.size
+    if taille is None:
+        fichier.file.seek(0, 2); taille = fichier.file.tell(); fichier.file.seek(0)
+    if stockage_r2.r2_actif():
+        if taille > TAILLE_MAX_R2_MO * 1024 * 1024:
+            raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_R2_MO} Mo maximum).")
+        fichier.file.seek(0)
+        cle = stockage_r2.nouvelle_cle(dossier, fichier.filename)
+        try:
+            from starlette.concurrency import run_in_threadpool
+            return await run_in_threadpool(stockage_r2.envoyer, cle, fichier.file, mime, taille)
+        except Exception:
+            raise HTTPException(status_code=502, detail="L'envoi du fichier vers le stockage a échoué. Réessayez.")
+    if taille > TAILLE_MAX_MEDIA_OCTETS:
+        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
+    contenu = await fichier.read()
+    return f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
 
 EXTENSIONS_AUTORISEES = {
     "pdf": {".pdf"},
@@ -376,12 +412,8 @@ async def uploader_media_fichier(
         attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
         raise HTTPException(status_code=400, detail=f"Format de fichier non reconnu pour ce type (attendu : {attendu}).")
 
-    contenu = await fichier.read()
-    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
-
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
-    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+    data_uri = await _stocker_fichier(fichier, mime, f"medias/chapitre/{chapitre_id}")
 
     media = Media(chapitre_id=chapitre_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
     session.add(media)
@@ -402,8 +434,10 @@ def supprimer_media(media_id: int, session: Session = Depends(obtenir_session)):
     media = session.get(Media, media_id)
     if media is None:
         raise HTTPException(status_code=404, detail="Média introuvable.")
+    ancienne_url = media.url if media.est_r2 else None
     session.delete(media)
     session.commit()
+    _supprimer_r2_si_orphelin(session, ancienne_url)
     return {"ok": True}
 
 
@@ -441,11 +475,9 @@ async def uploader_media_module(
     if extension not in EXTENSIONS_AUTORISEES.get(type, set()):
         attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
         raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
-    contenu = await fichier.read()
-    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
-    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+    data_uri = await _stocker_fichier(fichier, mime, f"medias/module/{module_id}")
+
     media = MediaModule(module_id=module_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
     session.add(media)
     session.commit()
@@ -467,8 +499,10 @@ def supprimer_media_module(media_id: int, session: Session = Depends(obtenir_ses
     media = session.get(MediaModule, media_id)
     if media is None:
         raise HTTPException(status_code=404, detail="Media introuvable.")
+    ancienne_url = media.url if media.est_r2 else None
     session.delete(media)
     session.commit()
+    _supprimer_r2_si_orphelin(session, ancienne_url)
     return {"ok": True}
 
 
@@ -506,11 +540,9 @@ async def uploader_media_formation(
     if extension not in EXTENSIONS_AUTORISEES.get(type, set()):
         attendu = ", ".join(EXTENSIONS_AUTORISEES.get(type, set()))
         raise HTTPException(status_code=400, detail=f"Format non reconnu (attendu : {attendu}).")
-    contenu = await fichier.read()
-    if len(contenu) > TAILLE_MAX_MEDIA_OCTETS:
-        raise HTTPException(status_code=400, detail=f"Le fichier est trop volumineux ({TAILLE_MAX_MEDIA_MO} Mo maximum).")
     mime = MIME_PAR_EXTENSION.get(extension, "application/octet-stream")
-    data_uri = f"data:{mime};base64,{base64.b64encode(contenu).decode('ascii')}"
+    data_uri = await _stocker_fichier(fichier, mime, f"medias/formation/{formation_id}")
+
     media = MediaFormation(formation_id=formation_id, type=type, titre=titre, url=data_uri, telechargeable=telechargeable)
     session.add(media)
     session.commit()
@@ -532,6 +564,25 @@ def supprimer_media_formation(media_id: int, session: Session = Depends(obtenir_
     media = session.get(MediaFormation, media_id)
     if media is None:
         raise HTTPException(status_code=404, detail="Media introuvable.")
+    ancienne_url = media.url if media.est_r2 else None
     session.delete(media)
     session.commit()
+    _supprimer_r2_si_orphelin(session, ancienne_url)
     return {"ok": True}
+
+
+# ---------- Vérification du stockage Cloudflare R2 ----------
+
+@router.get("/stockage-r2/verifier")
+def verifier_stockage_r2():
+    """Dépose, relit puis efface un petit fichier test : confirme que les clés R2 de Render fonctionnent."""
+    if not stockage_r2.r2_actif():
+        return {"actif": False, "message": "Variables R2_… absentes sur Render : les fichiers restent dans la base."}
+    cle = "verification/test.txt"
+    try:
+        stockage_r2.envoyer(cle, b"ok", "text/plain", 2)
+        taille = stockage_r2.taille_objet(cle)
+        stockage_r2.supprimer(stockage_r2.PREFIXE + cle)
+    except Exception as e:  # noqa: BLE001
+        return {"actif": True, "ok": False, "message": str(e)}
+    return {"actif": True, "ok": taille == 2, "bucket": stockage_r2.R2_BUCKET}

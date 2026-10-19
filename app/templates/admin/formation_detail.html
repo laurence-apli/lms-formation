@@ -685,6 +685,9 @@ async function supprimerMedia(mediaId) {
 // Poids du fichier stocké sur la plateforme (vide pour un lien externe).
 // Vert < 5 Mo, orange < 15 Mo, rouge au-delà : les gros fichiers alourdissent la plateforme.
 function badgePoids(media) {
+  if (media.stockage === 'r2') {
+    return '<span title="Fichier stocké sur Cloudflare R2 : ne consomme ni le stockage ni le transfert de la base" style="font-size:11px;font-weight:600;color:#2e7d4f;border:1px solid #2e7d4f;border-radius:10px;padding:1px 8px;white-space:nowrap;">☁️ R2</span>';
+  }
   const o = media.poids_octets;
   if (!o) return '';
   const mo = o / (1024 * 1024);

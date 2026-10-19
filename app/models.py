@@ -134,6 +134,8 @@ class Media(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # fichier stocké sur Cloudflare R2 (url "r2:<clé>", voir app/stockage_r2.py) -- pas une colonne, aucune migration
+    est_r2 = column_property(func.substr(url, 1, 3) == "r2:")
     # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
     taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)
@@ -155,6 +157,8 @@ class MediaModule(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # fichier stocké sur Cloudflare R2 (url "r2:<clé>", voir app/stockage_r2.py) -- pas une colonne, aucune migration
+    est_r2 = column_property(func.substr(url, 1, 3) == "r2:")
     # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
     taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)
@@ -177,6 +181,8 @@ class MediaFormation(Base):
     # (data:...) ou un lien externe sans charger la colonne entière.
     url = deferred(Column(Text, nullable=False))
     est_integre = column_property(func.substr(url, 1, 5) == "data:")
+    # fichier stocké sur Cloudflare R2 (url "r2:<clé>", voir app/stockage_r2.py) -- pas une colonne, aucune migration
+    est_r2 = column_property(func.substr(url, 1, 3) == "r2:")
     # taille du texte base64 (octet_length lit la taille sans décompresser le fichier en Postgres)
     taille_texte = column_property(func.octet_length(url))
     telechargeable = Column(Boolean, default=False)

@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
+from .. import stockage_r2
 from ..models import Administrateur, Eleve, Media, MediaModule, MediaFormation, ValidationChapitre, chapitre_est_accessible
 
 router = APIRouter()
@@ -26,7 +27,7 @@ _ENTETE = re.compile(r"^data:([^;,]*)(;[^,]*)?,")
 
 def url_media(nature: str, media) -> str:
     """URL à envoyer au navigateur, sans jamais charger le fichier base64."""
-    if media.est_integre:
+    if media.est_integre or media.est_r2:
         return f"/medias/{nature}/{media.id}/fichier"
     return media.url  # lien externe : quelques octets
 
@@ -41,7 +42,9 @@ def poids_octets(media):
 def media_json(nature: str, media) -> dict:
     return {"id": media.id, "type": media.type, "titre": media.titre,
             "url": url_media(nature, media), "telechargeable": media.telechargeable,
-            "poids_octets": poids_octets(media)}
+            "poids_octets": poids_octets(media),
+            # "r2" = Cloudflare R2, "plateforme" = base64 dans Neon, None = lien externe
+            "stockage": "r2" if media.est_r2 else ("plateforme" if media.est_integre else None)}
 
 
 def _formation_du_media(nature: str, media):
@@ -82,6 +85,16 @@ def fichier_media(nature: str, media_id: int, request: Request, session: Session
     _verifier_droits(request, nature, media, session)
 
     url = media.url
+    if url.startswith(stockage_r2.PREFIXE):
+        # Fichier sur Cloudflare R2 : lien signé temporaire, le fichier ne passe ni par Render ni par Neon
+        if not stockage_r2.r2_actif():
+            raise HTTPException(status_code=503, detail="Stockage des médias indisponible.")
+        nom = None
+        if media.telechargeable or media.type == "word":
+            ext = ("." + url.rsplit(".", 1)[-1]) if "." in url.rsplit("/", 1)[-1] else ""
+            nom = (media.titre or "fichier") + ext
+        return Response(status_code=307, headers={"Location": stockage_r2.url_signee(url, nom),
+                                                  "Cache-Control": "private, no-store"})
     if not url.startswith("data:"):
         return Response(status_code=307, headers={"Location": url})
     m = _ENTETE.match(url[:300])

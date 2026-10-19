@@ -97,3 +97,14 @@ app/
 - Règle : une élève n'écrit qu'à Laurence ; sans accès à la formation, plus de messagerie.
 - Les pièces jointes viendront avec le stockage Cloudflare R2 : ne JAMAIS stocker de fichier
   en base64 dans Neon pour la messagerie.
+
+## Stockage des médias sur Cloudflare R2 (ajouté le 19/10/2026)
+
+- Module : `app/stockage_r2.py` (signature SigV4 maison, pas de boto3). Bucket privé `lms-medias`.
+- Actif seulement si les 4 variables Render `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`,
+  `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` existent ; sinon les imports restent en base64 comme avant.
+- En base, un média R2 a `url = "r2:<clé>"` ; `est_r2` est un column_property (pas de migration).
+- Lecture : `/medias/<type>/<id>/fichier` vérifie les droits puis redirige (307) vers une URL signée 4 h.
+- Suppression d'un média : l'objet R2 n'est effacé que si aucun autre média (copie d'une
+  formation dupliquée) ne pointe dessus.
+- Vérifier la configuration : `GET /admin/stockage-r2/verifier` (connecté en admin).
