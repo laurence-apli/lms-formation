@@ -408,8 +408,6 @@ def chapitre_est_accessible(session, eleve_id: int, chapitre, acces=None) -> tup
         return False, "niveau_chapitre_insuffisant"
     seq = sequence_chapitres(formation)
     idx = next(i for i, c in enumerate(seq) if c.id == chapitre.id)
-    import logging
-    logging.warning(f"[DEBUG] chapitre_est_accessible: chapitre={chapitre.id}({chapitre.titre!r}) idx={idx} seq={[(c.id, c.titre[:20], c.ordre) for c in seq]}")
     for i in range(idx - 1, -1, -1):
         precedent = seq[i]
         if not chapitre_dans_le_niveau(formation, acces.niveau, precedent):
@@ -419,7 +417,6 @@ def chapitre_est_accessible(session, eleve_id: int, chapitre, acces=None) -> tup
             .filter_by(eleve_id=eleve_id, chapitre_id=precedent.id)
             .first()
         )
-        logging.warning(f"[DEBUG] precedent={precedent.id}({precedent.titre[:20]!r}) ordre={precedent.ordre} valide={deja_valide is not None}")
         if deja_valide is None:
             return False, "chapitre_precedent_non_valide"
         break
