@@ -380,8 +380,8 @@ class ReponseChapitre(Base):
 def sequence_chapitres(formation: Formation) -> list:
     # Tri explicite car selectinload ne garantit pas l'ordre des relationships.
     # Ordre affiché : modules triés par Module.ordre, puis chapitres triés par Chapitre.ordre dans chaque module.
-    modules_tries = sorted(formation.modules, key=lambda m: m.ordre)
-    return [c for module in modules_tries for c in sorted(module.chapitres, key=lambda c: c.ordre)]
+    modules_tries = sorted(formation.modules, key=lambda m: (m.ordre, m.id))
+    return [c for module in modules_tries for c in sorted(module.chapitres, key=lambda c: (c.ordre, c.id))]
 
 def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -> bool:
     if formation.nb_niveaux <= 1:
