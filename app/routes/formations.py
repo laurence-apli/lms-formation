@@ -52,7 +52,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "lien_visio": formation.lien_visio or "",
         "modules": [
             {
-                "id": m.id, "titre": m.titre, "niveau_requis": m.niveau_requis,
+                "id": m.id, "titre": m.titre, "ordre": m.ordre, "niveau_requis": m.niveau_requis,
                 "presentation_html": m.presentation_html or "",
                 "medias": [
                     media_json("module", med)
@@ -60,7 +60,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
                 ],
                 "chapitres": [
                     {
-                        "id": c.id, "titre": c.titre, "niveau_requis": c.niveau_requis,
+                        "id": c.id, "titre": c.titre, "ordre": c.ordre, "niveau_requis": c.niveau_requis,
                         "contenu_html": c.contenu_html or "",
                         "lien_coaching": c.lien_coaching or "",
                         "medias": [
