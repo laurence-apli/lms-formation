@@ -378,10 +378,9 @@ class ReponseChapitre(Base):
 
 
 def sequence_chapitres(formation: Formation) -> list:
-    chapitres = []
-    for module in formation.modules:
-        chapitres.extend(module.chapitres)
-    return sorted(chapitres, key=lambda c: c.ordre)
+    # Ordre affiché : modules dans l'ordre (Module.ordre), puis chapitres de chaque module (Chapitre.ordre)
+    # Les relationships sont déjà ordonnées (order_by) donc pas besoin de re-trier globalement.
+    return [c for module in formation.modules for c in module.chapitres]
 
 def chapitre_dans_le_niveau(formation: Formation, niveau_eleve: int, chapitre) -> bool:
     if formation.nb_niveaux <= 1:
