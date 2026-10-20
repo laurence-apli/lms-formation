@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 from html import escape
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from typing import List, Optional
 
@@ -28,9 +28,10 @@ from ..config import URL_PLATEFORME, URL_SITE_VITRINE
 from ..database import obtenir_session, SessionLocal
 from ..models import Administrateur, Eleve, Formation, AccesFormation, ValidationChapitre, chapitre_dans_le_niveau
 from ..messagerie_models import (
-    Conversation, MessagePrive, Annonce, AnnonceDestinataire,
+    Conversation, MessagePrive, Annonce, AnnonceDestinataire, PieceJointe,
     lire_parametre, ecrire_parametre, messagerie_visible_pour,
 )
+from .. import stockage_r2
 from .auth import admin_connecte, eleve_connecte
 from .. import emails
 
@@ -54,9 +55,9 @@ def _nom(eleve):
     return ("%s %s" % (eleve.prenom or "", eleve.nom or "")).strip() or eleve.email
 
 
-def _nettoyer(texte: str) -> str:
+def _nettoyer(texte: str, vide_permis: bool = False) -> str:
     texte = (texte or "").strip()
-    if not texte:
+    if not texte and not vide_permis:
         raise HTTPException(status_code=400, detail="Le message est vide.")
     if len(texte) > TEXTE_MAX:
         raise HTTPException(status_code=400, detail="Message trop long (%d caractères maximum)." % TEXTE_MAX)
@@ -142,9 +143,103 @@ def _fil_eleve(session: Session, eleve_id: int, formation_id: int, conv) -> list
             items.append({"type": "message", "id": m.id, "auteur": m.auteur, "objet": "",
                           "texte": m.texte, "date": _iso(m.cree_le), "cible": "", "_t": m.cree_le})
     items.sort(key=lambda x: x["_t"] or datetime.min)
+    _ajouter_pieces(session, items)
     for it in items:
         it.pop("_t", None)
     return items
+
+
+# ---------------------------------------------------------------------------
+# Pièces jointes (fichiers sur Cloudflare R2, jamais dans Neon)
+# ---------------------------------------------------------------------------
+
+PJ_MAX_ELEVE_MO = 50
+PJ_MAX_ADMIN_MO = 1024
+PJ_EXTENSIONS = {
+    ".pdf", ".doc", ".docx", ".odt", ".txt", ".rtf", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif",
+    ".mp3", ".m4a", ".aac", ".wav", ".ogg", ".oga", ".opus", ".webm",
+    ".mp4", ".m4v", ".mov",
+}
+PJ_MAX_PAR_MESSAGE = 10
+
+
+def _piece_json(p: PieceJointe) -> dict:
+    return {"id": p.id, "nom": p.nom, "type_mime": p.type_mime, "taille": p.taille, "vocal": bool(p.vocal),
+            "url": "/messagerie/pieces/%d" % p.id}
+
+
+def _ajouter_pieces(session: Session, items: list) -> None:
+    """Ajoute à chaque élément du fil la liste de ses pièces jointes (une seule requête)."""
+    ids_m = [it["id"] for it in items if it["type"] == "message"]
+    ids_a = [it["id"] for it in items if it["type"] == "annonce"]
+    par_m, par_a = {}, {}
+    if ids_m or ids_a:
+        q = session.query(PieceJointe)
+        conds = []
+        if ids_m:
+            conds.append(PieceJointe.message_id.in_(ids_m))
+        if ids_a:
+            conds.append(PieceJointe.annonce_id.in_(ids_a))
+        from sqlalchemy import or_
+        for p in q.filter(or_(*conds)).order_by(PieceJointe.id).all():
+            if p.message_id:
+                par_m.setdefault(p.message_id, []).append(_piece_json(p))
+            elif p.annonce_id:
+                par_a.setdefault(p.annonce_id, []).append(_piece_json(p))
+    for it in items:
+        it["pieces"] = (par_m if it["type"] == "message" else par_a).get(it["id"], [])
+
+
+def _preparer_piece(session: Session, nom: str, type_mime: str, taille: int, vocal: bool, auteur: str,
+                    formation_id: Optional[int], eleve_id: Optional[int], max_mo: int) -> dict:
+    if not stockage_r2.r2_actif():
+        raise HTTPException(status_code=503, detail="L'envoi de fichiers n'est pas disponible pour le moment.")
+    nom = (nom or "fichier").strip()[-200:]
+    ext = ("." + nom.rsplit(".", 1)[-1].lower()) if "." in nom else ""
+    if ext not in PJ_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Ce type de fichier n'est pas accepté (documents, photos, audios ou vidéos).")
+    if taille <= 0 or taille > max_mo * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Fichier vide ou trop lourd (%d Mo maximum)." % max_mo)
+    dossier = "messagerie/f%s/%s" % (formation_id or 0, ("e%d" % eleve_id) if eleve_id else "laurence")
+    cle = stockage_r2.nouvelle_cle(dossier, nom)
+    p = PieceJointe(cle=cle, nom=nom, type_mime=(type_mime or "application/octet-stream")[:120], taille=taille,
+                    vocal=bool(vocal), auteur=auteur, eleve_id=eleve_id, formation_id=formation_id)
+    session.add(p)
+    session.commit()
+    return {"id": p.id, "url": stockage_r2.url_depot(cle), "type_mime": p.type_mime}
+
+
+def _rattacher_pieces(session: Session, ids, auteur: str, eleve_id: Optional[int], formation_id: Optional[int],
+                      message_id: Optional[int] = None, annonce_id: Optional[int] = None) -> list:
+    """Vérifie que les pièces appartiennent bien à l'auteur, ne sont pas déjà envoyées,
+    et sont réellement arrivées sur R2 ; puis les rattache au message / à l'annonce."""
+    ids = list(dict.fromkeys(ids or []))[:PJ_MAX_PAR_MESSAGE]
+    pieces = []
+    for pid in ids:
+        p = session.get(PieceJointe, pid)
+        if p is None or p.auteur != auteur or p.message_id or p.annonce_id:
+            raise HTTPException(status_code=400, detail="Pièce jointe invalide.")
+        if auteur == "eleve" and (p.eleve_id != eleve_id or p.formation_id != formation_id):
+            raise HTTPException(status_code=400, detail="Pièce jointe invalide.")
+        taille, _ = stockage_r2.infos_objet(p.cle)
+        if not taille:
+            raise HTTPException(status_code=400, detail="« %s » n'a pas fini d'être envoyé. Réessaie dans un instant." % p.nom)
+        p.taille = taille
+        pieces.append(p)
+    for p in pieces:
+        p.message_id, p.annonce_id = message_id, annonce_id
+        if formation_id and not p.formation_id:
+            p.formation_id = formation_id
+    return pieces
+
+
+def _texte_notification(texte: str, pieces) -> str:
+    """Texte des e-mails : on signale les pièces jointes par leur nom."""
+    lignes = [texte] if texte else []
+    for p in pieces:
+        lignes.append(("🎙️ Message vocal" if p.vocal else "📎 " + p.nom))
+    return "\n".join(lignes)
 
 
 # ---------------------------------------------------------------------------
@@ -200,7 +295,8 @@ def notifier_admin(session: Session, forcer: bool = False) -> int:
         if eleve is None or formation is None:
             continue
         noms.append(eleve.prenom or _nom(eleve))
-        blocs.append(_bloc_message("%s · %s" % (_nom(eleve), formation.titre), m.texte))
+        pjs = session.query(PieceJointe).filter_by(message_id=m.id).all()
+        blocs.append(_bloc_message("%s · %s" % (_nom(eleve), formation.titre), _texte_notification(m.texte, pjs)))
     noms_uniques = list(dict.fromkeys(noms))
     if len(a_signaler) == 1:
         sujet = "%s t'a écrit — %s" % (noms_uniques[0], session.get(Formation, a_signaler[0].conversation.formation_id).titre)
@@ -251,11 +347,13 @@ def notifier_eleve(session: Session, eleve: Eleve, forcer: bool = False) -> int:
     par_formation = {}  # formation_id -> [(date, html, objet_a_marquer)]
     for m in msgs:
         par_formation.setdefault(m.conversation.formation_id, []).append(
-            (m.cree_le, _bloc_message("Message de Laurence", m.texte), m))
+            (m.cree_le, _bloc_message("Message de Laurence", _texte_notification(
+                m.texte, session.query(PieceJointe).filter_by(message_id=m.id).all())), m))
     for d in dests:
         ann = d.annonce
         titre = "Message de Laurence au groupe" + (" — " + ann.objet if ann.objet else "")
-        par_formation.setdefault(ann.formation_id, []).append((ann.cree_le, _bloc_message(titre, ann.texte), d))
+        texte_ann = _texte_notification(ann.texte, session.query(PieceJointe).filter_by(annonce_id=ann.id).all())
+        par_formation.setdefault(ann.formation_id, []).append((ann.cree_le, _bloc_message(titre, texte_ann), d))
     nb = 0
     for f_id, elements in par_formation.items():
         a_marquer = [e[2] for e in elements]
@@ -375,7 +473,58 @@ def _verifier_acces_eleve(session: Session, eleve: Eleve, formation_id: int) -> 
 
 
 class TexteMessage(BaseModel):
-    texte: str
+    texte: str = ""
+    pieces: Optional[List[int]] = None
+
+
+class DemandePiece(BaseModel):
+    nom_fichier: str
+    type_mime: str = ""
+    taille: int
+    vocal: bool = False
+    formation_id: Optional[int] = None   # côté admin : formation concernée (rangement)
+
+
+@router.post("/api/eleve/formations/{formation_id}/pieces/preparer")
+def preparer_piece_eleve(formation_id: int, d: DemandePiece, eleve: Eleve = Depends(eleve_connecte),
+                         session: Session = Depends(obtenir_session)):
+    _verifier_acces_eleve(session, eleve, formation_id)
+    return _preparer_piece(session, d.nom_fichier, d.type_mime, d.taille, d.vocal, "eleve",
+                           formation_id, eleve.id, PJ_MAX_ELEVE_MO)
+
+
+@router.get("/messagerie/pieces/{piece_id}")
+def ouvrir_piece(piece_id: int, request: Request, telecharger: int = 0, session: Session = Depends(obtenir_session)):
+    """Vérifie les droits puis redirige vers un lien R2 temporaire."""
+    p = session.get(PieceJointe, piece_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="Fichier introuvable.")
+    admin_id = request.session.get("admin_id")
+    est_admin = admin_id is not None and session.get(Administrateur, admin_id) is not None
+    if not est_admin:
+        eleve_id = request.session.get("eleve_id")
+        eleve = session.get(Eleve, eleve_id) if eleve_id else None
+        if eleve is None or not eleve.actif:
+            raise HTTPException(status_code=401, detail="Connexion requise.")
+        autorise = False
+        formation_id = None
+        if p.message_id:
+            m = session.get(MessagePrive, p.message_id)
+            if m is not None and m.conversation.eleve_id == eleve.id:
+                autorise, formation_id = True, m.conversation.formation_id
+        elif p.annonce_id:
+            d = session.query(AnnonceDestinataire).filter_by(annonce_id=p.annonce_id, eleve_id=eleve.id).first()
+            if d is not None:
+                autorise, formation_id = True, d.annonce.formation_id
+        elif p.auteur == "eleve" and p.eleve_id == eleve.id:
+            autorise, formation_id = True, p.formation_id   # sa propre pièce, pas encore envoyée (aperçu)
+        if not autorise:
+            raise HTTPException(status_code=404, detail="Fichier introuvable.")
+        _verifier_acces_eleve(session, eleve, formation_id)   # plus d'accès à la formation = plus de fichiers
+    if not stockage_r2.r2_actif():
+        raise HTTPException(status_code=503, detail="Stockage indisponible.")
+    url = stockage_r2.url_signee(stockage_r2.PREFIXE + p.cle, p.nom if telecharger else None)
+    return Response(status_code=307, headers={"Location": url, "Cache-Control": "private, no-store"})
 
 
 @router.get("/api/eleve/formations/{formation_id}/messages")
@@ -400,16 +549,19 @@ def lire_messages_eleve(formation_id: int, eleve: Eleve = Depends(eleve_connecte
 def ecrire_message_eleve(formation_id: int, corps: TexteMessage, taches: BackgroundTasks,
                          eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
     _verifier_acces_eleve(session, eleve, formation_id)
-    texte = _nettoyer(corps.texte)
+    texte = _nettoyer(corps.texte, vide_permis=bool(corps.pieces))
     conv = _conversation(session, eleve.id, formation_id, creer=True)
     m = MessagePrive(conversation_id=conv.id, auteur="eleve", texte=texte, notifier=True)
     session.add(m)
+    session.flush()
+    pieces = _rattacher_pieces(session, corps.pieces, "eleve", eleve.id, formation_id, message_id=m.id)
     conv.dernier_message_le = datetime.utcnow()
     conv.non_lu_admin = True
     session.commit()
     taches.add_task(_notifier_en_arriere_plan, admin=True)
     return {"ok": True, "message": {"type": "message", "id": m.id, "auteur": "eleve", "objet": "",
-                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": ""}}
+                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": "",
+                                    "pieces": [_piece_json(p) for p in pieces]}}
 
 
 # ---------------------------------------------------------------------------
@@ -422,6 +574,30 @@ admin_router = APIRouter(prefix="/admin/messagerie", dependencies=[Depends(admin
 @admin_router.get("/non-lus")
 def admin_non_lus(session: Session = Depends(obtenir_session)):
     return {"nb": session.query(Conversation).filter(Conversation.non_lu_admin.is_(True)).count()}
+
+
+@admin_router.post("/pieces/preparer")
+def admin_preparer_piece(d: DemandePiece, session: Session = Depends(obtenir_session)):
+    return _preparer_piece(session, d.nom_fichier, d.type_mime, d.taille, d.vocal, "admin",
+                           d.formation_id, None, PJ_MAX_ADMIN_MO)
+
+
+@admin_router.get("/documents")
+def admin_documents_recus(session: Session = Depends(obtenir_session)):
+    """Toutes les pièces envoyées par les élèves (les plus récentes d'abord)."""
+    res = []
+    lignes = (session.query(PieceJointe, MessagePrive, Conversation)
+              .join(MessagePrive, MessagePrive.id == PieceJointe.message_id)
+              .join(Conversation, Conversation.id == MessagePrive.conversation_id)
+              .filter(PieceJointe.auteur == "eleve")
+              .order_by(PieceJointe.cree_le.desc()).limit(300).all())
+    for p, m, c in lignes:
+        eleve = session.get(Eleve, c.eleve_id)
+        formation = session.get(Formation, c.formation_id)
+        res.append(dict(_piece_json(p), eleve=_nom(eleve) if eleve else "?",
+                        formation=formation.titre if formation else "?",
+                        conversation_id=c.id, date=_iso(m.cree_le)))
+    return res
 
 
 @admin_router.get("/reglages")
@@ -551,13 +727,14 @@ def admin_apercu(c: Cible, session: Session = Depends(obtenir_session)):
 
 class Envoi(Cible):
     objet: str = ""
-    texte: str
+    texte: str = ""
     notifier: bool = True
+    pieces: Optional[List[int]] = None
 
 
 @admin_router.post("/envoyer")
 def admin_envoyer(e: Envoi, taches: BackgroundTasks, session: Session = Depends(obtenir_session)):
-    texte = _nettoyer(e.texte)
+    texte = _nettoyer(e.texte, vide_permis=bool(e.pieces))
     formation, acces, description = _resoudre_cible(session, e)
     if not acces:
         raise HTTPException(status_code=400, detail="Aucune élève ne correspond à ce choix.")
@@ -566,7 +743,10 @@ def admin_envoyer(e: Envoi, taches: BackgroundTasks, session: Session = Depends(
         conv = _conversation(session, acces[0].eleve_id, formation.id, creer=True)
         if e.objet.strip():
             texte = e.objet.strip() + "\n\n" + texte
-        session.add(MessagePrive(conversation_id=conv.id, auteur="admin", texte=texte, notifier=e.notifier))
+        m = MessagePrive(conversation_id=conv.id, auteur="admin", texte=texte, notifier=e.notifier)
+        session.add(m)
+        session.flush()
+        _rattacher_pieces(session, e.pieces, "admin", None, formation.id, message_id=m.id)
         conv.dernier_message_le = maintenant
         conv.non_lu_eleve = True
         session.commit()
@@ -577,6 +757,7 @@ def admin_envoyer(e: Envoi, taches: BackgroundTasks, session: Session = Depends(
                   cible=description, notifier=e.notifier, cree_le=maintenant)
     session.add(ann)
     session.flush()
+    _rattacher_pieces(session, e.pieces, "admin", None, formation.id, annonce_id=ann.id)
     for a in acces:
         session.add(AnnonceDestinataire(annonce_id=ann.id, eleve_id=a.eleve_id))
     session.commit()
@@ -609,7 +790,8 @@ def admin_fils(filtre: str = "tous", session: Session = Depends(obtenir_session)
         dernier = c.messages[-1] if c.messages else None
         extrait = ""
         if dernier is not None:
-            extrait = ("Toi : " if dernier.auteur == "admin" else "") + dernier.texte.replace("\n", " ")[:140]
+            extrait = ("Toi : " if dernier.auteur == "admin" else "") + (
+                dernier.texte.replace("\n", " ")[:140] or "📎 Pièce jointe")
         res.append({"id": c.id, "eleve_id": c.eleve_id, "eleve": _nom(eleve), "formation_id": c.formation_id,
                     "formation": formation.titre, "avancement": avs.get((c.eleve_id, c.formation_id), "Accès terminé"),
                     "extrait": extrait, "date": _iso(c.dernier_message_le), "non_lu": bool(c.non_lu_admin)})
@@ -640,16 +822,19 @@ def admin_repondre(conversation_id: int, corps: TexteMessage, taches: Background
     conv = session.get(Conversation, conversation_id)
     if conv is None:
         raise HTTPException(status_code=404, detail="Conversation introuvable.")
-    texte = _nettoyer(corps.texte)
+    texte = _nettoyer(corps.texte, vide_permis=bool(corps.pieces))
     m = MessagePrive(conversation_id=conv.id, auteur="admin", texte=texte, notifier=True)
     session.add(m)
+    session.flush()
+    pieces = _rattacher_pieces(session, corps.pieces, "admin", None, conv.formation_id, message_id=m.id)
     conv.dernier_message_le = datetime.utcnow()
     conv.non_lu_eleve = True
     conv.non_lu_admin = False
     session.commit()
     taches.add_task(_notifier_en_arriere_plan, eleve_ids=[conv.eleve_id])
     return {"ok": True, "message": {"type": "message", "id": m.id, "auteur": "admin", "objet": "",
-                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": ""}}
+                                    "texte": m.texte, "date": _iso(m.cree_le), "cible": "",
+                                    "pieces": [_piece_json(p) for p in pieces]}}
 
 
 @admin_router.get("/eleves/{eleve_id}/formations")
@@ -694,7 +879,8 @@ def admin_annonce(annonce_id: int, session: Session = Depends(obtenir_session)):
     dests.sort(key=lambda x: x["nom"].lower())
     return {"id": ann.id, "formation": formation.titre if formation else "?", "formation_id": ann.formation_id,
             "objet": ann.objet or "", "texte": ann.texte, "date": _iso(ann.cree_le), "cible": ann.cible or "",
-            "destinataires": dests}
+            "destinataires": dests,
+            "pieces": [_piece_json(p) for p in session.query(PieceJointe).filter_by(annonce_id=ann.id).all()]}
 
 
 # ---------------------------------------------------------------------------

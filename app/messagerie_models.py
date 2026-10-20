@@ -114,3 +114,25 @@ def messagerie_visible_pour(session, eleve) -> bool:
     if lire_parametre(session, "messagerie_visible_eleves", "test") == "tous":
         return True
     return bool(eleve.compte_test)
+
+
+class PieceJointe(Base):
+    """Fichier joint à un message (document, photo, audio, message vocal…), ajout du 19/10/2026.
+    Le fichier est sur Cloudflare R2 (cle) -- JAMAIS en base. Nouvelle table (create_all).
+    Cycle : créée au moment du dépôt (message_id et annonce_id vides), puis rattachée
+    au message ou à l'annonce lors de l'envoi. Une pièce non rattachée n'est visible
+    par personne d'autre que son auteur."""
+    __tablename__ = "pieces_jointes"
+
+    id = Column(Integer, primary_key=True)
+    cle = Column(String(400), nullable=False)            # clé de l'objet sur R2
+    nom = Column(String(200), nullable=False)            # nom de fichier affiché
+    type_mime = Column(String(120), nullable=False, default="application/octet-stream")
+    taille = Column(Integer, nullable=False, default=0)  # octets
+    vocal = Column(Boolean, default=False)               # message vocal enregistré sur la plateforme
+    auteur = Column(String(10), nullable=False)          # "admin" | "eleve"
+    eleve_id = Column(Integer, ForeignKey("eleves.id", ondelete="CASCADE"), nullable=True, index=True)  # si auteur élève
+    formation_id = Column(Integer, ForeignKey("formations.id", ondelete="CASCADE"), nullable=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages_prives.id", ondelete="CASCADE"), nullable=True, index=True)
+    annonce_id = Column(Integer, ForeignKey("annonces.id", ondelete="CASCADE"), nullable=True, index=True)
+    cree_le = Column(DateTime, default=datetime.utcnow)

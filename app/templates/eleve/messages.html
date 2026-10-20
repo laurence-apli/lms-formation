@@ -49,7 +49,8 @@
 
   <form class="zone-ecrire" id="form-ecrire">
     <label for="texte">Écrire à {{ profil.prenom or "Laurence" }}</label>
-    <textarea id="texte" maxlength="5000" placeholder="Ton message…" required></textarea>
+    <textarea id="texte" maxlength="5000" placeholder="Ton message…"></textarea>
+    <div id="zone-pj"></div>
     <div class="ligne">
       <span class="discret">🔒 Seule {{ profil.prenom or "Laurence" }} lit tes messages. Elle reçoit une notification par e-mail.</span>
       <button type="submit" class="btn-envoyer" id="btn-envoyer">Envoyer</button>
@@ -58,9 +59,12 @@
   </form>
 </div>
 
+{% include "_pieces_jointes.html" %}
 <script>
 const FORMATION_ID = {{ formation.id }};
 const PRENOM_ADMIN = {{ (profil.prenom or "Laurence")|tojson }};
+
+let composeurPJ = null;
 
 function dateFr(iso) {
   if (!iso) return "";
@@ -82,13 +86,14 @@ function elementMessage(it) {
     et.textContent = 'Message de ' + PRENOM_ADMIN + ' au groupe';
     bulle.appendChild(et);
     if (it.objet) { const o = document.createElement('span'); o.className = 'objet'; o.textContent = it.objet; bulle.appendChild(o); }
-    bulle.appendChild(document.createTextNode(it.texte));
+    if (it.texte) bulle.appendChild(document.createTextNode(it.texte));
     meta.textContent = dateFr(it.date);
   } else {
     div.className = 'msg ' + (it.auteur === 'eleve' ? 'eleve' : 'admin');
-    bulle.textContent = it.texte;
+    if (it.texte) bulle.textContent = it.texte;
     meta.textContent = (it.auteur === 'eleve' ? 'Toi' : PRENOM_ADMIN) + ' · ' + dateFr(it.date);
   }
+  if (it.pieces && it.pieces.length) bulle.insertAdjacentHTML('beforeend', PJ.rendu(it.pieces));
   div.appendChild(bulle);
   div.appendChild(meta);
   return div;
@@ -130,14 +135,18 @@ document.getElementById('form-ecrire').addEventListener('submit', async (ev) => 
   const err = document.getElementById('erreur');
   err.textContent = '';
   const texte = zone.value.trim();
-  if (!texte) return;
+  const ids = composeurPJ ? composeurPJ.ids() : [];
+  if (!texte && !ids.length) { err.textContent = 'Écris un message ou joins un fichier.'; return; }
+  if (composeurPJ && composeurPJ.enCours()) { err.textContent = "Un fichier est encore en cours d'envoi. Patiente un instant."; return; }
   btn.disabled = true; btn.textContent = 'Envoi…';
   try {
     const r = await fetch('/api/eleve/formations/' + FORMATION_ID + '/messages', {
-      method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ texte })
+      method:'POST', headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({ texte, pieces: ids.length ? ids : null })
     });
     if (!r.ok) { let d = "L'envoi a échoué."; try { d = (await r.json()).detail || d; } catch(e){} throw new Error(d); }
     zone.value = '';
+    if (composeurPJ) composeurPJ.vider();
     dernierNombre = -1;
     await charger(true);
   } catch (e) {
@@ -145,6 +154,15 @@ document.getElementById('form-ecrire').addEventListener('submit', async (ev) => 
   } finally {
     btn.disabled = false; btn.textContent = 'Envoyer';
   }
+});
+
+// Init composeur pièces jointes
+document.addEventListener('DOMContentLoaded', () => {
+  composeurPJ = PJ.composeur(document.getElementById('zone-pj'), {
+    urlPreparer: '/api/eleve/formations/' + FORMATION_ID + '/pieces/preparer',
+    extra: () => ({ formation_id: FORMATION_ID }),
+    aide: 'Document, photo, audio ou vidéo · 50 Mo max',
+  });
 });
 
 charger(true);

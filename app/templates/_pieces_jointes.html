@@ -1,0 +1,162 @@
+{# Pièces jointes et messages vocaux de la messagerie (inclus côté élève ET côté admin).
+   Les fichiers partent directement du navigateur vers Cloudflare R2 (jamais dans Neon). #}
+<style>
+  .pj-composeur { margin-top:8px; }
+  .pj-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .pj-btn { border:1px solid #D9C9A0; background:#fff; color:#2E2210; border-radius:18px; padding:7px 13px; font-size:13.5px; cursor:pointer; font-family:inherit; min-height:38px; display:inline-flex; align-items:center; gap:6px; }
+  .pj-btn:hover { border-color:#B8922A; }
+  .pj-btn.enregistre { background:#A1432A; border-color:#A1432A; color:#fff; }
+  .pj-puces { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+  .pj-puce { display:flex; align-items:center; gap:8px; background:#F8F1E0; border:1px solid #EADDBA; border-radius:8px; padding:6px 10px; font-size:13px; color:#2E2210; }
+  .pj-puce .nom { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pj-puce .etat { font-size:12px; color:#6B5A3A; white-space:nowrap; }
+  .pj-puce .etat.err { color:#A1432A; }
+  .pj-puce button { border:none; background:none; cursor:pointer; color:#8a7d62; font-size:15px; padding:0 4px; }
+  .pj-puce audio { height:32px; max-width:200px; }
+  .pj-aide { font-size:11.5px; color:#8a7d62; }
+  /* Affichage dans le fil */
+  .pj-liste { white-space:normal; display:flex; flex-direction:column; gap:8px; margin-top:8px; font-family:'League Spartan',Arial,sans-serif; }
+  .pj-liste:first-child { margin-top:0; }
+  .pj-liste audio { width:100%; min-width:220px; max-width:340px; height:40px; }
+  .pj-liste .pj-legende { font-size:12px; opacity:.85; margin-bottom:2px; }
+  .pj-liste img.pj-img { max-width:100%; max-height:260px; border-radius:8px; display:block; cursor:zoom-in; }
+  .pj-liste video { max-width:100%; max-height:320px; border-radius:8px; background:#000; }
+  .pj-liste a.pj-doc { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; background:rgba(184,146,42,.12); border:1px solid rgba(184,146,42,.45); color:inherit; text-decoration:none; font-size:14px; max-width:100%; }
+  .pj-liste a.pj-doc span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pj-liste a.pj-doc small { opacity:.75; white-space:nowrap; }
+</style>
+<script>
+const PJ = (function () {
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const taille = o => o >= 1048576 ? (o / 1048576).toFixed(1).replace('.', ',') + ' Mo' : Math.max(1, Math.round(o / 1024)) + ' Ko';
+  const duree = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
+
+  // ---- Affichage des pièces d'un message ----
+  function rendu(pieces) {
+    if (!pieces || !pieces.length) return '';
+    return '<div class="pj-liste">' + pieces.map(p => {
+      const t = p.type_mime || '';
+      if (p.vocal || t.startsWith('audio/')) {
+        return '<div><div class="pj-legende">' + (p.vocal ? '🎙️ Message vocal' : '🎧 ' + esc(p.nom)) + '</div>' +
+          '<audio controls preload="metadata" controlsList="nodownload" src="' + p.url + '"></audio></div>';
+      }
+      if (t.startsWith('image/') && !/hei[cf]/.test(t)) {
+        return '<a href="' + p.url + '" target="_blank" rel="noopener"><img class="pj-img" loading="lazy" alt="' + esc(p.nom) + '" src="' + p.url + '"></a>';
+      }
+      if (t.startsWith('video/')) {
+        return '<video controls playsinline preload="metadata" src="' + p.url + '"></video>';
+      }
+      return '<a class="pj-doc" href="' + p.url + '?telecharger=1">📎 <span>' + esc(p.nom) + '</span> <small>' + taille(p.taille || 0) + '</small></a>';
+    }).join('') + '</div>';
+  }
+
+  // ---- Zone d'ajout (📎 fichiers + 🎙️ message vocal) ----
+  // options : { urlPreparer, extra: () => ({...}), aide }
+  function composeur(conteneur, options) {
+    const pieces = [];   // {id, nom, etat:'envoi'|'ok'|'erreur', pct}
+    let enregistreur = null, flux = null, morceaux = [], debut = 0, chrono = null;
+    const peutEnregistrer = !!(navigator.mediaDevices && window.MediaRecorder);
+    conteneur.classList.add('pj-composeur');
+    conteneur.innerHTML =
+      '<div class="pj-actions">' +
+        '<label class="pj-btn" title="Joindre un document, une photo, un audio…">📎 Joindre un fichier' +
+          '<input type="file" multiple hidden></label>' +
+        (peutEnregistrer ? '<button type="button" class="pj-btn pj-micro">🎙️ Message vocal</button>' : '') +
+        (options.aide ? '<span class="pj-aide">' + esc(options.aide) + '</span>' : '') +
+      '</div><div class="pj-puces"></div>';
+    const zonePuces = conteneur.querySelector('.pj-puces');
+    const btnMicro = conteneur.querySelector('.pj-micro');
+    conteneur.querySelector('input[type=file]').addEventListener('change', e => {
+      Array.from(e.target.files || []).forEach(f => envoyer(f, false));
+      e.target.value = '';
+    });
+    if (btnMicro) btnMicro.addEventListener('click', basculerMicro);
+
+    function dessiner() {
+      zonePuces.innerHTML = pieces.map((p, i) =>
+        '<div class="pj-puce">' + (p.vocal ? '🎙️' : '📎') + ' <span class="nom">' + esc(p.nom) + '</span>' +
+        (p.apercu ? '<audio controls src="' + p.apercu + '"></audio>' : '') +
+        '<span class="etat' + (p.etat === 'erreur' ? ' err' : '') + '">' +
+          (p.etat === 'envoi' ? 'envoi ' + (p.pct || 0) + ' %' : p.etat === 'ok' ? '✓ prêt' : esc(p.erreur || 'échec')) + '</span>' +
+        '<button type="button" aria-label="Retirer" data-i="' + i + '">✕</button></div>').join('');
+      zonePuces.querySelectorAll('button[data-i]').forEach(b => b.addEventListener('click', () => {
+        pieces.splice(parseInt(b.dataset.i, 10), 1); dessiner();
+      }));
+      if (options.onChange) options.onChange();
+    }
+
+    async function envoyer(fichier, vocal, nomForce) {
+      const p = { nom: nomForce || fichier.name, etat: 'envoi', pct: 0, vocal };
+      if (vocal) p.apercu = URL.createObjectURL(fichier);
+      pieces.push(p); dessiner();
+      try {
+        const corps = Object.assign({ nom_fichier: p.nom, type_mime: fichier.type || '', taille: fichier.size, vocal }, options.extra ? options.extra() : {});
+        const r = await fetch(options.urlPreparer, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
+        if (!r.ok) { let d = 'Envoi impossible.'; try { d = (await r.json()).detail || d; } catch (e) {} throw new Error(d); }
+        const prep = await r.json();
+        await new Promise((ok, ko) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', prep.url);
+          xhr.setRequestHeader('Content-Type', prep.type_mime);
+          xhr.upload.onprogress = e => { if (e.lengthComputable) { p.pct = Math.round(e.loaded / e.total * 100); dessiner(); } };
+          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? ok() : ko(new Error('Envoi refusé (' + xhr.status + ').'));
+          xhr.onerror = () => ko(new Error('Connexion interrompue.'));
+          xhr.send(fichier);
+        });
+        p.id = prep.id; p.etat = 'ok';
+      } catch (e) { p.etat = 'erreur'; p.erreur = e.message; }
+      dessiner();
+    }
+
+    async function basculerMicro() {
+      if (enregistreur && enregistreur.state === 'recording') { enregistreur.stop(); return; }
+      try {
+        flux = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        alerteDouce("Micro inaccessible : autorise l'accès au micro dans ton navigateur.");
+        return;
+      }
+      const types = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm', 'audio/ogg;codecs=opus'];
+      const mime = types.find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+      enregistreur = mime ? new MediaRecorder(flux, { mimeType: mime }) : new MediaRecorder(flux);
+      morceaux = [];
+      enregistreur.ondataavailable = e => { if (e.data && e.data.size) morceaux.push(e.data); };
+      enregistreur.onstop = () => {
+        clearInterval(chrono);
+        flux.getTracks().forEach(t => t.stop());
+        btnMicro.classList.remove('enregistre');
+        btnMicro.textContent = '🎙️ Message vocal';
+        const type = (enregistreur.mimeType || mime || 'audio/webm').split(';')[0];
+        const blob = new Blob(morceaux, { type });
+        const secondes = (Date.now() - debut) / 1000;
+        if (blob.size < 1000 || secondes < 1) return;
+        const ext = type.includes('mp4') ? 'm4a' : type.includes('ogg') ? 'ogg' : 'webm';
+        envoyer(blob, true, 'Message vocal (' + duree(secondes) + ').' + ext);
+      };
+      enregistreur.start(1000);
+      debut = Date.now();
+      btnMicro.classList.add('enregistre');
+      const maj = () => {
+        const s = (Date.now() - debut) / 1000;
+        btnMicro.textContent = '⏹ Arrêter · ' + duree(s);
+        if (s >= 600) enregistreur.stop();   // 10 minutes maximum
+      };
+      maj(); chrono = setInterval(maj, 500);
+    }
+
+    function alerteDouce(t) {
+      const d = document.createElement('div'); d.className = 'pj-aide'; d.style.color = '#A1432A'; d.textContent = t;
+      zonePuces.prepend(d); setTimeout(() => d.remove(), 6000);
+    }
+
+    return {
+      ids: () => pieces.filter(p => p.etat === 'ok').map(p => p.id),
+      enCours: () => pieces.some(p => p.etat === 'envoi') || !!(enregistreur && enregistreur.state === 'recording'),
+      aDesErreurs: () => pieces.some(p => p.etat === 'erreur'),
+      vider: () => { pieces.splice(0); dessiner(); },
+    };
+  }
+
+  return { rendu, composeur, esc };
+})();
+</script>

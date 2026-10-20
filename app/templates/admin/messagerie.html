@@ -133,6 +133,7 @@
     <form class="fil-pied" id="fil-pied" style="display:none;" onsubmit="repondre(event)">
       <label for="reponse" id="reponse-label">Répondre</label>
       <textarea id="reponse" maxlength="5000" placeholder="Ta réponse… (elle reçoit un e-mail)"></textarea>
+      <div id="zone-pj-reponse"></div>
       <div class="ligne">
         <span class="discret">🔒 Réponse privée : seule cette élève la voit.</span>
         <button type="submit" class="btn btn-primary" id="btn-repondre">Envoyer</button>
@@ -181,6 +182,7 @@
       <label class="etape" for="n-objet">3 · Message</label>
       <input type="text" id="n-objet" maxlength="200" placeholder="Objet (facultatif)">
       <textarea id="n-texte" maxlength="5000" rows="6" placeholder="Ton message…" style="margin-top:8px; font-family:'EB Garamond',serif; font-size:16px; line-height:1.45;"></textarea>
+      <div id="zone-pj-nouveau"></div>
     </div>
 
     <label class="case"><input type="checkbox" id="n-notifier" checked> Prévenir par e-mail</label>
@@ -193,6 +195,7 @@
 {% endblock %}
 
 {% block scripts %}
+{% include "_pieces_jointes.html" %}
 <script>
 const etat = { filtre:'tous', ouvert:null, formations:[], mode:'toutes', eleves:[], eleveChoisi:null, apercu:null };
 
@@ -272,11 +275,12 @@ async function chargerListe() {
 
 // ---------- Conversation ----------
 function bulle(it, prenomEleve) {
+  const pjHtml = (it.pieces && it.pieces.length) ? PJ.rendu(it.pieces) : '';
   if (it.type === 'annonce') {
-    return `<div class="bulle-w admin annonce"><div class="bulle"><div class="etiquette">Message de groupe${it.cible ? ' · ' + esc(it.cible) : ''}</div>${it.objet ? '<span class="objet">' + esc(it.objet) + '</span>' : ''}${esc(it.texte)}</div><div class="meta">Toi · ${esc(dateLongue(it.date))}</div></div>`;
+    return `<div class="bulle-w admin annonce"><div class="bulle"><div class="etiquette">Message de groupe${it.cible ? ' · ' + esc(it.cible) : ''}</div>${it.objet ? '<span class="objet">' + esc(it.objet) + '</span>' : ''}${it.texte ? esc(it.texte) : ''}${pjHtml}</div><div class="meta">Toi · ${esc(dateLongue(it.date))}</div></div>`;
   }
   const qui = it.auteur === 'admin' ? 'Toi' : esc(prenomEleve);
-  return `<div class="bulle-w ${it.auteur}"><div class="bulle">${esc(it.texte)}</div><div class="meta">${qui} · ${esc(dateLongue(it.date))}</div></div>`;
+  return `<div class="bulle-w ${it.auteur}"><div class="bulle">${it.texte ? esc(it.texte) : ''}${pjHtml}</div><div class="meta">${qui} · ${esc(dateLongue(it.date))}</div></div>`;
 }
 async function ouvrirFil(id) {
   etat.ouvert = 'c' + id;
@@ -292,6 +296,7 @@ async function ouvrirFil(id) {
     const pied = document.getElementById('fil-pied');
     pied.style.display = f.acces_actif ? 'block' : 'none';
     pied.dataset.conv = id;
+    pied.dataset.formation = f.formation_id || '';
     document.getElementById('reponse-label').textContent = 'Répondre en privé à ' + (f.prenom || f.eleve);
     chargerListe();
     rafraichirBadgeMessagerie();
@@ -304,11 +309,15 @@ async function repondre(ev) {
   const err = document.getElementById('erreur-reponse');
   const btn = document.getElementById('btn-repondre');
   err.textContent = '';
-  if (!zone.value.trim()) return;
+  const ids = composeurReponse ? composeurReponse.ids() : [];
+  if (!zone.value.trim() && !ids.length) { err.textContent = 'Écris une réponse ou joins un fichier.'; return; }
+  if (composeurReponse && composeurReponse.enCours()) { err.textContent = "Un fichier est encore en cours d'envoi."; return; }
   btn.disabled = true;
   try {
-    await appelApi('/admin/messagerie/fils/' + id + '/repondre', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texte: zone.value }) });
+    await appelApi('/admin/messagerie/fils/' + id + '/repondre', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ texte: zone.value, pieces: ids.length ? ids : null }) });
     zone.value = '';
+    if (composeurReponse) composeurReponse.vider();
     afficherToast('Réponse envoyée');
     ouvrirFil(id);
   } catch (e) { err.textContent = e.message; }
@@ -453,8 +462,12 @@ async function envoyer() {
   const btn = document.getElementById('btn-envoyer');
   err.textContent = '';
   const texte = document.getElementById('n-texte').value;
-  if (!texte.trim()) { err.textContent = 'Écris ton message avant d\'envoyer.'; return; }
-  const corps = Object.assign(cible(), { objet: document.getElementById('n-objet').value, texte, notifier: document.getElementById('n-notifier').checked });
+  const ids = composeurNouveau ? composeurNouveau.ids() : [];
+  if (!texte.trim() && !ids.length) { err.textContent = 'Écris ton message ou joins un fichier avant d\'envoyer.'; return; }
+  if (composeurNouveau && composeurNouveau.enCours()) { err.textContent = "Un fichier est encore en cours d'envoi."; return; }
+  const f = formationCourante();
+  const corps = Object.assign(cible(), { objet: document.getElementById('n-objet').value, texte,
+    notifier: document.getElementById('n-notifier').checked, pieces: ids.length ? ids : null });
   btn.disabled = true;
   const libelle = btn.textContent;
   btn.textContent = 'Envoi…';
@@ -462,6 +475,7 @@ async function envoyer() {
     const r = await appelApi('/admin/messagerie/envoyer', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(corps) });
     document.getElementById('n-texte').value = '';
     document.getElementById('n-objet').value = '';
+    if (composeurNouveau) composeurNouveau.vider();
     etat.choisis = new Set();
     afficherToast(r.type === 'annonce' ? 'Message envoyé à ' + r.nb + ' élève(s)' : 'Message envoyé');
     fermerNouveau();
@@ -470,6 +484,29 @@ async function envoyer() {
   } catch (e) { err.textContent = e.message; btn.textContent = libelle; }
   btn.disabled = false;
 }
+
+// ---------- Composeurs pièces jointes ----------
+let composeurReponse = null, composeurNouveau = null;
+document.addEventListener('DOMContentLoaded', () => {
+  composeurReponse = PJ.composeur(document.getElementById('zone-pj-reponse'), {
+    urlPreparer: '/admin/messagerie/pieces/preparer',
+    extra: () => {
+      const pied = document.getElementById('fil-pied');
+      // La formation_id est injectée lors de l'ouverture du fil (dataset.formation)
+      const fid = pied.dataset.formation ? parseInt(pied.dataset.formation, 10) : undefined;
+      return fid ? { formation_id: fid } : {};
+    },
+    aide: 'Document, photo, audio ou vidéo',
+  });
+  composeurNouveau = PJ.composeur(document.getElementById('zone-pj-nouveau'), {
+    urlPreparer: '/admin/messagerie/pieces/preparer',
+    extra: () => {
+      const f = formationCourante();
+      return f ? { formation_id: f.id } : {};
+    },
+    aide: 'Document, photo, audio ou vidéo',
+  });
+});
 
 // ---------- Démarrage ----------
 (async function () {
