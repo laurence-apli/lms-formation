@@ -177,6 +177,7 @@ ${renderMediasListe(f.medias || [], 'formation')}
 <div class="modal-actions" style="justify-content:flex-start; margin-top:18px; flex-wrap:wrap;">
         <button class="btn" onclick="ouvrirModalEditerFormation()">✎ Modifier la formation</button>
         <button class="btn" onclick="ouvrirModalCreerModule()">+ Ajouter un module</button>
+        <button class="btn" onclick="diffuserAToutesLesEleves()">🔓 Diffuser à toutes les élèves</button>
         <button class="btn" onclick="toggleActifFormation()">${f.actif ? 'Désactiver' : 'Activer'} la formation</button>
         <button class="btn btn-danger-outline" onclick="demanderSuppressionFormation()">Supprimer la formation</button>
       </div>`;
@@ -434,6 +435,13 @@ async function confirmerSuppressionFormation() {
 async function toggleActifFormation() {
   await appelApi(`/admin/formations/${FORMATION_ID}/toggle-actif`, { method: 'POST' });
   afficherToast('Statut mis à jour');
+  await charger();
+}
+
+async function diffuserAToutesLesEleves() {
+  if (!confirm('Donner l\'accès niveau 1 à cette formation à toutes les élèves actives qui ne l\'ont pas encore ?')) return;
+  const res = await appelApi(`/admin/formations/${FORMATION_ID}/diffuser-a-toutes`, { method: 'POST' });
+  afficherToast(res.nb_ajouts > 0 ? `Accès accordé à ${res.nb_ajouts} élève${res.nb_ajouts > 1 ? 's' : ''}` : 'Toutes les élèves avaient déjà accès');
   await charger();
 }
 

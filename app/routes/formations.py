@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import (
     Formation, Module, Chapitre, Media, MediaModule, MediaFormation, JoursAccompagnementNiveau,
-    SauvegardeMediaBase64,
+    SauvegardeMediaBase64, Eleve, AccesFormation,
     dupliquer_chapitre as dupliquer_chapitre_modele,
     dupliquer_formation as dupliquer_formation_modele,
     deplacer_chapitre_vers_module as deplacer_chapitre_modele,
@@ -124,6 +124,29 @@ def modifier_formation(
 
     session.commit()
     return {"id": formation.id, "titre": formation.titre}
+
+@router.post("/formations/{formation_id}/diffuser-a-toutes")
+def diffuser_formation_a_toutes(formation_id: int, session: Session = Depends(obtenir_session)):
+    """Donne l'accès niveau 1 à cette formation à toutes les élèves actives qui ne l'ont pas encore."""
+    formation = session.get(Formation, formation_id)
+    if formation is None:
+        raise HTTPException(status_code=404, detail="Formation introuvable.")
+
+    # Élèves actives qui n'ont pas encore accès à cette formation
+    eleves_avec_acces = {
+        a.eleve_id for a in session.query(AccesFormation.eleve_id).filter_by(formation_id=formation_id).all()
+    }
+    eleves_actives = session.query(Eleve).filter_by(actif=True).all()
+
+    nb_ajouts = 0
+    for eleve in eleves_actives:
+        if eleve.id not in eleves_avec_acces:
+            session.add(AccesFormation(eleve_id=eleve.id, formation_id=formation_id, niveau=1))
+            nb_ajouts += 1
+
+    session.commit()
+    return {"ok": True, "nb_ajouts": nb_ajouts}
+
 
 @router.post("/formations/{formation_id}/effacer-html")
 def effacer_html_formation(formation_id: int, session: Session = Depends(obtenir_session)):
