@@ -38,6 +38,7 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE commandes ADD COLUMN IF NOT EXISTS montant_prix_total NUMERIC(10,2)",
     "ALTER TABLE jours_accompagnement_niveau ADD COLUMN IF NOT EXISTS jours_visio INTEGER DEFAULT 0",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS type_accompagnement VARCHAR(20) DEFAULT 'cabinet'",
+    "ALTER TABLE formations ADD COLUMN IF NOT EXISTS acces_auto BOOLEAN DEFAULT FALSE",
 ]
 
 

@@ -50,6 +50,7 @@ def detail_formation(formation_id: int, session: Session = Depends(obtenir_sessi
         "jours_par_niveau": {j.niveau: j.jours for j in formation.jours_par_niveau},
         "jours_visio_par_niveau": {j.niveau: j.jours_visio for j in formation.jours_par_niveau},
         "lien_visio": formation.lien_visio or "",
+        "acces_auto": bool(formation.acces_auto),
         "modules": [
             {
                 "id": m.id, "titre": m.titre, "ordre": m.ordre, "niveau_requis": m.niveau_requis,
@@ -95,6 +96,7 @@ def modifier_formation(
     formation_id: int, titre: str = Form(...), couleur: str = Form(...),
     nb_niveaux: int = Form(...), presentation_html: str = Form(None),
     ordre_affichage: int = Form(0), lien_visio: str = Form(""),
+    acces_auto: bool = Form(False),
     session: Session = Depends(obtenir_session),
 ):
     formation = session.get(Formation, formation_id)
@@ -111,6 +113,7 @@ def modifier_formation(
         formation.presentation_html = presentation_html or None
     formation.ordre_affichage = ordre_affichage
     formation.lien_visio = lien_visio or None
+    formation.acces_auto = acces_auto
 
     if nb_niveaux != formation.nb_niveaux:
         niveaux_existants = {j.niveau for j in formation.jours_par_niveau}

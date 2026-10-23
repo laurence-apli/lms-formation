@@ -163,7 +163,7 @@ function renderContenu() {
 
   if (noeudActif.type === 'formation') {
     zone.innerHTML = `
-      <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span></h2>
+      <h2>${esc(f.titre)} <span class="niveau-badge ${f.actif ? 'niveau-1' : ''}" style="${f.actif ? 'background:#E4F0E8;color:#3B8C5A;' : 'background:#F0ECE2;color:var(--grey);'}">${f.actif ? 'Active' : 'Inactive'}</span>${f.acces_auto ? '<span class="niveau-badge" style="background:#EAF0FB;color:#2D5FAA;margin-left:6px;" title="Accès donné automatiquement à toutes les nouvelles inscrites">🔓 Accès auto</span>' : ''}</h2>
       <div class="sous-titre">Présentation de la formation — affichée à l'élève avant qu'il commence</div>
       ${!f.actif ? '<div class="message-erreur" style="margin-bottom:16px;">Cette formation est désactivée : elle est invisible pour les nouveaux élèves, et les élèves qui l\'ont déjà ne peuvent plus y accéder.</div>' : ''}
       ${(function(){const h=f.presentation_html;if(!h)return '<div class="presentation-display vide">Aucun contenu de présentation pour l\'instant.</div>';const isPage=h.trimStart().toLowerCase().startsWith('<!doctype')||h.trimStart().toLowerCase().startsWith('<html');if(isPage){const zCss='<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style>';const hZ=h.replace(/<\/head>/i,zCss+'</head>');const enc=hZ.replace(/&/g,'&amp;').replace(/"/g,'&quot;');return `<div class="presentation-display"><iframe srcdoc="${enc}" style="width:100%;border:none;display:block;" onload="(function(f){try{f.style.height=(f.contentDocument.body.scrollHeight+20)+'px';}catch(e){}}).call(this,this)"></iframe></div>`;}return `<div class="presentation-display">${h}</div>`;})()}
@@ -359,6 +359,11 @@ function ouvrirModalEditerFormation() {
         <option value="2" ${f.nb_niveaux===2?'selected':''}>2 niveaux</option>
         <option value="3" ${f.nb_niveaux===3?'selected':''}>3 niveaux</option>
       </select>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:4px;">
+        <input type="checkbox" id="input-acces-auto" ${f.acces_auto ? 'checked' : ''} style="width:16px;height:16px;cursor:pointer;">
+        <span>Donner automatiquement l'accès à toutes les nouvelles inscrites</span>
+      </label>
+      <div style="font-size:12px;color:var(--grey);margin:-4px 0 12px 24px;">Si coché, chaque nouvelle élève (inscription publique ou création par l'admin) reçoit automatiquement l'accès niveau 1 à cette formation.</div>
       <label>Séances de suivi comprises, par niveau (Cabinet &amp; Visio)</label>
       <div style="font-size:12px;color:var(--grey);margin:-2px 0 8px;">Si au moins une séance est indiquée, l'élève voit un bouton « Réserver une séance de suivi » qui ouvre Resalib (prestation « Séance de suivi – accompagnement en cours »).</div>
       <div id="bloc-jours">${joursHtml}</div>
@@ -392,6 +397,7 @@ async function enregistrerFormation() {
   data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
   data.append('lien_visio', '');  // Cal.com abandonné : tout passe par Resalib
+  data.append('acces_auto', document.getElementById('input-acces-auto').checked ? 'true' : 'false');
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
     const dataJours = new URLSearchParams();

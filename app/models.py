@@ -47,6 +47,7 @@ class Formation(Base):
     image_url = deferred(Column(Text, nullable=True))
     description_courte = Column(Text, nullable=True)
     lien_visio = Column(String(500), nullable=True)
+    acces_auto = Column(Boolean, default=False, nullable=False)
 
     modules = relationship("Module", back_populates="formation", order_by="Module.ordre",
                            cascade="all, delete-orphan")

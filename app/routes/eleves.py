@@ -60,6 +60,13 @@ def creer_eleve(
 
     eleve = Eleve(nom=nom.strip(), prenom=prenom.strip(), email=email_normalise, actif=True)
     session.add(eleve)
+    session.flush()  # obtenir eleve.id avant d'ajouter les accès
+
+    # Accès automatiques : toutes les formations marquées acces_auto=True
+    formations_auto = session.query(Formation).filter_by(acces_auto=True, actif=True).all()
+    for f in formations_auto:
+        session.add(AccesFormation(eleve_id=eleve.id, formation_id=f.id, niveau=1))
+
     session.commit()
 
     lien_premiere_connexion = creer_token_premiere_connexion(session, eleve)

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from fastapi import Depends
 
 from ..database import obtenir_session
-from ..models import Eleve
+from ..models import Eleve, Formation, AccesFormation
 from ..emails import email_bienvenue_inscription, email_nouvelle_inscription_admin
 
 router = APIRouter()
@@ -47,6 +47,12 @@ def creer_compte_eleve(
     # (evite aussi un doublon "nouvel eleve connecte" plus tard).
     eleve.nb_connexions = 1
     eleve.derniere_connexion = datetime.utcnow()
+
+    # Accès automatiques : toutes les formations marquées acces_auto=True
+    formations_auto = session.query(Formation).filter_by(acces_auto=True, actif=True).all()
+    for f in formations_auto:
+        session.add(AccesFormation(eleve_id=eleve.id, formation_id=f.id, niveau=1))
+
     session.commit()
 
     # E-mails envoyes en arriere-plan pour ne pas ralentir la page :
