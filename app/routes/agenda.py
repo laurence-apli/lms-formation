@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import (
     TypeSeance, Lieu, PlageDisponibilite, Reservation, RappelEnvoye,
-    SeanceAccompagnement, AccesFormation, Eleve,
+    SeanceAccompagnement, AccesFormation, Eleve, Administrateur,
 )
 from .auth import admin_connecte
 
@@ -50,7 +50,11 @@ cron_router = APIRouter(prefix="/cron")
 # ===========================================================================
 
 @admin_router.get("/", response_class=HTMLResponse)
-def page_agenda_admin(request: Request, session: Session = Depends(obtenir_session)):
+def page_agenda_admin(
+    request: Request,
+    admin: Administrateur = Depends(admin_connecte),
+    session: Session = Depends(obtenir_session),
+):
     """Page principale admin : vue semaine + listes latérales."""
     types_seances = session.query(TypeSeance).filter_by(actif=True).order_by(TypeSeance.ordre).all()
     lieux = session.query(Lieu).filter_by(actif=True).all()
@@ -70,10 +74,17 @@ def page_agenda_admin(request: Request, session: Session = Depends(obtenir_sessi
         .all()
     )
 
+    profil = {
+        "nom": admin.nom, "prenom": admin.prenom, "email": admin.email,
+        "telephone": admin.telephone, "photo_url": admin.photo_url,
+        "logo_url": admin.logo_url, "lien_github": admin.lien_github,
+    }
+
     return templates.TemplateResponse(
         request,
         "admin/agenda.html",
         {
+            "profil": profil,
             "page_active": "agenda",
             "types_seances": types_seances,
             "lieux": lieux,
