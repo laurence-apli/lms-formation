@@ -618,6 +618,7 @@ class TypeSeance(Base):
     id = Column(Integer, primary_key=True)
     nom = Column(String(200), nullable=False)
     duree_minutes = Column(Integer, nullable=False, default=60)
+    pause_apres_minutes = Column(Integer, nullable=False, default=0)  # temps de repos après séance
     # 'cabinet' | 'visio' | 'les_deux'
     modalite = Column(String(20), nullable=False, default="cabinet")
     couleur_hex = Column(String(10), default="#B8922A")

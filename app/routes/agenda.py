@@ -105,6 +105,7 @@ def lister_types_seances(session: Session = Depends(obtenir_session)):
     return [
         {
             "id": t.id, "nom": t.nom, "duree_minutes": t.duree_minutes,
+            "pause_apres_minutes": t.pause_apres_minutes or 0,
             "modalite": t.modalite, "couleur_hex": t.couleur_hex,
             "description": t.description, "actif": t.actif, "ordre": t.ordre,
         }
@@ -115,6 +116,7 @@ def lister_types_seances(session: Session = Depends(obtenir_session)):
 class TypeSeanceIn(BaseModel):
     nom: str
     duree_minutes: int = 60
+    pause_apres_minutes: int = 0
     modalite: str = "cabinet"
     couleur_hex: str = "#B8922A"
     description: str = ""
@@ -132,6 +134,7 @@ def creer_type_seance(data: TypeSeanceIn, session: Session = Depends(obtenir_ses
     ts = TypeSeance(
         nom=data.nom.strip(),
         duree_minutes=data.duree_minutes,
+        pause_apres_minutes=data.pause_apres_minutes,
         modalite=data.modalite,
         couleur_hex=data.couleur_hex,
         description=data.description.strip() or None,
@@ -149,6 +152,7 @@ def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depe
         raise HTTPException(status_code=404, detail="Type de séance introuvable.")
     ts.nom = data.nom.strip()
     ts.duree_minutes = data.duree_minutes
+    ts.pause_apres_minutes = data.pause_apres_minutes
     ts.modalite = data.modalite
     ts.couleur_hex = data.couleur_hex
     ts.description = data.description.strip() or None
@@ -498,6 +502,7 @@ def api_lister_types_seances(
     return [
         {
             "id": t.id, "nom": t.nom, "duree_minutes": t.duree_minutes,
+            "pause_apres_minutes": t.pause_apres_minutes or 0,
             "modalite": t.modalite, "couleur_hex": t.couleur_hex,
             "description": t.description, "actif": t.actif, "ordre": t.ordre,
         }
@@ -618,8 +623,12 @@ def api_detail_reservation(
 
 def _creneaux_pour_plage(plage: PlageDisponibilite, pour_date: date) -> list[tuple]:
     """Calcule les créneaux disponibles pour une plage sur une date donnée.
-    Retourne une liste de (heure_debut_str, heure_fin_str)."""
-    duree = plage.type_seance.duree_minutes
+    Retourne une liste de (heure_debut_str, heure_fin_str).
+    Le temps de repos (pause_apres_minutes) est pris en compte pour l'espacement
+    entre créneaux : le créneau suivant ne peut démarrer qu'après duree + repos."""
+    ts = plage.type_seance
+    duree = ts.duree_minutes
+    repos = ts.pause_apres_minutes or 0  # temps de repos après séance
     h_debut = [int(x) for x in plage.heure_debut.split(":")]
     h_fin = [int(x) for x in plage.heure_fin.split(":")]
     pause_d = [int(x) for x in plage.pause_debut.split(":")] if plage.pause_debut else None
@@ -635,7 +644,7 @@ def _creneaux_pour_plage(plage: PlageDisponibilite, pour_date: date) -> list[tup
         if fin_creneau_dt > fin_plage:
             break
 
-        # Exclure si dans la pause
+        # Exclure si dans la pause méridienne
         dans_pause = False
         if pause_d and pause_f:
             p_d = time(pause_d[0], pause_d[1])
@@ -649,7 +658,8 @@ def _creneaux_pour_plage(plage: PlageDisponibilite, pour_date: date) -> list[tup
                 fin_creneau_dt.strftime("%H:%M"),
             ))
 
-        curseur = fin_creneau_dt
+        # Avancer de duree + repos pour positionner le prochain créneau
+        curseur = (datetime.combine(date.today(), curseur) + timedelta(minutes=duree + repos)).time()
 
     return creneaux
 

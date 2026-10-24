@@ -44,6 +44,8 @@ _MIGRATIONS_COLONNES = [
     # pas de ALTER TABLE nécessaire pour elles.
     # Colonne de liaison sur seances_accompagnement : réservation native
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS reservation_id INTEGER",
+    # Temps de repos après séance (ajouté oct. 2026)
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS pause_apres_minutes INTEGER DEFAULT 0",
 ]
 
 

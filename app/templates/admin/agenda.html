@@ -363,7 +363,7 @@ async function ouvrirDetailReservation(id) {
     const heureLabel = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
 
     const html = `
-    <div class="overlay" onclick="if(event.target===this)fermerModal()">
+    <div class="overlay">
     <div class="modal" style="width:520px;" onclick="event.stopPropagation()">
       <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
         <h3 style="margin:0;">${rdv.prenom} ${rdv.nom}</h3>
@@ -450,6 +450,7 @@ async function chargerTypes() {
           <div style="font-weight:600;font-size:14px;">${t.nom}</div>
           <div style="font-size:12px;color:var(--grey);">
             ${t.duree_minutes} min
+            ${t.pause_apres_minutes ? `<span style="color:#B8922A;">+ ${t.pause_apres_minutes} min repos</span>` : ''}
             <span class="tag-modalite tag-${t.modalite}">${t.modalite.replace('_',' ')}</span>
             ${!t.actif ? '<em style="color:var(--danger);">Inactif</em>' : ''}
           </div>
@@ -465,14 +466,26 @@ async function chargerTypes() {
 function ouvrirModalType(id = null) {
   const type = id ? typesSeances.find(t => t.id === id) : null;
   const html = `
-  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="overlay">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3>${type ? 'Modifier' : 'Nouveau'} type de séance</h3>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;">${type ? 'Modifier' : 'Nouveau'} type de séance</h3>
+      <button type="button" class="btn btn-sm" onclick="fermerModal()" title="Fermer">✕</button>
+    </div>
     <form onsubmit="sauvegarderType(event, ${id})">
       <label>Nom de la séance *</label>
       <input name="nom" required value="${type?.nom||''}" placeholder="ex : Consultation découverte">
-      <label>Durée (minutes) *</label>
-      <input name="duree_minutes" type="number" min="15" step="15" required value="${type?.duree_minutes||60}">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Durée de la séance (min) *</label>
+          <input name="duree_minutes" type="number" min="15" step="5" required value="${type?.duree_minutes||60}" style="width:100%;">
+        </div>
+        <div>
+          <label>⏸ Temps de repos après (min)</label>
+          <input name="pause_apres_minutes" type="number" min="0" step="5" value="${type?.pause_apres_minutes||0}" style="width:100%;">
+          <small style="color:var(--grey);font-size:11px;">Pause entre deux réservations</small>
+        </div>
+      </div>
       <label>Modalité *</label>
       <select name="modalite">
         <option value="cabinet" ${type?.modalite==='cabinet'?'selected':''}>Cabinet uniquement</option>
@@ -499,6 +512,7 @@ async function sauvegarderType(evt, id) {
   const data = {
     nom: fd.get('nom'),
     duree_minutes: parseInt(fd.get('duree_minutes')),
+    pause_apres_minutes: parseInt(fd.get('pause_apres_minutes') || '0'),
     modalite: fd.get('modalite'),
     couleur_hex: fd.get('couleur_hex'),
     description: fd.get('description') || null,
@@ -559,7 +573,7 @@ async function chargerLieux() {
 function ouvrirModalLieu(id = null) {
   const lieu = id ? lieux.find(l => l.id === id) : null;
   const html = `
-  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="overlay">
   <div class="modal" onclick="event.stopPropagation()">
     <h3>${lieu ? 'Modifier' : 'Nouveau'} lieu</h3>
     <form onsubmit="sauvegarderLieu(event, ${id})">
@@ -675,7 +689,7 @@ function ouvrirModalPlage() {
   const optsTypes = typesSeances.map(t => `<option value="${t.id}">${t.nom}</option>`).join('');
   const optsLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
   const html = `
-  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="overlay">
   <div class="modal" onclick="event.stopPropagation()">
     <h3>Nouvelle plage de disponibilité</h3>
     <form onsubmit="sauvegarderPlage(event)">
