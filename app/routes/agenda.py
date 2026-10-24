@@ -645,7 +645,6 @@ def api_lister_plages(
     return [
         {
             "id": p.id,
-            "id": p.id,
             "type_seance_id": p.type_seance_id,
             "type_seance_nom": p.type_seance.nom if p.type_seance else None,
             "type_seance_couleur": p.type_seance.couleur_hex if p.type_seance else "#B8922A",
@@ -655,6 +654,8 @@ def api_lister_plages(
             "date_unique": p.date_unique.isoformat() if p.date_unique else None,
             "heure_debut": p.heure_debut,
             "heure_fin": p.heure_fin,
+            "valide_du": p.valide_du.date().isoformat() if p.valide_du else None,
+            "valide_au": p.valide_au.date().isoformat() if p.valide_au else None,
             "actif": p.actif,
         }
         for p in plages
@@ -725,7 +726,7 @@ def api_creneaux_semaine(
                     "heure_debut": h_debut,
                     "heure_fin": h_fin,
                     "type_seance_nom": plage.type_seance.nom if plage.type_seance else "",
-                    "couleur": plage.type_seance.couleur if plage.type_seance else "#B8922A",
+                    "couleur": plage.type_seance.couleur_hex if plage.type_seance else "#B8922A",
                     "lieu_nom": plage.lieu.nom if plage.lieu else "",
                 })
         d += timedelta(days=1)
