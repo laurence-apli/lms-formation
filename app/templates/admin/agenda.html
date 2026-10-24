@@ -446,13 +446,15 @@ async function chargerTypes() {
     }
     c.innerHTML = typesSeances.map(t => `
       <div class="item-param">
-        <div>
-          <div style="font-weight:600;font-size:14px;">${t.nom}</div>
-          <div style="font-size:12px;color:var(--grey);">
-            ${t.duree_minutes} min
-            ${t.pause_apres_minutes ? `<span style="color:#B8922A;">+ ${t.pause_apres_minutes} min repos</span>` : ''}
-            <span class="tag-modalite tag-${t.modalite}">${t.modalite.replace('_',' ')}</span>
-            ${!t.actif ? '<em style="color:var(--danger);">Inactif</em>' : ''}
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:${t.couleur_hex||'#B8922A'};flex-shrink:0;"></span>
+          <div>
+            <div style="font-weight:600;font-size:14px;">${t.nom}</div>
+            <div style="font-size:12px;color:var(--grey);">
+              ${t.duree_minutes} min
+              ${t.pause_apres_minutes ? `<span style="color:var(--gold);">+ ${t.pause_apres_minutes} min repos</span>` : ''}
+              ${!t.actif ? '<em style="color:var(--danger);">· Inactif</em>' : ''}
+            </div>
           </div>
         </div>
         <div style="display:flex;gap:6px;">
@@ -486,14 +488,12 @@ function ouvrirModalType(id = null) {
           <small style="color:var(--grey);font-size:11px;">Pause entre deux réservations</small>
         </div>
       </div>
-      <label>Modalité *</label>
-      <select name="modalite">
-        <option value="cabinet" ${type?.modalite==='cabinet'?'selected':''}>Cabinet uniquement</option>
-        <option value="visio" ${type?.modalite==='visio'?'selected':''}>Visio uniquement</option>
-        <option value="les_deux" ${type?.modalite==='les_deux'?'selected':''}>Cabinet ou visio</option>
-      </select>
-      <label>Couleur (hexadécimal)</label>
-      <input name="couleur_hex" type="color" value="${type?.couleur_hex||'#B8922A'}" style="height:36px;padding:4px;">
+      <label>Couleur d'affichage</label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <input name="couleur_hex" type="color" value="${type?.couleur_hex||'#B8922A'}" style="height:36px;width:48px;padding:2px;border-radius:6px;cursor:pointer;" oninput="this.nextElementSibling.textContent=this.value">
+        <span style="font-size:13px;color:var(--grey);font-family:monospace;">${type?.couleur_hex||'#B8922A'}</span>
+      </div>
+      <small style="color:var(--grey);font-size:11px;">Cette couleur sera utilisée dans le calendrier et sur la page de réservation.</small>
       <label>Description (optionnel)</label>
       <textarea name="description">${type?.description||''}</textarea>
       <label><input type="checkbox" name="actif" ${type?.actif!==false?'checked':''}> Actif (proposé à la réservation)</label>
@@ -513,7 +513,7 @@ async function sauvegarderType(evt, id) {
     nom: fd.get('nom'),
     duree_minutes: parseInt(fd.get('duree_minutes')),
     pause_apres_minutes: parseInt(fd.get('pause_apres_minutes') || '0'),
-    modalite: fd.get('modalite'),
+    modalite: 'cabinet',   // champ supprimé du formulaire, valeur neutre conservée en base
     couleur_hex: fd.get('couleur_hex'),
     description: fd.get('description') || '',
     actif: fd.get('actif') === 'on',
@@ -672,7 +672,9 @@ async function chargerPlages() {
           ${p.date_unique ? new Date(p.date_unique).toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
           ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
         </td>
-        <td style="padding:8px 6px;">${p.type_seance_nom || '—'}</td>
+        <td style="padding:8px 6px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.type_seance_couleur||'#B8922A'};margin-right:6px;vertical-align:middle;"></span>${p.type_seance_nom || '—'}
+        </td>
         <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
         <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
         <td style="padding:8px 6px;">${p.pause_debut && p.pause_fin ? p.pause_debut + ' – ' + p.pause_fin : '—'}</td>
