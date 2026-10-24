@@ -14,6 +14,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ..database import obtenir_session
@@ -111,27 +112,29 @@ def lister_types_seances(session: Session = Depends(obtenir_session)):
     ]
 
 
+class TypeSeanceIn(BaseModel):
+    nom: str
+    duree_minutes: int = 60
+    modalite: str = "cabinet"
+    couleur_hex: str = "#B8922A"
+    description: str = ""
+    actif: bool = True
+
+
 @admin_router.post("/types-seances")
-def creer_type_seance(
-    nom: str = Form(...),
-    duree_minutes: int = Form(60),
-    modalite: str = Form("cabinet"),
-    couleur_hex: str = Form("#B8922A"),
-    description: str = Form(""),
-    session: Session = Depends(obtenir_session),
-):
-    if not nom.strip():
+def creer_type_seance(data: TypeSeanceIn, session: Session = Depends(obtenir_session)):
+    if not data.nom.strip():
         raise HTTPException(status_code=400, detail="Le nom est requis.")
-    if modalite not in ("cabinet", "visio", "les_deux"):
+    if data.modalite not in ("cabinet", "visio", "les_deux"):
         raise HTTPException(status_code=400, detail="Modalité invalide.")
 
     max_ordre = session.query(TypeSeance).count()
     ts = TypeSeance(
-        nom=nom.strip(),
-        duree_minutes=duree_minutes,
-        modalite=modalite,
-        couleur_hex=couleur_hex,
-        description=description.strip() or None,
+        nom=data.nom.strip(),
+        duree_minutes=data.duree_minutes,
+        modalite=data.modalite,
+        couleur_hex=data.couleur_hex,
+        description=data.description.strip() or None,
         ordre=max_ordre,
     )
     session.add(ts)
@@ -140,25 +143,16 @@ def creer_type_seance(
 
 
 @admin_router.put("/types-seances/{ts_id}")
-def modifier_type_seance(
-    ts_id: int,
-    nom: str = Form(...),
-    duree_minutes: int = Form(60),
-    modalite: str = Form("cabinet"),
-    couleur_hex: str = Form("#B8922A"),
-    description: str = Form(""),
-    actif: bool = Form(True),
-    session: Session = Depends(obtenir_session),
-):
+def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depends(obtenir_session)):
     ts = session.get(TypeSeance, ts_id)
     if not ts:
         raise HTTPException(status_code=404, detail="Type de séance introuvable.")
-    ts.nom = nom.strip()
-    ts.duree_minutes = duree_minutes
-    ts.modalite = modalite
-    ts.couleur_hex = couleur_hex
-    ts.description = description.strip() or None
-    ts.actif = actif
+    ts.nom = data.nom.strip()
+    ts.duree_minutes = data.duree_minutes
+    ts.modalite = data.modalite
+    ts.couleur_hex = data.couleur_hex
+    ts.description = data.description.strip() or None
+    ts.actif = data.actif
     session.commit()
     return {"ok": True}
 
@@ -194,24 +188,26 @@ def lister_lieux(session: Session = Depends(obtenir_session)):
     ]
 
 
+class LieuIn(BaseModel):
+    nom: str
+    adresse: Optional[str] = None
+    type_lieu: str = "cabinet"
+    lien_visio: Optional[str] = None
+    actif: bool = True
+
+
 @admin_router.post("/lieux")
-def creer_lieu(
-    nom: str = Form(...),
-    adresse: str = Form(""),
-    type_lieu: str = Form("cabinet"),
-    lien_visio: str = Form(""),
-    session: Session = Depends(obtenir_session),
-):
-    if not nom.strip():
+def creer_lieu(data: LieuIn, session: Session = Depends(obtenir_session)):
+    if not data.nom.strip():
         raise HTTPException(status_code=400, detail="Le nom est requis.")
-    if type_lieu not in ("cabinet", "visio", "autre"):
+    if data.type_lieu not in ("cabinet", "visio", "autre"):
         raise HTTPException(status_code=400, detail="Type de lieu invalide.")
 
     lieu = Lieu(
-        nom=nom.strip(),
-        adresse=adresse.strip() or None,
-        type_lieu=type_lieu,
-        lien_visio=lien_visio.strip() or None,
+        nom=data.nom.strip(),
+        adresse=(data.adresse or "").strip() or None,
+        type_lieu=data.type_lieu,
+        lien_visio=(data.lien_visio or "").strip() or None,
     )
     session.add(lieu)
     session.commit()
@@ -219,23 +215,15 @@ def creer_lieu(
 
 
 @admin_router.put("/lieux/{lieu_id}")
-def modifier_lieu(
-    lieu_id: int,
-    nom: str = Form(...),
-    adresse: str = Form(""),
-    type_lieu: str = Form("cabinet"),
-    lien_visio: str = Form(""),
-    actif: bool = Form(True),
-    session: Session = Depends(obtenir_session),
-):
+def modifier_lieu(lieu_id: int, data: LieuIn, session: Session = Depends(obtenir_session)):
     lieu = session.get(Lieu, lieu_id)
     if not lieu:
         raise HTTPException(status_code=404, detail="Lieu introuvable.")
-    lieu.nom = nom.strip()
-    lieu.adresse = adresse.strip() or None
-    lieu.type_lieu = type_lieu
-    lieu.lien_visio = lien_visio.strip() or None
-    lieu.actif = actif
+    lieu.nom = data.nom.strip()
+    lieu.adresse = (data.adresse or "").strip() or None
+    lieu.type_lieu = data.type_lieu
+    lieu.lien_visio = (data.lien_visio or "").strip() or None
+    lieu.actif = data.actif
     session.commit()
     return {"ok": True}
 
@@ -282,37 +270,39 @@ def lister_plages(session: Session = Depends(obtenir_session)):
     ]
 
 
+class PlageIn(BaseModel):
+    type_seance_id: int
+    lieu_id: int
+    heure_debut: str
+    heure_fin: str
+    jour_semaine: Optional[int] = None
+    date_unique: Optional[str] = None
+    pause_debut: Optional[str] = None
+    pause_fin: Optional[str] = None
+    actif: bool = True
+
+
 @admin_router.post("/plages")
-def creer_plage(
-    type_seance_id: int = Form(...),
-    lieu_id: int = Form(...),
-    heure_debut: str = Form(...),
-    heure_fin: str = Form(...),
-    jour_semaine: Optional[int] = Form(None),
-    date_unique: Optional[str] = Form(None),
-    pause_debut: str = Form(""),
-    pause_fin: str = Form(""),
-    session: Session = Depends(obtenir_session),
-):
-    if jour_semaine is None and not date_unique:
+def creer_plage(data: PlageIn, session: Session = Depends(obtenir_session)):
+    if data.jour_semaine is None and not data.date_unique:
         raise HTTPException(status_code=400, detail="Jour de la semaine ou date unique requis.")
 
     date_u = None
-    if date_unique:
+    if data.date_unique:
         try:
-            date_u = datetime.fromisoformat(date_unique)
+            date_u = datetime.fromisoformat(data.date_unique)
         except ValueError:
             raise HTTPException(status_code=400, detail="Format de date invalide.")
 
     plage = PlageDisponibilite(
-        type_seance_id=type_seance_id,
-        lieu_id=lieu_id,
-        jour_semaine=jour_semaine,
+        type_seance_id=data.type_seance_id,
+        lieu_id=data.lieu_id,
+        jour_semaine=data.jour_semaine,
         date_unique=date_u,
-        heure_debut=heure_debut,
-        heure_fin=heure_fin,
-        pause_debut=pause_debut.strip() or None,
-        pause_fin=pause_fin.strip() or None,
+        heure_debut=data.heure_debut,
+        heure_fin=data.heure_fin,
+        pause_debut=(data.pause_debut or "").strip() or None,
+        pause_fin=(data.pause_fin or "").strip() or None,
     )
     session.add(plage)
     session.commit()
@@ -364,22 +354,26 @@ def lister_reservations(
     return [_serialiser_reservation(r) for r in reservations]
 
 
+class StatutIn(BaseModel):
+    statut: str
+    note_admin: str = ""
+
+
 @admin_router.post("/reservations/{resa_id}/statut")
 def changer_statut_reservation(
     resa_id: int,
-    statut: str = Form(...),
-    note_admin: str = Form(""),
+    data: StatutIn,
     session: Session = Depends(obtenir_session),
 ):
     resa = session.get(Reservation, resa_id)
     if not resa:
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
-    if statut not in ("en_attente", "annulee", "realisee"):
+    if data.statut not in ("en_attente", "annulee", "realisee"):
         raise HTTPException(status_code=400, detail="Statut invalide.")
 
-    resa.statut = statut
-    if note_admin:
-        resa.note_admin = note_admin.strip()
+    resa.statut = data.statut
+    if data.note_admin:
+        resa.note_admin = data.note_admin.strip()
 
     # Si marquée réalisée, créer une SeanceAccompagnement si l'élève est connu
     if statut == "realisee" and resa.eleve_id:
@@ -414,17 +408,21 @@ def changer_statut_reservation(
     return {"ok": True}
 
 
+class NoteIn(BaseModel):
+    note: str = ""
+
+
 @admin_router.post("/reservations/{resa_id}/note")
 def sauvegarder_note_reservation(
     resa_id: int,
-    note_admin: str = Form(""),
+    data: NoteIn,
     session: Session = Depends(obtenir_session),
 ):
     """Sauvegarde la note interne d'une réservation (admin)."""
     resa = session.get(Reservation, resa_id)
     if not resa:
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
-    resa.note_admin = note_admin.strip() or None
+    resa.note_admin = data.note.strip() or None
     session.commit()
     return {"ok": True}
 

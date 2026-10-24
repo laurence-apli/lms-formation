@@ -77,32 +77,49 @@
 
 <!-- ===== ONGLET PARAMÈTRES ===== -->
 <div id="tab-parametres" style="display:none;">
+
+  <!-- Bandeau d'aide : ordre de configuration -->
+  <div style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);border:1px solid #F59E0B;border-radius:10px;padding:14px 18px;margin-bottom:20px;max-width:900px;display:flex;gap:12px;align-items:flex-start;">
+    <span style="font-size:18px;line-height:1;">💡</span>
+    <div>
+      <div style="font-family:'League Spartan',sans-serif;font-weight:700;font-size:12px;letter-spacing:.06em;color:#92400E;margin-bottom:4px;">ORDRE DE CONFIGURATION</div>
+      <div style="font-size:13px;color:#78350F;line-height:1.5;">
+        <strong>① Créez d'abord les Lieux</strong> (cabinet, salle de visio…) et les <strong>Types de séances</strong> (durée, modalité, couleur).<br>
+        <strong>② Puis créez les Plages de disponibilité</strong> en associant un type de séance à un lieu et des horaires — c'est ce qui génère les créneaux disponibles pour vos clientes.<br>
+        <strong>③ Partagez ensuite le lien</strong> <code style="background:#FEF3C7;padding:1px 5px;border-radius:4px;">/rendez-vous</code> à vos clientes pour qu'elles puissent réserver.
+      </div>
+    </div>
+  </div>
+
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;">
 
     <!-- Types de séances -->
     <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Types de séances</h3>
         <button class="btn btn-sm btn-primary" onclick="ouvrirModalType()">+ Ajouter</button>
       </div>
+      <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Définissez la durée, la modalité (cabinet / visio) et la couleur d'affichage.</p>
       <div id="liste-types"></div>
     </div>
 
     <!-- Lieux -->
     <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Lieux</h3>
         <button class="btn btn-sm btn-primary" onclick="ouvrirModalLieu()">+ Ajouter</button>
       </div>
+      <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Ajoutez votre cabinet et/ou salle de visio. L'adresse s'affiche dans la confirmation cliente.</p>
       <div id="liste-lieux"></div>
     </div>
 
     <!-- Plages de disponibilité -->
     <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;grid-column:1/-1;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Plages de disponibilité</h3>
         <button class="btn btn-sm btn-primary" onclick="ouvrirModalPlage()">+ Ajouter</button>
       </div>
+      <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Associez un type de séance, un lieu et des horaires. Les créneaux sont générés automatiquement selon la durée de la séance. Une plage hebdomadaire se répète chaque semaine ; une date unique n'apparaît qu'une fois.</p>
       <div id="liste-plages"></div>
     </div>
   </div>
@@ -420,7 +437,8 @@ async function chargerParametres() {
 async function chargerTypes() {
   try {
     const r = await appelApi('/api/agenda/types-seances');
-    typesSeances = r.types || [];
+    // L'API retourne un tableau directement
+    typesSeances = Array.isArray(r) ? r : (r.types || []);
     const c = document.getElementById('liste-types');
     if (!typesSeances.length) {
       c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucun type de séance.</div>';
@@ -513,7 +531,8 @@ async function supprimerType(id) {
 async function chargerLieux() {
   try {
     const r = await appelApi('/api/agenda/lieux');
-    lieux = r.lieux || [];
+    // L'API retourne un tableau directement
+    lieux = Array.isArray(r) ? r : (r.lieux || []);
     const c = document.getElementById('liste-lieux');
     if (!lieux.length) {
       c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucun lieu configuré.</div>';
@@ -615,7 +634,8 @@ const JOURS_LABEL = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dim
 async function chargerPlages() {
   try {
     const r = await appelApi('/api/agenda/plages');
-    const plages = r.plages || [];
+    // L'API retourne un tableau directement
+    const plages = Array.isArray(r) ? r : (r.plages || []);
     const c = document.getElementById('liste-plages');
     if (!plages.length) {
       c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage configurée.</div>';
@@ -638,8 +658,8 @@ async function chargerPlages() {
           ${p.date_unique ? new Date(p.date_unique).toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
           ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
         </td>
-        <td style="padding:8px 6px;">${p.type_seance || '—'}</td>
-        <td style="padding:8px 6px;">${p.lieu || '—'}</td>
+        <td style="padding:8px 6px;">${p.type_seance_nom || '—'}</td>
+        <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
         <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
         <td style="padding:8px 6px;">${p.pause_debut && p.pause_fin ? p.pause_debut + ' – ' + p.pause_fin : '—'}</td>
         <td style="padding:8px 0;text-align:right;">
