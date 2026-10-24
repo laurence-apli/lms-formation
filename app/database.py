@@ -46,6 +46,10 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS reservation_id INTEGER",
     # Temps de repos après séance (ajouté oct. 2026)
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS pause_apres_minutes INTEGER DEFAULT 0",
+    # Période de validité des plages récurrentes (ajouté oct. 2026)
+    "ALTER TABLE agenda_plages_disponibilites ADD COLUMN IF NOT EXISTS valide_du TIMESTAMP",
+    "ALTER TABLE agenda_plages_disponibilites ADD COLUMN IF NOT EXISTS valide_au TIMESTAMP",
+    # La table agenda_indisponibilites est nouvelle → créée par create_all, pas de ALTER TABLE.
 ]
 
 

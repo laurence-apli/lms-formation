@@ -7,10 +7,11 @@
     <div class="breadcrumb"><a href="/admin/agenda/">Agenda</a></div>
     <h1>📅 Agenda</h1>
   </div>
-  <div style="display:flex;gap:8px;align-items:center;">
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
     <button class="btn" onclick="ouvrirModalType()">+ Type de séance</button>
     <button class="btn" onclick="ouvrirModalLieu()">+ Lieu</button>
     <button class="btn btn-primary" onclick="ouvrirModalPlage()">+ Disponibilité</button>
+    <button class="btn" onclick="ouvrirModalIndispo()" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">🚫 Indispo</button>
   </div>
 </div>
 
@@ -121,6 +122,16 @@
       </div>
       <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Associez un type de séance, un lieu et des horaires. Les créneaux sont générés automatiquement selon la durée de la séance. Une plage hebdomadaire se répète chaque semaine ; une date unique n'apparaît qu'une fois.</p>
       <div id="liste-plages"></div>
+    </div>
+
+    <!-- Indisponibilités -->
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;grid-column:1/-1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">🚫 Indisponibilités</h3>
+        <button class="btn btn-sm" onclick="ouvrirModalIndispo()" style="background:#FEE2E2;color:#991B1B;border-color:#FCA5A5;">+ Ajouter</button>
+      </div>
+      <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Bloquez une période (journée, demi-journée, semaine…) : aucun créneau ne sera proposé pendant cette plage. Utile pour les congés, déplacements, imprévus.</p>
+      <div id="liste-indispos"></div>
     </div>
   </div>
 </div>
@@ -431,7 +442,7 @@ async function sauvegarderNote(id) {
 // Paramètres — Types de séances
 // ============================================================
 async function chargerParametres() {
-  await Promise.all([chargerTypes(), chargerLieux(), chargerPlages()]);
+  await Promise.all([chargerTypes(), chargerLieux(), chargerPlages(), chargerIndisponibilites()]);
 }
 
 async function chargerTypes() {
@@ -645,48 +656,9 @@ async function supprimerLieu(id) {
 // ============================================================
 const JOURS_LABEL = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
 
-async function chargerPlages() {
-  try {
-    const r = await appelApi('/api/agenda/plages');
-    // L'API retourne un tableau directement
-    const plages = Array.isArray(r) ? r : (r.plages || []);
-    const c = document.getElementById('liste-plages');
-    if (!plages.length) {
-      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage configurée.</div>';
-      return;
-    }
-    c.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="color:var(--grey);font-family:'League Spartan',sans-serif;font-size:11px;letter-spacing:.05em;">
-          <th style="padding:6px 0;text-align:left;">Récurrence</th>
-          <th style="padding:6px;text-align:left;">Séance</th>
-          <th style="padding:6px;text-align:left;">Lieu</th>
-          <th style="padding:6px;text-align:left;">Horaires</th>
-          <th style="padding:6px;text-align:left;">Pause</th>
-          <th style="padding:6px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-      ${plages.map(p => `<tr style="border-top:1px solid var(--border);">
-        <td style="padding:8px 0;">
-          ${p.date_unique ? new Date(p.date_unique).toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
-          ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
-        </td>
-        <td style="padding:8px 6px;">
-          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.type_seance_couleur||'#B8922A'};margin-right:6px;vertical-align:middle;"></span>${p.type_seance_nom || '—'}
-        </td>
-        <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
-        <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
-        <td style="padding:8px 6px;">${p.pause_debut && p.pause_fin ? p.pause_debut + ' – ' + p.pause_fin : '—'}</td>
-        <td style="padding:8px 0;text-align:right;">
-          <button class="btn btn-sm btn-danger-outline" onclick="supprimerPlage(${p.id})">🗑</button>
-        </td>
-      </tr>`).join('')}
-      </tbody>
-    </table>`;
-  } catch(e) { console.error(e); }
-}
-
+// ============================================================
+// Paramètres — Plages de disponibilité
+// ============================================================
 function ouvrirModalPlage() {
   const optsTypes = typesSeances.map(t => `<option value="${t.id}">${t.nom}</option>`).join('');
   const optsLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
@@ -724,15 +696,16 @@ function ouvrirModalPlage() {
           <input name="heure_fin" type="time" value="17:00" required>
         </div>
       </div>
-      <p class="helper-text">Pause méridienne (optionnel)</p>
+      <p class="helper-text" style="margin:14px 0 4px;font-weight:600;color:var(--ink);">Période de validité (optionnel)</p>
+      <p class="helper-text" style="margin:0 0 8px;">Laissez vide pour une plage sans limite de durée.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
-          <label>Pause début</label>
-          <input name="pause_debut" type="time" placeholder="12:00">
+          <label>Valide à partir du</label>
+          <input name="valide_du" type="date">
         </div>
         <div>
-          <label>Pause fin</label>
-          <input name="pause_fin" type="time" placeholder="14:00">
+          <label>Valide jusqu'au</label>
+          <input name="valide_au" type="date">
         </div>
       </div>
       <div class="modal-actions">
@@ -760,8 +733,8 @@ async function sauvegarderPlage(evt) {
     date_unique: isUnique ? fd.get('date_unique') : null,
     heure_debut: fd.get('heure_debut'),
     heure_fin: fd.get('heure_fin'),
-    pause_debut: fd.get('pause_debut') || null,
-    pause_fin: fd.get('pause_fin') || null,
+    valide_du: fd.get('valide_du') || null,
+    valide_au: fd.get('valide_au') || null,
     actif: true,
   };
   try {
@@ -778,6 +751,241 @@ async function supprimerPlage(id) {
     await appelApi(`/admin/agenda/plages/${id}`, {method:'DELETE'});
     afficherToast('Supprimé');
     await chargerPlages();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Modifier une plage existante
+// ============================================================
+let plagesCachees = [];
+
+async function chargerPlages() {
+  try {
+    const r = await appelApi('/api/agenda/plages');
+    const plages = Array.isArray(r) ? r : (r.plages || []);
+    plagesCachees = plages;
+    const c = document.getElementById('liste-plages');
+    if (!plages.length) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage configurée.</div>';
+      return;
+    }
+    c.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="color:var(--grey);font-family:'League Spartan',sans-serif;font-size:11px;letter-spacing:.05em;">
+          <th style="padding:6px 0;text-align:left;">Récurrence</th>
+          <th style="padding:6px;text-align:left;">Séance</th>
+          <th style="padding:6px;text-align:left;">Lieu</th>
+          <th style="padding:6px;text-align:left;">Horaires</th>
+          <th style="padding:6px;text-align:left;">Validité</th>
+          <th style="padding:6px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+      ${plages.map(p => {
+        const validite = (p.valide_du || p.valide_au)
+          ? `<span style="font-size:11px;color:var(--grey);">${p.valide_du ? 'Du ' + new Date(p.valide_du+'T00:00').toLocaleDateString('fr-FR') : ''} ${p.valide_au ? 'au ' + new Date(p.valide_au+'T00:00').toLocaleDateString('fr-FR') : ''}</span>`
+          : '<span style="color:var(--grey);font-size:11px;">Sans limite</span>';
+        return `<tr style="border-top:1px solid var(--border);">
+          <td style="padding:8px 0;">
+            ${p.date_unique ? new Date(p.date_unique+'T00:00').toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
+            ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
+          </td>
+          <td style="padding:8px 6px;">
+            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.type_seance_couleur||'#B8922A'};margin-right:6px;vertical-align:middle;"></span>${p.type_seance_nom || '—'}
+          </td>
+          <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
+          <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
+          <td style="padding:8px 6px;">${validite}</td>
+          <td style="padding:8px 0;text-align:right;">
+            <div style="display:flex;gap:4px;justify-content:flex-end;">
+              <button class="btn btn-sm" onclick="ouvrirModalModifierPlage(${p.id})" title="Modifier">✏️</button>
+              <button class="btn btn-sm btn-danger-outline" onclick="supprimerPlage(${p.id})" title="Supprimer">🗑</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+function ouvrirModalModifierPlage(id) {
+  const p = plagesCachees.find(x => x.id === id);
+  if (!p) { afficherToast('Plage introuvable'); return; }
+  const optsTypes = typesSeances.map(t => `<option value="${t.id}" ${t.id === p.type_seance_id ? 'selected' : ''}>${t.nom}</option>`).join('');
+  const optsLieux = lieux.map(l => `<option value="${l.id}" ${l.id === p.lieu_id ? 'selected' : ''}>${l.nom}</option>`).join('');
+  const estUnique = !!p.date_unique;
+  const html = `
+  <div class="overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;">Modifier la plage</h3>
+      <button type="button" class="btn btn-sm" onclick="fermerModal()">✕</button>
+    </div>
+    <form onsubmit="sauvegarderModifierPlage(event, ${id})">
+      <label>Type de séance *</label>
+      <select name="type_seance_id" required>${optsTypes}</select>
+      <label>Lieu *</label>
+      <select name="lieu_id" required>${optsLieux}</select>
+      <label>Récurrence</label>
+      <select name="type_recurrence" onchange="toggleDateUniqueModif(this.value)">
+        <option value="hebdo" ${!estUnique ? 'selected' : ''}>Hebdomadaire (chaque semaine)</option>
+        <option value="unique" ${estUnique ? 'selected' : ''}>Date unique</option>
+      </select>
+      <div id="champ-jour-modif" style="${estUnique ? 'display:none' : ''}">
+        <label>Jour de la semaine *</label>
+        <select name="jour_semaine">
+          ${JOURS_LABEL.map((j,i) => `<option value="${i}" ${p.jour_semaine === i ? 'selected' : ''}>${j}</option>`).join('')}
+        </select>
+      </div>
+      <div id="champ-date-unique-modif" style="${!estUnique ? 'display:none' : ''}">
+        <label>Date *</label>
+        <input name="date_unique" type="date" value="${p.date_unique || ''}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Heure début *</label>
+          <input name="heure_debut" type="time" value="${p.heure_debut}" required>
+        </div>
+        <div>
+          <label>Heure fin *</label>
+          <input name="heure_fin" type="time" value="${p.heure_fin}" required>
+        </div>
+      </div>
+      <p class="helper-text" style="margin:14px 0 4px;font-weight:600;color:var(--ink);">Période de validité (optionnel)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Valide à partir du</label>
+          <input name="valide_du" type="date" value="${p.valide_du || ''}">
+        </div>
+        <div>
+          <label>Valide jusqu'au</label>
+          <input name="valide_au" type="date" value="${p.valide_au || ''}">
+        </div>
+      </div>
+      <label style="margin-top:12px;"><input type="checkbox" name="actif" ${p.actif !== false ? 'checked' : ''}> Actif (proposé à la réservation)</label>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleDateUniqueModif(val) {
+  document.getElementById('champ-jour-modif').style.display = val === 'unique' ? 'none' : '';
+  document.getElementById('champ-date-unique-modif').style.display = val === 'unique' ? '' : 'none';
+}
+
+async function sauvegarderModifierPlage(evt, id) {
+  evt.preventDefault();
+  const fd = new FormData(evt.target);
+  const isUnique = fd.get('type_recurrence') === 'unique';
+  const data = {
+    type_seance_id: parseInt(fd.get('type_seance_id')),
+    lieu_id: parseInt(fd.get('lieu_id')),
+    jour_semaine: isUnique ? null : parseInt(fd.get('jour_semaine')),
+    date_unique: isUnique ? fd.get('date_unique') : null,
+    heure_debut: fd.get('heure_debut'),
+    heure_fin: fd.get('heure_fin'),
+    valide_du: fd.get('valide_du') || null,
+    valide_au: fd.get('valide_au') || null,
+    actif: fd.get('actif') === 'on',
+  };
+  try {
+    await appelApi(`/admin/agenda/plages/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    fermerModal();
+    afficherToast('Plage modifiée');
+    await chargerPlages();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Indisponibilités
+// ============================================================
+async function chargerIndisponibilites() {
+  try {
+    const r = await appelApi('/admin/agenda/indisponibilites');
+    const indispos = Array.isArray(r) ? r : (r.indisponibilites || []);
+    const c = document.getElementById('liste-indispos');
+    if (!c) return;
+    if (!indispos.length) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune indisponibilité planifiée.</div>';
+      return;
+    }
+    const maintenant = new Date();
+    c.innerHTML = indispos.map(i => {
+      const debut = new Date(i.date_debut);
+      const fin = new Date(i.date_fin);
+      const estPasse = fin < maintenant;
+      const debutLabel = debut.toLocaleDateString('fr-FR', {weekday:'short',day:'numeric',month:'long',year:'numeric'}) + ' ' + debut.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+      const finLabel = fin.toLocaleDateString('fr-FR', {weekday:'short',day:'numeric',month:'long',year:'numeric'}) + ' ' + fin.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+      return `<div class="item-param" style="${estPasse ? 'opacity:.5' : ''}">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${i.motif || 'Indisponible'} ${estPasse ? '<em style="font-weight:400;font-size:11px;color:var(--grey);">(passé)</em>' : ''}</div>
+          <div style="font-size:12px;color:var(--grey);">Du ${debutLabel} au ${finLabel}</div>
+        </div>
+        <button class="btn btn-sm btn-danger-outline" onclick="supprimerIndispo(${i.id})">🗑</button>
+      </div>`;
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+function ouvrirModalIndispo() {
+  const html = `
+  <div class="overlay">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;">🚫 Nouvelle indisponibilité</h3>
+      <button type="button" class="btn btn-sm" onclick="fermerModal()">✕</button>
+    </div>
+    <form onsubmit="sauvegarderIndispo(event)">
+      <label>Motif (optionnel)</label>
+      <input name="motif" placeholder="ex : Congés, Déplacement, Maladie…">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Début *</label>
+          <input name="date_debut" type="datetime-local" required>
+          <small class="helper-text">Pour bloquer une journée entière, mettre 00:00</small>
+        </div>
+        <div>
+          <label>Fin *</label>
+          <input name="date_fin" type="datetime-local" required>
+          <small class="helper-text">Pour une journée entière, mettre 23:59</small>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary" style="background:#991B1B;border-color:#991B1B;">🚫 Bloquer cette période</button>
+      </div>
+    </form>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function sauvegarderIndispo(evt) {
+  evt.preventDefault();
+  const fd = new FormData(evt.target);
+  const data = {
+    date_debut: fd.get('date_debut'),
+    date_fin: fd.get('date_fin'),
+    motif: fd.get('motif') || null,
+  };
+  try {
+    await appelApi('/admin/agenda/indisponibilites', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    fermerModal();
+    afficherToast('Période bloquée');
+    await chargerIndisponibilites();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+async function supprimerIndispo(id) {
+  if (!confirm('Supprimer cette indisponibilité ?')) return;
+  try {
+    await appelApi(`/admin/agenda/indisponibilites/${id}`, {method:'DELETE'});
+    afficherToast('Indisponibilité supprimée');
+    await chargerIndisponibilites();
   } catch(e) { afficherToast('Erreur : ' + e.message); }
 }
 

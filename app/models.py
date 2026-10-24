@@ -666,11 +666,31 @@ class PlageDisponibilite(Base):
     # Pause méridienne optionnelle : exclut un bloc dans la journée
     pause_debut = Column(String(5), nullable=True)    # "12:00"
     pause_fin = Column(String(5), nullable=True)      # "13:30"
+    # Période de validité pour les plages récurrentes (hebdo)
+    # NULL = valable indéfiniment
+    valide_du = Column(DateTime, nullable=True)
+    valide_au = Column(DateTime, nullable=True)
     actif = Column(Boolean, default=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
 
     type_seance = relationship("TypeSeance", back_populates="plages")
     lieu = relationship("Lieu", back_populates="plages")
+
+
+class IndisponibiliteAgenda(Base):
+    """Période durant laquelle Laurence n'est pas disponible.
+
+    Bloque tous les créneaux sur la plage horaire indiquée,
+    quel que soit le type de séance ou le lieu.
+    Exemple : vacances, jour de repos, indisponibilité ponctuelle.
+    """
+    __tablename__ = "agenda_indisponibilites"
+
+    id = Column(Integer, primary_key=True)
+    date_debut = Column(DateTime, nullable=False)   # début de l'indispo
+    date_fin = Column(DateTime, nullable=False)     # fin de l'indispo (incluse)
+    motif = Column(String(200), nullable=True)      # libellé interne (non montré aux clientes)
+    cree_le = Column(DateTime, default=datetime.utcnow)
 
 
 class Reservation(Base):

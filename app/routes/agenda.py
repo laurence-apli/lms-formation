@@ -21,6 +21,7 @@ from ..database import obtenir_session
 from ..models import (
     TypeSeance, Lieu, PlageDisponibilite, Reservation, RappelEnvoye,
     SeanceAccompagnement, AccesFormation, Eleve, Administrateur,
+    IndisponibiliteAgenda,
 )
 from .auth import admin_connecte
 
@@ -270,6 +271,8 @@ def lister_plages(session: Session = Depends(obtenir_session)):
             "heure_fin": p.heure_fin,
             "pause_debut": p.pause_debut,
             "pause_fin": p.pause_fin,
+            "valide_du": p.valide_du.date().isoformat() if p.valide_du else None,
+            "valide_au": p.valide_au.date().isoformat() if p.valide_au else None,
         }
         for p in plages
     ]
@@ -282,9 +285,19 @@ class PlageIn(BaseModel):
     heure_fin: str
     jour_semaine: Optional[int] = None
     date_unique: Optional[str] = None
-    pause_debut: Optional[str] = None
-    pause_fin: Optional[str] = None
+    valide_du: Optional[str] = None   # "YYYY-MM-DD" ou None = toujours valable
+    valide_au: Optional[str] = None   # "YYYY-MM-DD" ou None = pas de fin
     actif: bool = True
+
+
+def _parse_date_opt(s: Optional[str]) -> Optional[datetime]:
+    """Convertit une chaîne YYYY-MM-DD en datetime (minuit), ou None si vide."""
+    if not s:
+        return None
+    try:
+        return datetime.fromisoformat(s)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Format de date invalide : {s}")
 
 
 @admin_router.post("/plages")
@@ -292,12 +305,9 @@ def creer_plage(data: PlageIn, session: Session = Depends(obtenir_session)):
     if data.jour_semaine is None and not data.date_unique:
         raise HTTPException(status_code=400, detail="Jour de la semaine ou date unique requis.")
 
-    date_u = None
-    if data.date_unique:
-        try:
-            date_u = datetime.fromisoformat(data.date_unique)
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Format de date invalide.")
+    date_u = _parse_date_opt(data.date_unique)
+    valide_du = _parse_date_opt(data.valide_du)
+    valide_au = _parse_date_opt(data.valide_au)
 
     plage = PlageDisponibilite(
         type_seance_id=data.type_seance_id,
@@ -306,12 +316,34 @@ def creer_plage(data: PlageIn, session: Session = Depends(obtenir_session)):
         date_unique=date_u,
         heure_debut=data.heure_debut,
         heure_fin=data.heure_fin,
-        pause_debut=(data.pause_debut or "").strip() or None,
-        pause_fin=(data.pause_fin or "").strip() or None,
+        valide_du=valide_du,
+        valide_au=valide_au,
     )
     session.add(plage)
     session.commit()
     return {"id": plage.id}
+
+
+@admin_router.put("/plages/{plage_id}")
+def modifier_plage(plage_id: int, data: PlageIn, session: Session = Depends(obtenir_session)):
+    """Modifie une plage de disponibilité existante."""
+    plage = session.get(PlageDisponibilite, plage_id)
+    if not plage:
+        raise HTTPException(status_code=404, detail="Plage introuvable.")
+    if data.jour_semaine is None and not data.date_unique:
+        raise HTTPException(status_code=400, detail="Jour de la semaine ou date unique requis.")
+
+    plage.type_seance_id = data.type_seance_id
+    plage.lieu_id = data.lieu_id
+    plage.jour_semaine = data.jour_semaine
+    plage.date_unique = _parse_date_opt(data.date_unique)
+    plage.heure_debut = data.heure_debut
+    plage.heure_fin = data.heure_fin
+    plage.valide_du = _parse_date_opt(data.valide_du)
+    plage.valide_au = _parse_date_opt(data.valide_au)
+    plage.actif = data.actif
+    session.commit()
+    return {"ok": True}
 
 
 @admin_router.delete("/plages/{plage_id}")
@@ -320,6 +352,76 @@ def supprimer_plage(plage_id: int, session: Session = Depends(obtenir_session)):
     if not plage:
         raise HTTPException(status_code=404, detail="Plage introuvable.")
     plage.actif = False
+    session.commit()
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# ADMIN — API Indisponibilités
+# ---------------------------------------------------------------------------
+
+@admin_router.get("/indisponibilites")
+def lister_indisponibilites(session: Session = Depends(obtenir_session)):
+    """Liste toutes les indisponibilités (futures d'abord)."""
+    indispos = (
+        session.query(IndisponibiliteAgenda)
+        .order_by(IndisponibiliteAgenda.date_debut)
+        .all()
+    )
+    return [
+        {
+            "id": i.id,
+            "date_debut": i.date_debut.isoformat(),
+            "date_fin": i.date_fin.isoformat(),
+            "motif": i.motif,
+            "cree_le": i.cree_le.isoformat() if i.cree_le else None,
+        }
+        for i in indispos
+    ]
+
+
+class IndisponibiliteIn(BaseModel):
+    date_debut: str    # ISO datetime "YYYY-MM-DD" ou "YYYY-MM-DDTHH:MM"
+    date_fin: str      # ISO datetime (inclusive)
+    motif: Optional[str] = None
+
+
+@admin_router.post("/indisponibilites")
+def creer_indisponibilite(data: IndisponibiliteIn, session: Session = Depends(obtenir_session)):
+    """Crée une indisponibilité (vacances, jour de repos, etc.)."""
+    try:
+        dt_debut = datetime.fromisoformat(data.date_debut)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format date_debut invalide.")
+    try:
+        dt_fin = datetime.fromisoformat(data.date_fin)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format date_fin invalide.")
+
+    if dt_fin < dt_debut:
+        raise HTTPException(status_code=400, detail="La date de fin doit être après la date de début.")
+
+    # Si date pure (sans heure), on étend la fin à 23:59 pour couvrir toute la journée
+    if dt_fin.hour == 0 and dt_fin.minute == 0 and dt_fin.second == 0:
+        dt_fin = dt_fin.replace(hour=23, minute=59)
+
+    indispo = IndisponibiliteAgenda(
+        date_debut=dt_debut,
+        date_fin=dt_fin,
+        motif=(data.motif or "").strip() or None,
+    )
+    session.add(indispo)
+    session.commit()
+    return {"id": indispo.id, "ok": True}
+
+
+@admin_router.delete("/indisponibilites/{indispo_id}")
+def supprimer_indisponibilite(indispo_id: int, session: Session = Depends(obtenir_session)):
+    """Supprime définitivement une indisponibilité."""
+    indispo = session.get(IndisponibiliteAgenda, indispo_id)
+    if not indispo:
+        raise HTTPException(status_code=404, detail="Indisponibilité introuvable.")
+    session.delete(indispo)
     session.commit()
     return {"ok": True}
 
@@ -559,6 +661,25 @@ def api_lister_plages(
     ]
 
 
+@api_router.get("/indisponibilites")
+def api_lister_indisponibilites(session: Session = Depends(obtenir_session)):
+    """Liste les indisponibilités (utilisé par le JS d'agenda admin)."""
+    indispos = (
+        session.query(IndisponibiliteAgenda)
+        .order_by(IndisponibiliteAgenda.date_debut)
+        .all()
+    )
+    return [
+        {
+            "id": i.id,
+            "date_debut": i.date_debut.isoformat(),
+            "date_fin": i.date_fin.isoformat(),
+            "motif": i.motif,
+        }
+        for i in indispos
+    ]
+
+
 @api_router.get("/semaine")
 def api_semaine(
     debut: Optional[str] = None,
@@ -624,11 +745,25 @@ def api_detail_reservation(
 # API PUBLIQUE — Disponibilités et réservation
 # ===========================================================================
 
+def _plage_valide_pour_date(plage: PlageDisponibilite, pour_date: date) -> bool:
+    """Vérifie que la plage est valide pour une date donnée (période valide_du / valide_au)."""
+    if plage.valide_du and pour_date < plage.valide_du.date():
+        return False
+    if plage.valide_au and pour_date > plage.valide_au.date():
+        return False
+    return True
+
+
 def _creneaux_pour_plage(plage: PlageDisponibilite, pour_date: date) -> list[tuple]:
     """Calcule les créneaux disponibles pour une plage sur une date donnée.
     Retourne une liste de (heure_debut_str, heure_fin_str).
     Le temps de repos (pause_apres_minutes) est pris en compte pour l'espacement
-    entre créneaux : le créneau suivant ne peut démarrer qu'après duree + repos."""
+    entre créneaux : le créneau suivant ne peut démarrer qu'après duree + repos.
+    Tient compte de la période de validité (valide_du / valide_au)."""
+    # Vérifier la période de validité
+    if not _plage_valide_pour_date(plage, pour_date):
+        return []
+
     ts = plage.type_seance
     duree = ts.duree_minutes
     repos = ts.pause_apres_minutes or 0  # temps de repos après séance
@@ -665,6 +800,24 @@ def _creneaux_pour_plage(plage: PlageDisponibilite, pour_date: date) -> list[tup
         curseur = (datetime.combine(date.today(), curseur) + timedelta(minutes=duree + repos)).time()
 
     return creneaux
+
+
+def _indispo_pour_datetime(dt: datetime, session: Session) -> bool:
+    """Retourne True si le datetime donné est couvert par une indisponibilité."""
+    return session.query(IndisponibiliteAgenda).filter(
+        IndisponibiliteAgenda.date_debut <= dt,
+        IndisponibiliteAgenda.date_fin >= dt,
+    ).first() is not None
+
+
+def _indispos_du_jour(d: date, session: Session) -> list:
+    """Retourne les indisponibilités qui chevauchent une journée donnée."""
+    debut_jour = datetime.combine(d, time(0, 0))
+    fin_jour = datetime.combine(d, time(23, 59))
+    return session.query(IndisponibiliteAgenda).filter(
+        IndisponibiliteAgenda.date_debut <= fin_jour,
+        IndisponibiliteAgenda.date_fin >= debut_jour,
+    ).all()
 
 
 @api_router.get("/disponibilites")
@@ -714,6 +867,9 @@ def disponibilites(
         if d < date.today():
             continue
 
+        # Si tout le jour est en indisponibilité, pas besoin de vérifier les plages
+        indispos_jour = _indispos_du_jour(d, session)
+
         # Trouver les plages qui couvrent ce jour
         for plage in plages:
             couvre = False
@@ -743,7 +899,16 @@ def disponibilites(
                 .all()
             )
             heures_prises = {r.date_debut.strftime("%H:%M") for r in reservations_jour}
-            creneaux_libres = [c for c in creneaux if c[0] not in heures_prises]
+
+            # Filtrer les créneaux bloqués par une indisponibilité
+            def _heure_en_indispo(h: str) -> bool:
+                dt_test = datetime.combine(d, time(int(h[:2]), int(h[3:])))
+                return any(i.date_debut <= dt_test <= i.date_fin for i in indispos_jour)
+
+            creneaux_libres = [
+                c for c in creneaux
+                if c[0] not in heures_prises and not _heure_en_indispo(c[0])
+            ]
 
             if creneaux_libres:
                 jours_disponibles.append(d.isoformat())
@@ -806,10 +971,16 @@ def creneaux_du_jour(
     )
     heures_prises = {r.date_debut.strftime("%H:%M") for r in reservations_jour}
 
+    # Filtrer les créneaux bloqués par une indisponibilité
+    indispos_jour = _indispos_du_jour(d, session)
+    def _heure_en_indispo_creneaux(h: str) -> bool:
+        dt_test = datetime.combine(d, time(int(h[:2]), int(h[3:])))
+        return any(i.date_debut <= dt_test <= i.date_fin for i in indispos_jour)
+
     creneaux_libres = [
         {"debut": c[0], "fin": c[1]}
         for c in tous_creneaux
-        if c[0] not in heures_prises
+        if c[0] not in heures_prises and not _heure_en_indispo_creneaux(c[0])
     ]
 
     # Trouver le lieu associé à ces plages
