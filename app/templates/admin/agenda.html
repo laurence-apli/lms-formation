@@ -515,7 +515,7 @@ async function sauvegarderType(evt, id) {
     pause_apres_minutes: parseInt(fd.get('pause_apres_minutes') || '0'),
     modalite: fd.get('modalite'),
     couleur_hex: fd.get('couleur_hex'),
-    description: fd.get('description') || null,
+    description: fd.get('description') || '',
     actif: fd.get('actif') === 'on',
   };
   try {

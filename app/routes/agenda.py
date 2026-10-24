@@ -119,7 +119,7 @@ class TypeSeanceIn(BaseModel):
     pause_apres_minutes: int = 0
     modalite: str = "cabinet"
     couleur_hex: str = "#B8922A"
-    description: str = ""
+    description: Optional[str] = None   # le JS peut envoyer null si vide
     actif: bool = True
 
 
@@ -380,7 +380,7 @@ def changer_statut_reservation(
         resa.note_admin = data.note_admin.strip()
 
     # Si marquée réalisée, créer une SeanceAccompagnement si l'élève est connu
-    if statut == "realisee" and resa.eleve_id:
+    if data.statut == "realisee" and resa.eleve_id:
         from ..models import AccesFormation
         # On cherche le premier accès actif de l'élève
         acces = (
