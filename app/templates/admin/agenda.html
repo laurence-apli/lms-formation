@@ -61,18 +61,8 @@
     </div>
     {% endfor %}
 
-    <!-- Plages horaires 8h–20h -->
-    {% for h in range(8, 20) %}
-    <div class="label-heure" style="background:var(--panel);padding:4px 6px;font-size:11px;color:var(--grey);
-                text-align:right;border-top:1px solid var(--border);height:52px;line-height:1;">
-      {{ '%02d'|format(h) }}h
-    </div>
-    {% for j in range(7) %}
-    <div class="cellule-heure" data-heure="{{ h }}" data-jour="{{ j }}"
-         style="background:var(--panel);border-top:1px solid #f0e9d6;height:52px;position:relative;padding:2px;">
-    </div>
-    {% endfor %}
-    {% endfor %}
+    <!-- Plages horaires : générées dynamiquement par JS selon les données réelles -->
+    <div id="grille-corps"></div>
   </div>
 </div>
 
@@ -211,9 +201,8 @@ let hauteurHeure = 52; // px par tranche horaire, ajustable avec zoom
 
 function ajusterZoom(delta) {
   hauteurHeure = Math.max(28, Math.min(120, hauteurHeure + delta));
-  // Mettre à jour toutes les cellules et les labels d'heures
-  document.querySelectorAll('.cellule-heure').forEach(c => c.style.height = hauteurHeure + 'px');
-  document.querySelectorAll('.label-heure').forEach(c => c.style.height = hauteurHeure + 'px');
+  // Forcer la reconstruction de la grille (hauteurHeure a changé)
+  heureGrilleMin = -1;
   // Recharger la semaine pour repositionner les blocs
   chargerSemaine();
 }
@@ -234,6 +223,40 @@ function changerOnglet(tab, btn) {
 // ============================================================
 // Grille semaine
 // ============================================================
+let heureGrilleMin = 8;  // bornes actuelles de la grille (mis à jour dynamiquement)
+let heureGrilleMax = 20;
+
+function construireGrille(hMin, hMax) {
+  const grille = document.getElementById('grille-semaine');
+  if (!grille) return;
+  // Supprimer le placeholder initial (#grille-corps) s'il existe encore
+  const placeholder = document.getElementById('grille-corps');
+  if (placeholder) placeholder.remove();
+  // Ne reconstruit que si les bornes ou la hauteur ont changé
+  if (hMin === heureGrilleMin && hMax === heureGrilleMax &&
+      document.querySelectorAll('.cellule-heure').length > 0) return;
+  heureGrilleMin = hMin;
+  heureGrilleMax = hMax;
+  // Supprimer les lignes existantes
+  grille.querySelectorAll('.label-heure,.cellule-heure').forEach(el => el.remove());
+  for (let h = hMin; h < hMax; h++) {
+    const label = document.createElement('div');
+    label.className = 'label-heure';
+    label.dataset.heure = h;
+    label.style.cssText = `background:var(--panel);padding:4px 6px;font-size:11px;color:var(--grey);text-align:right;border-top:1px solid var(--border);height:${hauteurHeure}px;line-height:1;`;
+    label.textContent = String(h).padStart(2,'0') + 'h';
+    grille.appendChild(label);
+    for (let j = 0; j < 7; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'cellule-heure';
+      cell.dataset.heure = h;
+      cell.dataset.jour = j;
+      cell.style.cssText = `background:var(--panel);border-top:1px solid #f0e9d6;height:${hauteurHeure}px;position:relative;padding:2px;`;
+      grille.appendChild(cell);
+    }
+  }
+}
+
 function lundiDeLaSemaine(offset) {
   const d = new Date();
   const jour = d.getDay() || 7;
@@ -306,23 +329,64 @@ async function chargerSemaine() {
     dateSpan.style.margin = estAuj ? '0 auto' : '';
   });
 
-  // Vider les cellules
-  document.querySelectorAll('.cellule-heure').forEach(c => c.innerHTML = '');
-
   const fin = new Date(lundi);
   fin.setDate(fin.getDate() + 6);
   const debutStr = formatDateISO(lundi);
   const finStr = formatDateISO(fin);
 
   try {
+    let donnees = [];
     if (modeVue === 'reservations') {
-      // Mode réservations : afficher les RDV pris
       const r = await appelApi(`/api/agenda/semaine?debut=${debutStr}&fin=${finStr}`);
-      (r.reservations || r || []).forEach(rdv => afficherRdvGrille(rdv, lundi));
+      donnees = r.reservations || r || [];
     } else {
-      // Mode créneaux : grouper par (jourIdx, heure_debut) puis afficher côte à côte
-      const bandeaux = await appelApi(`/api/agenda/creneaux-semaine?debut=${debutStr}&fin=${finStr}`);
-      if (Array.isArray(bandeaux)) afficherBandeauxGrouillant(bandeaux, lundi);
+      donnees = await appelApi(`/api/agenda/creneaux-semaine?debut=${debutStr}&fin=${finStr}`);
+      if (!Array.isArray(donnees)) donnees = [];
+    }
+
+    // Calculer les bornes horaires réelles (min planche de toutes les données)
+    let hMin = 8, hMax = 20;
+    if (donnees.length > 0) {
+      let minH = 23, maxH = 0;
+      donnees.forEach(d => {
+        // Mode créneaux : heure_debut / heure_fin (strings "HH:MM:SS")
+        if (d.heure_debut) {
+          const h = parseInt(d.heure_debut.split(':')[0]);
+          if (h < minH) minH = h;
+        }
+        if (d.heure_fin) {
+          const h = parseInt(d.heure_fin.split(':')[0]);
+          const m = parseInt(d.heure_fin.split(':')[1] || 0);
+          const hFin = h + (m > 0 ? 1 : 0);  // arrondi supérieur
+          if (hFin > maxH) maxH = hFin;
+        }
+        // Mode réservations : date_debut / date_fin (ISO datetime)
+        if (d.date_debut) {
+          const dt = new Date(d.date_debut);
+          if (dt.getHours() < minH) minH = dt.getHours();
+        }
+        if (d.date_fin) {
+          const dt = new Date(d.date_fin);
+          const hFin = dt.getHours() + (dt.getMinutes() > 0 ? 1 : 0);
+          if (hFin > maxH) maxH = hFin;
+        }
+      });
+      // Bornes : au plus tôt 7h, au plus tard 23h ; marge d'1h en bas
+      hMin = Math.min(8, minH);
+      hMax = Math.max(20, maxH + 1);
+    }
+
+    // (Re)construire la grille si les bornes ont changé
+    construireGrille(hMin, hMax);
+
+    // Vider les cellules
+    document.querySelectorAll('.cellule-heure').forEach(c => c.innerHTML = '');
+
+    // Afficher les données
+    if (modeVue === 'reservations') {
+      donnees.forEach(rdv => afficherRdvGrille(rdv, lundi));
+    } else {
+      afficherBandeauxGrouillant(donnees, lundi);
     }
     // Toujours charger et afficher les indisponibilités
     await afficherIndisposGrille(debutStr, finStr, lundi);
@@ -339,15 +403,11 @@ function afficherRdvGrille(rdv, lundi) {
   const heureDebut = debut.getHours() + debut.getMinutes() / 60;
   const heureFin = fin.getHours() + fin.getMinutes() / 60;
 
-  if (heureDebut < 8 || heureDebut >= 20) return;
+  if (heureDebut < heureGrilleMin || heureDebut >= heureGrilleMax) return;
 
-  // Cellule de départ : ligne (heureDebut - 8), colonne jourIdx
-  const heureIdx = Math.floor(heureDebut) - 8;
-  const cellule = document.querySelector(`.cellule-heure[data-heure="${Math.floor(heureDebut) + 8 - (8)}"][data-jour="${jourIdx}"]`);
-  // Sélection précise
-  const cells = document.querySelectorAll(`.cellule-heure`);
+  // Trouver la cellule correspondant à l'heure de début
   let cible = null;
-  cells.forEach(c => {
+  document.querySelectorAll('.cellule-heure').forEach(c => {
     if (parseInt(c.dataset.heure) === Math.floor(heureDebut) && parseInt(c.dataset.jour) === jourIdx) cible = c;
   });
   if (!cible) return;
@@ -378,7 +438,7 @@ function afficherBandeauxGrouillant(bandeaux, lundi) {
     const [hF, mF] = b.heure_fin.split(':').map(Number);
     return { ...b, jourIdx, hD, mD, hF, mF,
       heureDebut: hD + mD/60, heureFin: hF + mF/60 };
-  }).filter(b => b.jourIdx >= 0 && b.jourIdx <= 6 && b.hD >= 8 && b.hD < 20);
+  }).filter(b => b.jourIdx >= 0 && b.jourIdx <= 6 && b.hD >= heureGrilleMin && b.hD < heureGrilleMax);
 
   // Étape 2 : grouper par (jourIdx, hD, mD) — même cellule de départ
   const groupes = {};
@@ -488,9 +548,9 @@ async function afficherIndisposGrille(debutStr, finStr, lundi) {
           ? dtDebut.getHours() + dtDebut.getMinutes()/60 : 0;
         const hFinJour = jourDate.toDateString() === dtFin.toDateString()
           ? dtFin.getHours() + dtFin.getMinutes()/60 : 24;
-        // Cellules concernées (8h–20h)
-        const hStart = Math.max(8, Math.floor(hDebutJour));
-        const hEnd = Math.min(20, Math.ceil(hFinJour));
+        // Cellules concernées (bornes dynamiques de la grille)
+        const hStart = Math.max(heureGrilleMin, Math.floor(hDebutJour));
+        const hEnd = Math.min(heureGrilleMax, Math.ceil(hFinJour));
         for (let h = hStart; h < hEnd; h++) {
           const cells = document.querySelectorAll('.cellule-heure');
           cells.forEach(c => {

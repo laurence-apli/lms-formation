@@ -623,6 +623,9 @@ class TypeSeance(Base):
     modalite = Column(String(20), nullable=False, default="cabinet")
     couleur_hex = Column(String(10), default="#B8922A")
     description = Column(Text, nullable=True)
+    # 'individuelle' | 'collective'
+    format_seance = Column(String(20), nullable=False, default="individuelle")
+    nb_places_max = Column(Integer, nullable=True)   # None si individuelle
     actif = Column(Boolean, default=True)
     ordre = Column(Integer, default=0)
 

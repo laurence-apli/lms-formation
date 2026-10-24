@@ -108,7 +108,10 @@ def lister_types_seances(session: Session = Depends(obtenir_session)):
             "id": t.id, "nom": t.nom, "duree_minutes": t.duree_minutes,
             "pause_apres_minutes": t.pause_apres_minutes or 0,
             "modalite": t.modalite, "couleur_hex": t.couleur_hex,
-            "description": t.description, "actif": t.actif, "ordre": t.ordre,
+            "description": t.description,
+            "format_seance": t.format_seance or "individuelle",
+            "nb_places_max": t.nb_places_max,
+            "actif": t.actif, "ordre": t.ordre,
         }
         for t in ts
     ]
@@ -121,6 +124,8 @@ class TypeSeanceIn(BaseModel):
     modalite: str = "cabinet"
     couleur_hex: str = "#B8922A"
     description: Optional[str] = None   # le JS peut envoyer null si vide
+    format_seance: str = "individuelle"  # 'individuelle' | 'collective'
+    nb_places_max: Optional[int] = None  # None si individuelle
     actif: bool = True
 
 
@@ -138,7 +143,9 @@ def creer_type_seance(data: TypeSeanceIn, session: Session = Depends(obtenir_ses
         pause_apres_minutes=data.pause_apres_minutes,
         modalite=data.modalite,
         couleur_hex=data.couleur_hex,
-        description=data.description.strip() or None,
+        description=data.description.strip() if data.description else None,
+        format_seance=data.format_seance if data.format_seance in ("individuelle", "collective") else "individuelle",
+        nb_places_max=data.nb_places_max if data.format_seance == "collective" else None,
         ordre=max_ordre,
     )
     session.add(ts)
@@ -156,7 +163,9 @@ def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depe
     ts.pause_apres_minutes = data.pause_apres_minutes
     ts.modalite = data.modalite
     ts.couleur_hex = data.couleur_hex
-    ts.description = data.description.strip() or None
+    ts.description = data.description.strip() if data.description else None
+    ts.format_seance = data.format_seance if data.format_seance in ("individuelle", "collective") else "individuelle"
+    ts.nb_places_max = data.nb_places_max if data.format_seance == "collective" else None
     ts.actif = data.actif
     session.commit()
     return {"ok": True}

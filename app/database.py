@@ -50,6 +50,9 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE agenda_plages_disponibilites ADD COLUMN IF NOT EXISTS valide_du TIMESTAMP",
     "ALTER TABLE agenda_plages_disponibilites ADD COLUMN IF NOT EXISTS valide_au TIMESTAMP",
     # La table agenda_indisponibilites est nouvelle → créée par create_all, pas de ALTER TABLE.
+    # Format individuelle/collective + places max (ajouté oct. 2026)
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS format_seance VARCHAR(20) DEFAULT 'individuelle'",
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS nb_places_max INTEGER",
 ]
 
 
