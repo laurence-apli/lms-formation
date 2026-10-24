@@ -177,3 +177,15 @@ def lire_catalogue_complet(session: Session = Depends(obtenir_session)):
         tarifs_tries = sorted(f.tarifs, key=lambda t: t.ordre)
         resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "image_url": f.image_url, "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
     return resultat
+
+
+# --- Suppression des commandes de test ------------------------------------
+
+@router.delete("/commandes/tout-supprimer")
+def supprimer_toutes_commandes(session: Session = Depends(obtenir_session)):
+    """Supprime toutes les commandes et lignes de commande (remise à zéro des données de test)."""
+    from .boutique_models import Commande, LigneCommande
+    nb_lignes = session.query(LigneCommande).delete()
+    nb_commandes = session.query(Commande).delete()
+    session.commit()
+    return {"ok": True, "commandes_supprimees": nb_commandes, "lignes_supprimees": nb_lignes}

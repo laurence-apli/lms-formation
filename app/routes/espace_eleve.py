@@ -127,7 +127,9 @@ def detail_formation(
         'lien_resalib': eleve.lien_resalib,
         'lien_resalib_visio': eleve.lien_resalib_visio,
         # Séances de suivi comprises : réservation directe dans Resalib (seul agenda utilisé)
-        'rdv_suivi': RESALIB_SUIVI if (jours_cabinet_total > 0 or jours_visio_total > 0) else None,
+        # Les formations acces_auto sont des formations de bienvenue/démo : le bouton s'affiche
+        # mais n'ouvre pas Resalib (pas de vraie réservation possible).
+        'rdv_suivi': (None if formation.acces_auto else RESALIB_SUIVI) if (jours_cabinet_total > 0 or jours_visio_total > 0) else None,
     'medias': [
         media_json('formation', m)
         for m in formation.medias

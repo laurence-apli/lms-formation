@@ -629,16 +629,21 @@ function afficherSommaire() {
   // Séances de suivi comprises dans l'accompagnement : réservation directe sur Resalib
   // (l'ancien compteur de jours cabinet / visio et les e-mails de demande sont supprimés).
   const zoneAccomp = document.getElementById('bloc-accompagnement-zone');
-  if (f.rdv_suivi) {
+  const aAccomp = f.accompagnement_cabinet || f.accompagnement_visio;
+  if (aAccomp) {
     const nbCab = f.accompagnement_cabinet ? f.accompagnement_cabinet.total : 0;
     const nbVis = f.accompagnement_visio ? f.accompagnement_visio.total : 0;
     const detail = [nbCab ? nbCab + ' en cabinet' : '', nbVis ? nbVis + ' en visio' : ''].filter(Boolean).join(' et ');
+    const btnHtml = f.rdv_suivi
+      ? '<a href="' + f.rdv_suivi + '" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">Réserver une séance de suivi ↗</a>'
+      : '<button disabled style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:#999;background:#f0ede6;border:1px solid #d9c9a0;cursor:default;">Réserver une séance de suivi</button>'
+        + '<div style="font-size:12px;color:var(--grey);margin-top:6px;">Non disponible dans ce menu de démonstration.</div>';
     zoneAccomp.innerHTML = '<div class="bloc-accompagnement-eleve" style="text-align:left;max-width:520px;">'
       + '<div style="font-weight:600;margin-bottom:4px;">Tes séances de suivi avec Laurence</div>'
       + '<div style="font-size:13px;color:var(--grey);margin-bottom:10px;">'
       + (detail ? 'Ton accompagnement comprend ' + detail + '. ' : '')
-      + 'Choisis ton créneau directement dans l\'agenda de Laurence.</div>'
-      + '<a href="' + f.rdv_suivi + '" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">Réserver une séance de suivi ↗</a>'
+      + (f.rdv_suivi ? 'Choisis ton créneau directement dans l\'agenda de Laurence.' : '') + '</div>'
+      + btnHtml
       + '</div>';
   } else {
     zoneAccomp.innerHTML = '';

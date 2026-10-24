@@ -68,6 +68,17 @@ async def rediriger_vers_connexion(request: Request, exc: StarletteHTTPException
 @app.on_event("startup")
 def au_demarrage():
     initialiser_base()
+    # Messagerie ouverte à toutes les élèves par défaut (plus seulement les comptes test)
+    from .database import SessionLocal
+    from .messagerie_models import lire_parametre, ecrire_parametre
+    try:
+        session = SessionLocal()
+        valeur_actuelle = lire_parametre(session, "messagerie_visible_eleves", "tous")
+        if valeur_actuelle != "tous":
+            ecrire_parametre(session, "messagerie_visible_eleves", "tous")
+        session.close()
+    except Exception:
+        pass  # table pas encore créée au tout premier démarrage
 
 
 @app.get("/")

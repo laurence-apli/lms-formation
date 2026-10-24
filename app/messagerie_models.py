@@ -111,7 +111,7 @@ def messagerie_visible_pour(session, eleve) -> bool:
     voient l'onglet Messages (la messagerie arrive « éteinte » pour les élèves)."""
     if eleve is None:
         return False
-    if lire_parametre(session, "messagerie_visible_eleves", "test") == "tous":
+    if lire_parametre(session, "messagerie_visible_eleves", "tous") == "tous":
         return True
     return bool(eleve.compte_test)
 

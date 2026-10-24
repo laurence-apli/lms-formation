@@ -602,7 +602,7 @@ def admin_documents_recus(session: Session = Depends(obtenir_session)):
 
 @admin_router.get("/reglages")
 def admin_lire_reglages(session: Session = Depends(obtenir_session)):
-    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "test")}
+    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "tous")}
 
 
 class Reglages(BaseModel):
@@ -650,7 +650,7 @@ def admin_tous_destinataires(session: Session = Depends(obtenir_session)):
         res.append({"id": f.id, "titre": f.titre, "actif": bool(f.actif),
                     "modules": [{"id": m.id, "libelle": "Module %d — %s" % (i + 1, m.titre)} for i, m in enumerate(f.modules)],
                     "eleves": eleves})
-    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "test"), "formations": res}
+    return {"visible_eleves": lire_parametre(session, "messagerie_visible_eleves", "tous"), "formations": res}
 
 
 @admin_router.get("/formations/{formation_id}/eleves")
@@ -718,7 +718,7 @@ def _resoudre_cible(session: Session, c: Cible):
 def admin_apercu(c: Cible, session: Session = Depends(obtenir_session)):
     formation, acces, _ = _resoudre_cible(session, c)
     av = _avancements(session, formation, acces)
-    visibles = lire_parametre(session, "messagerie_visible_eleves", "test") == "tous"
+    visibles = lire_parametre(session, "messagerie_visible_eleves", "tous") == "tous"
     return {"nb": len(acces), "mode_test": not visibles, "eleves": sorted([
         {"id": a.eleve_id, "nom": _nom(a.eleve), "test": bool(a.eleve.compte_test),
          "avancement": av[a.eleve_id]["libelle"], "pct": av[a.eleve_id]["pct"]} for a in acces
