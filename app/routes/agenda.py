@@ -543,8 +543,10 @@ def api_lister_plages(
     return [
         {
             "id": p.id,
+            "id": p.id,
             "type_seance_id": p.type_seance_id,
             "type_seance_nom": p.type_seance.nom if p.type_seance else None,
+            "type_seance_couleur": p.type_seance.couleur_hex if p.type_seance else "#B8922A",
             "lieu_id": p.lieu_id,
             "lieu_nom": p.lieu.nom if p.lieu else None,
             "jour_semaine": p.jour_semaine,
