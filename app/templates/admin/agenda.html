@@ -1,0 +1,753 @@
+{% extends "admin/base.html" %}
+{% block titre %}Agenda — Administration{% endblock %}
+
+{% block contenu %}
+<div class="topbar">
+  <div>
+    <div class="breadcrumb"><a href="/admin/agenda/">Agenda</a></div>
+    <h1>📅 Agenda</h1>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <button class="btn" onclick="ouvrirModalType()">+ Type de séance</button>
+    <button class="btn" onclick="ouvrirModalLieu()">+ Lieu</button>
+    <button class="btn btn-primary" onclick="ouvrirModalPlage()">+ Disponibilité</button>
+  </div>
+</div>
+
+<!-- Onglets -->
+<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:24px;">
+  <button class="onglet-btn active" data-tab="semaine" onclick="changerOnglet('semaine',this)">Semaine</button>
+  <button class="onglet-btn" data-tab="reservations" onclick="changerOnglet('reservations',this)">Réservations</button>
+  <button class="onglet-btn" data-tab="parametres" onclick="changerOnglet('parametres',this)">Paramètres</button>
+</div>
+
+<!-- ===== ONGLET SEMAINE ===== -->
+<div id="tab-semaine">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+    <button class="btn btn-sm" onclick="changerSemaine(-1)">‹ Préc.</button>
+    <span id="label-semaine" style="font-family:'EB Garamond',serif;font-size:18px;font-weight:600;min-width:220px;text-align:center;"></span>
+    <button class="btn btn-sm" onclick="changerSemaine(1)">Suiv. ›</button>
+    <button class="btn btn-sm" onclick="allerAujourd_hui()">Aujourd'hui</button>
+  </div>
+
+  <div id="grille-semaine" style="display:grid;grid-template-columns:60px repeat(7,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden;">
+    <!-- Entêtes jours -->
+    <div style="background:var(--panel);padding:8px;"></div>
+    {% for j in ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+    <div class="entete-jour" data-index="{{ loop.index0 }}"
+         style="background:var(--panel);padding:8px 4px;text-align:center;font-family:'League Spartan',sans-serif;
+                font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--grey);">
+      <span class="jour-nom">{{ j }}</span><br>
+      <span class="jour-date" style="font-size:16px;font-weight:700;color:var(--ink);"></span>
+    </div>
+    {% endfor %}
+
+    <!-- Plages horaires 8h–20h -->
+    {% for h in range(8, 20) %}
+    <div style="background:var(--panel);padding:4px 6px;font-size:11px;color:var(--grey);
+                text-align:right;border-top:1px solid var(--border);height:52px;line-height:1;">
+      {{ '%02d'|format(h) }}h
+    </div>
+    {% for j in range(7) %}
+    <div class="cellule-heure" data-heure="{{ h }}" data-jour="{{ j }}"
+         style="background:var(--panel);border-top:1px solid #f0e9d6;height:52px;position:relative;padding:2px;">
+    </div>
+    {% endfor %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ===== ONGLET RÉSERVATIONS ===== -->
+<div id="tab-reservations" style="display:none;">
+  <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+    <select id="filtre-statut" onchange="chargerReservations()" class="btn btn-sm" style="font-family:inherit;">
+      <option value="">Tous statuts</option>
+      <option value="en_attente">En attente</option>
+      <option value="annulee">Annulée</option>
+      <option value="realisee">Réalisée</option>
+    </select>
+    <input type="date" id="filtre-date" onchange="chargerReservations()" class="btn btn-sm" style="font-family:inherit;">
+    <button class="btn btn-sm" onclick="reinitialiserFiltres()">Réinitialiser</button>
+  </div>
+
+  <div id="liste-reservations">
+    <div class="empty-state"><div class="big">📋</div>Chargement…</div>
+  </div>
+</div>
+
+<!-- ===== ONGLET PARAMÈTRES ===== -->
+<div id="tab-parametres" style="display:none;">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:900px;">
+
+    <!-- Types de séances -->
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Types de séances</h3>
+        <button class="btn btn-sm btn-primary" onclick="ouvrirModalType()">+ Ajouter</button>
+      </div>
+      <div id="liste-types"></div>
+    </div>
+
+    <!-- Lieux -->
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Lieux</h3>
+        <button class="btn btn-sm btn-primary" onclick="ouvrirModalLieu()">+ Ajouter</button>
+      </div>
+      <div id="liste-lieux"></div>
+    </div>
+
+    <!-- Plages de disponibilité -->
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;grid-column:1/-1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Plages de disponibilité</h3>
+        <button class="btn btn-sm btn-primary" onclick="ouvrirModalPlage()">+ Ajouter</button>
+      </div>
+      <div id="liste-plages"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+  .onglet-btn {
+    padding:10px 20px;border:none;background:none;cursor:pointer;font-family:'League Spartan',sans-serif;
+    font-size:13px;font-weight:600;color:var(--grey);letter-spacing:.04em;border-bottom:2px solid transparent;
+    margin-bottom:-2px;transition:all .15s;
+  }
+  .onglet-btn.active { color:var(--ink);border-bottom-color:var(--gold); }
+  .onglet-btn:hover:not(.active) { color:var(--ink); }
+
+  .rdv-bloc {
+    position:absolute;left:2px;right:2px;border-radius:4px;padding:2px 4px;
+    font-size:11px;font-weight:600;overflow:hidden;cursor:pointer;z-index:2;
+    color:#fff;line-height:1.3;
+  }
+  .rdv-bloc:hover { filter:brightness(1.1); }
+
+  .carte-resa {
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;margin-bottom:10px;display:flex;gap:16px;align-items:flex-start;
+  }
+  .carte-resa:hover { border-color:var(--gold); }
+  .badge-statut {
+    display:inline-block;padding:3px 8px;border-radius:12px;font-size:11px;
+    font-family:'League Spartan',sans-serif;font-weight:700;letter-spacing:.04em;
+  }
+  .badge-en_attente { background:#FEF3C7;color:#92400E; }
+  .badge-annulee { background:#FEE2E2;color:#991B1B; }
+  .badge-realisee { background:#D1FAE5;color:#065F46; }
+
+  .item-param {
+    padding:10px 0;border-bottom:1px solid var(--border);display:flex;
+    justify-content:space-between;align-items:center;gap:8px;
+  }
+  .item-param:last-child { border-bottom:none;padding-bottom:0; }
+  .tag-modalite {
+    display:inline-block;padding:2px 7px;border-radius:10px;font-size:11px;
+    font-family:'League Spartan',sans-serif;font-weight:600;
+  }
+  .tag-cabinet { background:#EDE4D4;color:#5A3E1B; }
+  .tag-visio { background:#DBEAFE;color:#1E40AF; }
+  .tag-les_deux { background:#F3E8FF;color:#5B21B6; }
+</style>
+
+<script>
+// ============================================================
+// État global
+// ============================================================
+let offsetSemaine = 0;
+let typesSeances = [];
+let lieux = [];
+
+// ============================================================
+// Onglets
+// ============================================================
+function changerOnglet(tab, btn) {
+  document.querySelectorAll('.onglet-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['semaine','reservations','parametres'].forEach(t => {
+    document.getElementById('tab-' + t).style.display = (t === tab) ? '' : 'none';
+  });
+  if (tab === 'reservations') chargerReservations();
+  if (tab === 'parametres') chargerParametres();
+}
+
+// ============================================================
+// Grille semaine
+// ============================================================
+function lundiDeLaSemaine(offset) {
+  const d = new Date();
+  const jour = d.getDay() || 7;
+  d.setDate(d.getDate() - jour + 1 + offset * 7);
+  d.setHours(0,0,0,0);
+  return d;
+}
+
+function changerSemaine(delta) {
+  offsetSemaine += delta;
+  chargerSemaine();
+}
+
+function allerAujourd_hui() {
+  offsetSemaine = 0;
+  chargerSemaine();
+}
+
+function formatDateISO(d) {
+  return d.toISOString().split('T')[0];
+}
+
+function labelSemaine(lundi) {
+  const dimanche = new Date(lundi);
+  dimanche.setDate(dimanche.getDate() + 6);
+  const opts = {day:'numeric',month:'long'};
+  const optsFin = {day:'numeric',month:'long',year:'numeric'};
+  return lundi.toLocaleDateString('fr-FR', opts) + ' – ' + dimanche.toLocaleDateString('fr-FR', optsFin);
+}
+
+async function chargerSemaine() {
+  const lundi = lundiDeLaSemaine(offsetSemaine);
+  document.getElementById('label-semaine').textContent = labelSemaine(lundi);
+
+  // Mettre à jour les entêtes
+  const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const optsDate = {day:'numeric'};
+  document.querySelectorAll('.entete-jour').forEach((el, i) => {
+    const d = new Date(lundi);
+    d.setDate(d.getDate() + i);
+    const estAuj = formatDateISO(d) === formatDateISO(new Date());
+    el.querySelector('.jour-nom').textContent = JOURS[i];
+    const dateSpan = el.querySelector('.jour-date');
+    dateSpan.textContent = d.getDate();
+    dateSpan.style.background = estAuj ? 'var(--gold)' : '';
+    dateSpan.style.color = estAuj ? '#fff' : '';
+    dateSpan.style.borderRadius = estAuj ? '50%' : '';
+    dateSpan.style.width = estAuj ? '28px' : '';
+    dateSpan.style.height = estAuj ? '28px' : '';
+    dateSpan.style.display = estAuj ? 'inline-flex' : '';
+    dateSpan.style.alignItems = estAuj ? 'center' : '';
+    dateSpan.style.justifyContent = estAuj ? 'center' : '';
+    dateSpan.style.margin = estAuj ? '0 auto' : '';
+  });
+
+  // Vider les cellules
+  document.querySelectorAll('.cellule-heure').forEach(c => c.innerHTML = '');
+
+  // Charger les réservations de la semaine
+  const fin = new Date(lundi);
+  fin.setDate(fin.getDate() + 6);
+  try {
+    const r = await appelApi(`/api/agenda/semaine?debut=${formatDateISO(lundi)}&fin=${formatDateISO(fin)}`);
+    (r.reservations || []).forEach(rdv => afficherRdvGrille(rdv, lundi));
+  } catch(e) { console.error('Erreur chargement semaine:', e); }
+}
+
+function afficherRdvGrille(rdv, lundi) {
+  const debut = new Date(rdv.date_debut);
+  const fin = new Date(rdv.date_fin);
+
+  const jourIdx = Math.round((new Date(debut.toDateString()) - new Date(lundi.toDateString())) / 86400000);
+  if (jourIdx < 0 || jourIdx > 6) return;
+
+  const heureDebut = debut.getHours() + debut.getMinutes() / 60;
+  const heureFin = fin.getHours() + fin.getMinutes() / 60;
+
+  if (heureDebut < 8 || heureDebut >= 20) return;
+
+  // Cellule de départ : ligne (heureDebut - 8), colonne jourIdx
+  const heureIdx = Math.floor(heureDebut) - 8;
+  const cellule = document.querySelector(`.cellule-heure[data-heure="${Math.floor(heureDebut) + 8 - (8)}"][data-jour="${jourIdx}"]`);
+  // Sélection précise
+  const cells = document.querySelectorAll(`.cellule-heure`);
+  let cible = null;
+  cells.forEach(c => {
+    if (parseInt(c.dataset.heure) === Math.floor(heureDebut) && parseInt(c.dataset.jour) === jourIdx) cible = c;
+  });
+  if (!cible) return;
+
+  const dureeH = heureFin - heureDebut;
+  const offsetTop = (heureDebut - Math.floor(heureDebut)) * 52;
+  const hauteur = dureeH * 52 - 2;
+
+  const couleur = rdv.couleur || '#B8922A';
+  const div = document.createElement('div');
+  div.className = 'rdv-bloc';
+  div.style.cssText = `top:${offsetTop}px;height:${hauteur}px;background:${couleur};`;
+  div.innerHTML = `<div>${rdv.prenom} ${rdv.nom[0]}.</div><div style="font-weight:400;opacity:.9">${debut.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>`;
+  div.onclick = () => ouvrirDetailReservation(rdv.id);
+  cible.appendChild(div);
+}
+
+// ============================================================
+// Réservations
+// ============================================================
+async function chargerReservations() {
+  const statut = document.getElementById('filtre-statut').value;
+  const date = document.getElementById('filtre-date').value;
+  const params = new URLSearchParams();
+  if (statut) params.set('statut', statut);
+  if (date) params.set('date', date);
+
+  const conteneur = document.getElementById('liste-reservations');
+  conteneur.innerHTML = '<div class="empty-state"><div class="big">⏳</div>Chargement…</div>';
+  try {
+    const r = await appelApi('/api/agenda/reservations?' + params.toString());
+    if (!r.reservations || r.reservations.length === 0) {
+      conteneur.innerHTML = '<div class="empty-state"><div class="big">📋</div>Aucune réservation trouvée.</div>';
+      return;
+    }
+    conteneur.innerHTML = r.reservations.map(rdv => carteReservation(rdv)).join('');
+  } catch(e) {
+    conteneur.innerHTML = `<div class="message-erreur">${e.message}</div>`;
+  }
+}
+
+function carteReservation(rdv) {
+  const d = new Date(rdv.date_debut);
+  const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const heureLabel = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+  const icons = {en_attente:'🕐',annulee:'❌',realisee:'✅'};
+  return `
+  <div class="carte-resa" onclick="ouvrirDetailReservation(${rdv.id})">
+    <div style="font-size:28px;line-height:1;">${icons[rdv.statut] || '📋'}</div>
+    <div style="flex:1;">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
+        <strong>${rdv.prenom} ${rdv.nom}</strong>
+        <span class="badge-statut badge-${rdv.statut}">${rdv.statut.replace('_',' ')}</span>
+        ${rdv.source === 'publique' ? '<span class="badge-statut" style="background:#F0FDF4;color:#166534;">🌐 En ligne</span>' : ''}
+      </div>
+      <div style="font-size:13px;color:var(--grey);">
+        ${dateLabel} à ${heureLabel}
+        ${rdv.type_seance ? ' · ' + rdv.type_seance : ''}
+        ${rdv.lieu ? ' · ' + rdv.lieu : ''}
+      </div>
+      <div style="font-size:12px;color:var(--grey);margin-top:2px;">${rdv.email} ${rdv.telephone ? '· ' + rdv.telephone : ''}</div>
+    </div>
+    <button class="btn btn-sm" onclick="event.stopPropagation();ouvrirDetailReservation(${rdv.id})">Détail</button>
+  </div>`;
+}
+
+function reinitialiserFiltres() {
+  document.getElementById('filtre-statut').value = '';
+  document.getElementById('filtre-date').value = '';
+  chargerReservations();
+}
+
+// ============================================================
+// Détail réservation (modal)
+// ============================================================
+async function ouvrirDetailReservation(id) {
+  try {
+    const rdv = await appelApi(`/api/agenda/reservations/${id}`);
+    const d = new Date(rdv.date_debut);
+    const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    const heureLabel = d.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'});
+
+    const html = `
+    <div class="overlay" onclick="if(event.target===this)fermerModal()">
+    <div class="modal" style="width:520px;" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+        <h3 style="margin:0;">${rdv.prenom} ${rdv.nom}</h3>
+        <button class="btn btn-sm" onclick="fermerModal()">✕</button>
+      </div>
+      <span class="badge-statut badge-${rdv.statut}" style="margin-bottom:16px;display:inline-block;">${rdv.statut.replace('_',' ')}</span>
+
+      <table style="width:100%;font-size:13px;border-collapse:collapse;">
+        <tr><td style="padding:5px 0;color:var(--grey);width:120px;">Date</td><td style="padding:5px 0;font-weight:600;">${dateLabel} à ${heureLabel}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--grey);">Séance</td><td style="padding:5px 0;">${rdv.type_seance || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--grey);">Lieu</td><td style="padding:5px 0;">${rdv.lieu || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--grey);">Email</td><td style="padding:5px 0;"><a href="mailto:${rdv.email}">${rdv.email}</a></td></tr>
+        <tr><td style="padding:5px 0;color:var(--grey);">Téléphone</td><td style="padding:5px 0;">${rdv.telephone || '—'}</td></tr>
+        ${rdv.message ? `<tr><td style="padding:5px 0;color:var(--grey);vertical-align:top;">Message</td><td style="padding:5px 0;">${rdv.message}</td></tr>` : ''}
+        ${rdv.lien_visio_unique ? `<tr><td style="padding:5px 0;color:var(--grey);">Visio</td><td style="padding:5px 0;"><a href="${rdv.lien_visio_unique}" target="_blank">Rejoindre</a></td></tr>` : ''}
+      </table>
+
+      <div style="margin-top:16px;">
+        <label style="font-size:12px;color:var(--grey);font-weight:600;display:block;margin-bottom:4px;">Note admin</label>
+        <textarea id="note-admin-${rdv.id}" style="width:100%;border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:13px;min-height:70px;">${rdv.note_admin || ''}</textarea>
+      </div>
+
+      <div style="margin-top:20px;display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${rdv.statut !== 'realisee' ? `<button class="btn btn-sm" onclick="changerStatut(${rdv.id},'realisee')" style="background:#D1FAE5;color:#065F46;border-color:#A7F3D0;">✅ Marquer réalisée</button>` : ''}
+          ${rdv.statut === 'en_attente' ? `<button class="btn btn-sm btn-danger-outline" onclick="changerStatut(${rdv.id},'annulee')">❌ Annuler</button>` : ''}
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="sauvegarderNote(${rdv.id})">Enregistrer note</button>
+      </div>
+    </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+  } catch(e) {
+    afficherToast('Erreur : ' + e.message);
+  }
+}
+
+async function changerStatut(id, statut) {
+  try {
+    await appelApi(`/admin/agenda/reservations/${id}/statut`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({statut})
+    });
+    fermerModal();
+    afficherToast('Statut mis à jour');
+    chargerSemaine();
+    if (document.getElementById('tab-reservations').style.display !== 'none') chargerReservations();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+async function sauvegarderNote(id) {
+  const note = document.getElementById('note-admin-' + id).value;
+  try {
+    await appelApi(`/admin/agenda/reservations/${id}/note`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({note})
+    });
+    afficherToast('Note enregistrée');
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Paramètres — Types de séances
+// ============================================================
+async function chargerParametres() {
+  await Promise.all([chargerTypes(), chargerLieux(), chargerPlages()]);
+}
+
+async function chargerTypes() {
+  try {
+    const r = await appelApi('/api/agenda/types-seances');
+    typesSeances = r.types || [];
+    const c = document.getElementById('liste-types');
+    if (!typesSeances.length) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucun type de séance.</div>';
+      return;
+    }
+    c.innerHTML = typesSeances.map(t => `
+      <div class="item-param">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${t.nom}</div>
+          <div style="font-size:12px;color:var(--grey);">
+            ${t.duree_minutes} min
+            <span class="tag-modalite tag-${t.modalite}">${t.modalite.replace('_',' ')}</span>
+            ${!t.actif ? '<em style="color:var(--danger);">Inactif</em>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" onclick="ouvrirModalType(${t.id})">✏️</button>
+          <button class="btn btn-sm btn-danger-outline" onclick="supprimerType(${t.id})">🗑</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+function ouvrirModalType(id = null) {
+  const type = id ? typesSeances.find(t => t.id === id) : null;
+  const html = `
+  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>${type ? 'Modifier' : 'Nouveau'} type de séance</h3>
+    <form onsubmit="sauvegarderType(event, ${id})">
+      <label>Nom de la séance *</label>
+      <input name="nom" required value="${type?.nom||''}" placeholder="ex : Consultation découverte">
+      <label>Durée (minutes) *</label>
+      <input name="duree_minutes" type="number" min="15" step="15" required value="${type?.duree_minutes||60}">
+      <label>Modalité *</label>
+      <select name="modalite">
+        <option value="cabinet" ${type?.modalite==='cabinet'?'selected':''}>Cabinet uniquement</option>
+        <option value="visio" ${type?.modalite==='visio'?'selected':''}>Visio uniquement</option>
+        <option value="les_deux" ${type?.modalite==='les_deux'?'selected':''}>Cabinet ou visio</option>
+      </select>
+      <label>Couleur (hexadécimal)</label>
+      <input name="couleur_hex" type="color" value="${type?.couleur_hex||'#B8922A'}" style="height:36px;padding:4px;">
+      <label>Description (optionnel)</label>
+      <textarea name="description">${type?.description||''}</textarea>
+      <label><input type="checkbox" name="actif" ${type?.actif!==false?'checked':''}> Actif (proposé à la réservation)</label>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function sauvegarderType(evt, id) {
+  evt.preventDefault();
+  const fd = new FormData(evt.target);
+  const data = {
+    nom: fd.get('nom'),
+    duree_minutes: parseInt(fd.get('duree_minutes')),
+    modalite: fd.get('modalite'),
+    couleur_hex: fd.get('couleur_hex'),
+    description: fd.get('description') || null,
+    actif: fd.get('actif') === 'on',
+  };
+  try {
+    if (id) {
+      await appelApi(`/admin/agenda/types-seances/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    } else {
+      await appelApi('/admin/agenda/types-seances', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    }
+    fermerModal();
+    afficherToast('Type de séance enregistré');
+    await chargerTypes();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+async function supprimerType(id) {
+  if (!confirm('Supprimer ce type de séance ?')) return;
+  try {
+    await appelApi(`/admin/agenda/types-seances/${id}`, {method:'DELETE'});
+    afficherToast('Supprimé');
+    await chargerTypes();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Paramètres — Lieux
+// ============================================================
+async function chargerLieux() {
+  try {
+    const r = await appelApi('/api/agenda/lieux');
+    lieux = r.lieux || [];
+    const c = document.getElementById('liste-lieux');
+    if (!lieux.length) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucun lieu configuré.</div>';
+      return;
+    }
+    c.innerHTML = lieux.map(l => `
+      <div class="item-param">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${l.nom}</div>
+          <div style="font-size:12px;color:var(--grey);">
+            <span class="tag-modalite tag-${l.type_lieu}">${l.type_lieu}</span>
+            ${l.adresse ? ' · ' + l.adresse.replace(/\n/g,' ') : ''}
+            ${!l.actif ? ' <em style="color:var(--danger);">Inactif</em>' : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sm" onclick="ouvrirModalLieu(${l.id})">✏️</button>
+          <button class="btn btn-sm btn-danger-outline" onclick="supprimerLieu(${l.id})">🗑</button>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+function ouvrirModalLieu(id = null) {
+  const lieu = id ? lieux.find(l => l.id === id) : null;
+  const html = `
+  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>${lieu ? 'Modifier' : 'Nouveau'} lieu</h3>
+    <form onsubmit="sauvegarderLieu(event, ${id})">
+      <label>Nom du lieu *</label>
+      <input name="nom" required value="${lieu?.nom||''}" placeholder="ex : Cabinet Véranne">
+      <label>Type *</label>
+      <select name="type_lieu" onchange="toggleLienVisio(this.value)">
+        <option value="cabinet" ${lieu?.type_lieu==='cabinet'?'selected':''}>Cabinet</option>
+        <option value="visio" ${lieu?.type_lieu==='visio'?'selected':''}>Visio</option>
+        <option value="autre" ${lieu?.type_lieu==='autre'?'selected':''}>Autre</option>
+      </select>
+      <div id="champ-adresse" style="${lieu?.type_lieu==='visio'?'display:none':''}">
+        <label>Adresse</label>
+        <textarea name="adresse">${lieu?.adresse||''}</textarea>
+      </div>
+      <div id="champ-visio" style="${lieu?.type_lieu!=='visio'?'display:none':''}">
+        <label>Lien visio permanent <span class="helper-text">(Zoom, Whereby, Meet…)</span></label>
+        <input name="lien_visio" type="url" value="${lieu?.lien_visio||''}" placeholder="https://whereby.com/votre-salle">
+        <p class="helper-text">Ce lien sera inclus dans les invitations calendrier.</p>
+      </div>
+      <label><input type="checkbox" name="actif" ${lieu?.actif!==false?'checked':''}> Actif</label>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleLienVisio(val) {
+  document.getElementById('champ-adresse').style.display = val === 'visio' ? 'none' : '';
+  document.getElementById('champ-visio').style.display = val === 'visio' ? '' : 'none';
+}
+
+async function sauvegarderLieu(evt, id) {
+  evt.preventDefault();
+  const fd = new FormData(evt.target);
+  const data = {
+    nom: fd.get('nom'),
+    type_lieu: fd.get('type_lieu'),
+    adresse: fd.get('adresse') || null,
+    lien_visio: fd.get('lien_visio') || null,
+    actif: fd.get('actif') === 'on',
+  };
+  try {
+    if (id) {
+      await appelApi(`/admin/agenda/lieux/${id}`, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    } else {
+      await appelApi('/admin/agenda/lieux', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    }
+    fermerModal();
+    afficherToast('Lieu enregistré');
+    await chargerLieux();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+async function supprimerLieu(id) {
+  if (!confirm('Supprimer ce lieu ?')) return;
+  try {
+    await appelApi(`/admin/agenda/lieux/${id}`, {method:'DELETE'});
+    afficherToast('Supprimé');
+    await chargerLieux();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Paramètres — Plages de disponibilité
+// ============================================================
+const JOURS_LABEL = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'];
+
+async function chargerPlages() {
+  try {
+    const r = await appelApi('/api/agenda/plages');
+    const plages = r.plages || [];
+    const c = document.getElementById('liste-plages');
+    if (!plages.length) {
+      c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage configurée.</div>';
+      return;
+    }
+    c.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="color:var(--grey);font-family:'League Spartan',sans-serif;font-size:11px;letter-spacing:.05em;">
+          <th style="padding:6px 0;text-align:left;">Récurrence</th>
+          <th style="padding:6px;text-align:left;">Séance</th>
+          <th style="padding:6px;text-align:left;">Lieu</th>
+          <th style="padding:6px;text-align:left;">Horaires</th>
+          <th style="padding:6px;text-align:left;">Pause</th>
+          <th style="padding:6px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+      ${plages.map(p => `<tr style="border-top:1px solid var(--border);">
+        <td style="padding:8px 0;">
+          ${p.date_unique ? new Date(p.date_unique).toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
+          ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
+        </td>
+        <td style="padding:8px 6px;">${p.type_seance || '—'}</td>
+        <td style="padding:8px 6px;">${p.lieu || '—'}</td>
+        <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
+        <td style="padding:8px 6px;">${p.pause_debut && p.pause_fin ? p.pause_debut + ' – ' + p.pause_fin : '—'}</td>
+        <td style="padding:8px 0;text-align:right;">
+          <button class="btn btn-sm btn-danger-outline" onclick="supprimerPlage(${p.id})">🗑</button>
+        </td>
+      </tr>`).join('')}
+      </tbody>
+    </table>`;
+  } catch(e) { console.error(e); }
+}
+
+function ouvrirModalPlage() {
+  const optsTypes = typesSeances.map(t => `<option value="${t.id}">${t.nom}</option>`).join('');
+  const optsLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
+  const html = `
+  <div class="overlay" onclick="if(event.target===this)fermerModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3>Nouvelle plage de disponibilité</h3>
+    <form onsubmit="sauvegarderPlage(event)">
+      <label>Type de séance *</label>
+      <select name="type_seance_id" required>${optsTypes}</select>
+      <label>Lieu *</label>
+      <select name="lieu_id" required>${optsLieux}</select>
+      <label>Récurrence</label>
+      <select name="type_recurrence" onchange="toggleDateUnique(this.value)">
+        <option value="hebdo">Hebdomadaire (chaque semaine)</option>
+        <option value="unique">Date unique</option>
+      </select>
+      <div id="champ-jour">
+        <label>Jour de la semaine *</label>
+        <select name="jour_semaine">
+          ${JOURS_LABEL.map((j,i) => `<option value="${i}">${j}</option>`).join('')}
+        </select>
+      </div>
+      <div id="champ-date-unique" style="display:none;">
+        <label>Date *</label>
+        <input name="date_unique" type="date">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Heure début *</label>
+          <input name="heure_debut" type="time" value="09:00" required>
+        </div>
+        <div>
+          <label>Heure fin *</label>
+          <input name="heure_fin" type="time" value="17:00" required>
+        </div>
+      </div>
+      <p class="helper-text">Pause méridienne (optionnel)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Pause début</label>
+          <input name="pause_debut" type="time" placeholder="12:00">
+        </div>
+        <div>
+          <label>Pause fin</label>
+          <input name="pause_fin" type="time" placeholder="14:00">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </div>
+    </form>
+  </div></div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleDateUnique(val) {
+  document.getElementById('champ-jour').style.display = val === 'unique' ? 'none' : '';
+  document.getElementById('champ-date-unique').style.display = val === 'unique' ? '' : 'none';
+}
+
+async function sauvegarderPlage(evt) {
+  evt.preventDefault();
+  const fd = new FormData(evt.target);
+  const isUnique = fd.get('type_recurrence') === 'unique';
+  const data = {
+    type_seance_id: parseInt(fd.get('type_seance_id')),
+    lieu_id: parseInt(fd.get('lieu_id')),
+    jour_semaine: isUnique ? null : parseInt(fd.get('jour_semaine')),
+    date_unique: isUnique ? fd.get('date_unique') : null,
+    heure_debut: fd.get('heure_debut'),
+    heure_fin: fd.get('heure_fin'),
+    pause_debut: fd.get('pause_debut') || null,
+    pause_fin: fd.get('pause_fin') || null,
+    actif: true,
+  };
+  try {
+    await appelApi('/admin/agenda/plages', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    fermerModal();
+    afficherToast('Plage enregistrée');
+    await chargerPlages();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+async function supprimerPlage(id) {
+  if (!confirm('Supprimer cette plage ?')) return;
+  try {
+    await appelApi(`/admin/agenda/plages/${id}`, {method:'DELETE'});
+    afficherToast('Supprimé');
+    await chargerPlages();
+  } catch(e) { afficherToast('Erreur : ' + e.message); }
+}
+
+// ============================================================
+// Init
+// ============================================================
+chargerSemaine();
+</script>
+{% endblock %}

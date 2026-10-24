@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendez-vous confirmé — Laurence Mermet-Bijon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --panel:#FFFFFF; --border:#E5DCC3; --grey:#9B968A; }
+  *, *::before, *::after { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); }
+  .header { background:var(--ink); padding:20px 24px; text-align:center; }
+  .header h1 { margin:0 0 2px; font-family:'EB Garamond',serif; font-size:22px; font-weight:600; color:var(--cream); }
+  .header p { margin:0; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); }
+  .centre { max-width:520px; margin:60px auto; padding:0 24px; text-align:center; }
+  .icone { font-size:60px; margin-bottom:20px; }
+  .titre { font-family:'EB Garamond',serif; font-size:30px; font-weight:600; margin:0 0 12px; }
+  .soustitre { font-size:15px; color:#5a4a30; line-height:1.7; margin:0 0 28px; }
+  .recap { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:20px 24px; text-align:left; margin-bottom:24px; }
+  .recap .ligne { display:flex; gap:12px; padding:6px 0; border-bottom:1px solid #f0e9d6; font-size:13px; }
+  .recap .ligne:last-child { border-bottom:none; }
+  .recap .l { color:var(--grey); width:90px; flex-shrink:0; }
+  .recap .v { color:var(--ink); font-weight:600; }
+  .bloc-ics { background:#EEF4F8; border:1px solid #C3D9EE; border-radius:8px; padding:14px 18px; margin-bottom:20px; font-size:13px; color:#1E3A5F; line-height:1.6; }
+  .bloc-visio { background:#E8F5E9; border:1px solid #A5D6A7; border-radius:8px; padding:14px 18px; margin-bottom:20px; }
+  .bloc-visio a { display:inline-block; margin-top:8px; background:#3B8C5A; color:#fff; text-decoration:none; padding:10px 20px; border-radius:6px; font-family:'League Spartan',sans-serif; font-size:13px; font-weight:700; }
+  .annulation { font-size:12px; color:var(--grey); line-height:1.6; margin-top:8px; }
+  .annulation a { color:var(--grey); }
+  .lien-rdv { color:var(--gold); text-decoration:none; font-weight:600; }
+  .lien-rdv:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Laurence Mermet-Bijon</h1>
+  <p>Accompagnement féminin</p>
+</div>
+
+<div class="centre">
+  <div class="icone">✅</div>
+  <h2 class="titre">Rendez-vous confirmé !</h2>
+  <p class="soustitre">
+    {% if reservation %}
+    Bonjour {{ reservation.prenom }}, votre rendez-vous est bien enregistré.
+    Un email de confirmation avec le fichier calendrier (.ics) vous a été envoyé à <strong>{{ reservation.email }}</strong>.
+    {% else %}
+    Votre rendez-vous est bien enregistré.
+    Un email de confirmation avec le fichier calendrier (.ics) vous a été envoyé.
+    {% endif %}
+  </p>
+
+  {% if reservation %}
+  <div class="recap">
+    <div class="ligne">
+      <span class="l">Séance</span>
+      <span class="v">{{ reservation.type_seance.nom if reservation.type_seance else '—' }}</span>
+    </div>
+    <div class="ligne">
+      <span class="l">Date</span>
+      <span class="v">{{ reservation.date_debut | datefr }}</span>
+    </div>
+    <div class="ligne">
+      <span class="l">Durée</span>
+      <span class="v">{{ reservation.type_seance.duree_minutes if reservation.type_seance else '—' }} min</span>
+    </div>
+    <div class="ligne">
+      <span class="l">Format</span>
+      <span class="v">
+        {% if reservation.lien_visio_unique %}🎥 Visio{% elif reservation.lieu %}{{ reservation.lieu.nom }}{% else %}—{% endif %}
+      </span>
+    </div>
+  </div>
+
+  {% if reservation.lien_visio_unique %}
+  <div class="bloc-visio">
+    <strong style="font-size:14px;">🎥 Votre lien de connexion visio</strong>
+    <p style="margin:6px 0 0;font-size:13px;color:#1B4332;">Ce lien est également intégré dans votre fichier calendrier.</p>
+    <a href="{{ reservation.lien_visio_unique }}" target="_blank">Rejoindre la séance</a>
+  </div>
+  {% endif %}
+
+  <div class="bloc-ics">
+    📅 <strong>Ajouter à votre calendrier</strong><br>
+    Le fichier .ics joint à votre email vous permet d'ajouter ce rendez-vous en un clic à Google Agenda, Apple Calendar ou Outlook.
+  </div>
+  {% endif %}
+
+  <p class="annulation">
+    Besoin d'annuler ou de modifier ce rendez-vous ?<br>
+    Le lien d'annulation se trouve dans votre email de confirmation.<br>
+    <em>L'annulation est possible jusqu'à 24h avant la séance.</em>
+  </p>
+
+  <p style="margin-top:28px;font-size:14px;">
+    <a href="/rendez-vous" class="lien-rdv">Prendre un autre rendez-vous →</a>
+  </p>
+</div>
+
+</body>
+</html>

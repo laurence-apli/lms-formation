@@ -341,6 +341,8 @@ class SeanceAccompagnement(Base):
     date_realise = Column(DateTime, nullable=True)      # renseigné par l'admin quand la séance a eu lieu
 
     type_accompagnement = Column(String(20), nullable=False, default="cabinet")  # "cabinet" | "visio"
+    # Lien optionnel vers la réservation native (agenda intégré)
+    reservation_id = Column(Integer, ForeignKey("agenda_reservations.id"), nullable=True)
 
     acces = relationship("AccesFormation", back_populates="seances_accompagnement")
 
@@ -601,3 +603,131 @@ class Offre(Base):
     cree_le = Column(DateTime, default=datetime.utcnow)
     formations_ids = Column(Text, nullable=True)  # JSON list [1, 2]
     badge = Column(String(200), nullable=True, default="Accompagnement féminin")
+
+
+# ---------------------------------------------------------------------------
+# AGENDA — Système de réservation natif (remplace Resalib)
+# Toutes ces tables sont créées par Base.metadata.create_all (nouvelles tables).
+# Aucune ALTER TABLE nécessaire pour ces modèles-ci.
+# ---------------------------------------------------------------------------
+
+class TypeSeance(Base):
+    """Type de séance proposée par Laurence (ex : 'Séance cabinet 1h', 'Visio 1h30')."""
+    __tablename__ = "agenda_types_seances"
+
+    id = Column(Integer, primary_key=True)
+    nom = Column(String(200), nullable=False)
+    duree_minutes = Column(Integer, nullable=False, default=60)
+    # 'cabinet' | 'visio' | 'les_deux'
+    modalite = Column(String(20), nullable=False, default="cabinet")
+    couleur_hex = Column(String(10), default="#B8922A")
+    description = Column(Text, nullable=True)
+    actif = Column(Boolean, default=True)
+    ordre = Column(Integer, default=0)
+
+    plages = relationship("PlageDisponibilite", back_populates="type_seance")
+    reservations = relationship("Reservation", back_populates="type_seance")
+
+
+class Lieu(Base):
+    """Lieu physique ou visio où se déroule une séance (cabinet, salle externe…)."""
+    __tablename__ = "agenda_lieux"
+
+    id = Column(Integer, primary_key=True)
+    nom = Column(String(200), nullable=False)
+    adresse = Column(Text, nullable=True)
+    # 'cabinet' | 'visio' | 'autre'
+    type_lieu = Column(String(20), nullable=False, default="cabinet")
+    lien_visio = Column(String(500), nullable=True)   # URL Whereby / Jitsi / autre
+    actif = Column(Boolean, default=True)
+
+    plages = relationship("PlageDisponibilite", back_populates="lieu")
+    reservations = relationship("Reservation", back_populates="lieu")
+
+
+class PlageDisponibilite(Base):
+    """Créneau horaire défini par Laurence dans son agenda (récurrent ou ponctuel).
+
+    Exemple : "Mardis 9h-17h au cabinet" ou "Vendredi 14h le 5 nov uniquement".
+    Les créneaux réels réservables sont calculés à partir de ces plages + durée du type de séance.
+    """
+    __tablename__ = "agenda_plages_disponibilites"
+
+    id = Column(Integer, primary_key=True)
+    type_seance_id = Column(Integer, ForeignKey("agenda_types_seances.id"), nullable=False)
+    lieu_id = Column(Integer, ForeignKey("agenda_lieux.id"), nullable=False)
+    # 0=lundi … 6=dimanche ; NULL = date_unique uniquement
+    jour_semaine = Column(Integer, nullable=True)
+    # Si ponctuel, la date spécifique (remplace jour_semaine)
+    date_unique = Column(DateTime, nullable=True)
+    heure_debut = Column(String(5), nullable=False)   # "09:00"
+    heure_fin = Column(String(5), nullable=False)     # "17:00"
+    # Pause méridienne optionnelle : exclut un bloc dans la journée
+    pause_debut = Column(String(5), nullable=True)    # "12:00"
+    pause_fin = Column(String(5), nullable=True)      # "13:30"
+    actif = Column(Boolean, default=True)
+    cree_le = Column(DateTime, default=datetime.utcnow)
+
+    type_seance = relationship("TypeSeance", back_populates="plages")
+    lieu = relationship("Lieu", back_populates="plages")
+
+
+class Reservation(Base):
+    """Réservation d'un créneau par une cliente (ou créée manuellement par l'admin).
+
+    Statuts : 'en_attente' (confirmée) | 'annulee' | 'realisee'
+    Source   : 'publique' (formulaire /rendez-vous) | 'admin' (créée depuis le back-office)
+    """
+    __tablename__ = "agenda_reservations"
+
+    id = Column(Integer, primary_key=True)
+    token_annulation = Column(String(64), unique=True, nullable=False,
+                              default=lambda: secrets.token_urlsafe(32))
+    type_seance_id = Column(Integer, ForeignKey("agenda_types_seances.id"), nullable=True)
+    lieu_id = Column(Integer, ForeignKey("agenda_lieux.id"), nullable=True)
+    # Lien optionnel avec une élève existante (None si non inscrite)
+    eleve_id = Column(Integer, ForeignKey("eleves.id"), nullable=True)
+    # Coordonnées saisies dans le formulaire public (toujours renseignées)
+    prenom = Column(String(100), nullable=False)
+    nom = Column(String(100), nullable=False)
+    email = Column(String(200), nullable=False)
+    telephone = Column(String(30), nullable=True)
+    message = Column(Text, nullable=True)
+    # Date/heure du rendez-vous
+    date_debut = Column(DateTime, nullable=False)
+    date_fin = Column(DateTime, nullable=False)
+    # 'en_attente' | 'annulee' | 'realisee'
+    statut = Column(String(20), nullable=False, default="en_attente")
+    # 'publique' | 'admin'
+    source = Column(String(20), nullable=False, default="publique")
+    # Lien visio unique généré à la réservation (pour séances visio)
+    lien_visio_unique = Column(String(500), nullable=True)
+    # Vrai si le .ics a bien été envoyé à la cliente
+    ics_envoye = Column(Boolean, default=False)
+    cree_le = Column(DateTime, default=datetime.utcnow)
+    # Note interne admin (non visible par la cliente)
+    note_admin = Column(Text, nullable=True)
+
+    type_seance = relationship("TypeSeance", back_populates="reservations")
+    lieu = relationship("Lieu", back_populates="reservations")
+    eleve = relationship("Eleve", foreign_keys=[eleve_id])
+    rappels = relationship("RappelEnvoye", back_populates="reservation",
+                           cascade="all, delete-orphan")
+
+
+class RappelEnvoye(Base):
+    """Traçabilité des rappels email envoyés pour chaque réservation.
+
+    Permet de ne pas renvoyer deux fois le même rappel (idempotence du cron).
+    Types : 'confirmation' | 'rappel_j7' | 'rappel_j1' | 'suivi_post_seance'
+    """
+    __tablename__ = "agenda_rappels_envoyes"
+
+    id = Column(Integer, primary_key=True)
+    reservation_id = Column(Integer, ForeignKey("agenda_reservations.id",
+                                                ondelete="CASCADE"), nullable=False)
+    type_rappel = Column(String(30), nullable=False)
+    envoye_le = Column(DateTime, default=datetime.utcnow)
+    succes = Column(Boolean, default=True)
+
+    reservation = relationship("Reservation", back_populates="rappels")

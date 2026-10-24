@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prendre rendez-vous — Laurence Mermet-Bijon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
+  :root {
+    --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0;
+    --panel:#FFFFFF; --border:#E5DCC3; --grey:#9B968A;
+  }
+  *, *::before, *::after { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); }
+
+  /* En-tête */
+  .header { background:var(--ink); padding:20px 24px; text-align:center; }
+  .header h1 { margin:0 0 2px; font-family:'EB Garamond',serif; font-size:22px; font-weight:600; color:var(--cream); }
+  .header p { margin:0; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); }
+
+  /* Étapes */
+  .etapes { display:flex; justify-content:center; gap:0; padding:24px 24px 0; max-width:640px; margin:0 auto; }
+  .etape { flex:1; text-align:center; position:relative; }
+  .etape::after { content:''; position:absolute; top:14px; right:-50%; width:100%; height:2px; background:var(--border); z-index:0; }
+  .etape:last-child::after { display:none; }
+  .etape-num {
+    width:28px; height:28px; border-radius:50%; background:var(--border); color:var(--grey);
+    font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center; position:relative; z-index:1;
+    transition:all .2s;
+  }
+  .etape.active .etape-num { background:var(--gold); color:#fff; }
+  .etape.done .etape-num { background:var(--ink); color:var(--cream); }
+  .etape-label { font-size:11px; font-family:'League Spartan',sans-serif; font-weight:600; letter-spacing:.04em; color:var(--grey); margin-top:6px; }
+  .etape.active .etape-label { color:var(--ink); }
+
+  /* Contenu */
+  .contenu { max-width:640px; margin:0 auto; padding:28px 24px 60px; }
+
+  /* Titre d'étape */
+  .titre-etape { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 20px; }
+
+  /* Cartes de choix */
+  .cartes-types { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .carte-type {
+    background:var(--panel); border:2px solid var(--border); border-radius:10px;
+    padding:16px; cursor:pointer; transition:all .15s; text-align:left;
+  }
+  .carte-type:hover { border-color:var(--gold); }
+  .carte-type.active { border-color:var(--gold); background:#FEF8EE; }
+  .carte-type .nom { font-weight:600; font-size:15px; margin-bottom:4px; }
+  .carte-type .detail { font-size:12px; color:var(--grey); }
+  .carte-type .puce { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
+
+  /* Choix modalité */
+  .choix-modalite { display:flex; gap:10px; margin-bottom:20px; }
+  .btn-modalite {
+    flex:1; padding:10px; border:2px solid var(--border); background:var(--panel);
+    border-radius:8px; cursor:pointer; font-family:'League Spartan',sans-serif;
+    font-size:13px; font-weight:600; letter-spacing:.03em; transition:all .15s;
+    text-align:center;
+  }
+  .btn-modalite.active { border-color:var(--gold); background:#FEF8EE; color:var(--gold); }
+  .btn-modalite:hover:not(.active) { border-color:var(--grey); }
+
+  /* Calendrier */
+  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .cal-titre { font-family:'EB Garamond',serif; font-size:18px; font-weight:600; }
+  .cal-nav { background:none; border:1px solid var(--border); border-radius:6px;
+             width:32px; height:32px; cursor:pointer; font-size:16px; }
+  .cal-nav:hover { border-color:var(--gold); }
+  .cal-grille { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+  .cal-ent { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700;
+             letter-spacing:.05em; color:var(--grey); text-align:center; padding:4px 0; }
+  .cal-jour {
+    aspect-ratio:1; border-radius:6px; display:flex; align-items:center; justify-content:center;
+    font-size:14px; border:none; background:none; cursor:default; color:var(--grey);
+  }
+  .cal-jour.dispo { cursor:pointer; background:var(--panel); border:1px solid var(--border); color:var(--ink); }
+  .cal-jour.dispo:hover { background:#FEF8EE; border-color:var(--gold); }
+  .cal-jour.active { background:var(--gold) !important; color:#fff !important; border-color:var(--gold) !important; }
+  .cal-jour.today { font-weight:700; }
+  .cal-jour.passe { opacity:.35; }
+
+  /* Créneaux */
+  .creneaux { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+  .creneau {
+    padding:9px 16px; border:1px solid var(--border); border-radius:6px; cursor:pointer;
+    font-family:'League Spartan',sans-serif; font-size:13px; font-weight:600;
+    background:var(--panel); transition:all .15s;
+  }
+  .creneau:hover { border-color:var(--gold); }
+  .creneau.active { background:var(--gold); color:#fff; border-color:var(--gold); }
+
+  /* Formulaire */
+  .groupe { margin-bottom:14px; }
+  .groupe label { display:block; font-size:12px; font-weight:600; color:var(--grey); margin-bottom:4px;
+                  font-family:'League Spartan',sans-serif; letter-spacing:.04em; text-transform:uppercase; }
+  .groupe input, .groupe textarea {
+    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:6px;
+    font-family:'Inter',sans-serif; font-size:14px; outline:none; transition:border-color .15s;
+    background:var(--panel);
+  }
+  .groupe input:focus, .groupe textarea:focus { border-color:var(--gold); }
+  .groupe textarea { min-height:80px; resize:vertical; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+  /* Récap */
+  .recap {
+    background:#FAF5E8; border:1px solid #E8DFC8; border-radius:8px; padding:16px 20px; margin-bottom:20px;
+  }
+  .recap .ligne { display:flex; gap:12px; padding:4px 0; font-size:13px; }
+  .recap .l { color:var(--grey); width:90px; }
+  .recap .v { color:var(--ink); font-weight:600; }
+
+  /* Boutons */
+  .btn-suite {
+    width:100%; padding:14px; background:var(--ink); color:var(--cream); border:none;
+    border-radius:8px; font-family:'League Spartan',sans-serif; font-size:14px; font-weight:700;
+    letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .15s;
+  }
+  .btn-suite:hover:not(:disabled) { background:#3d2e14; }
+  .btn-suite:disabled { opacity:.45; cursor:not-allowed; }
+  .btn-retour { background:none; border:none; color:var(--grey); cursor:pointer; font-size:13px;
+                text-decoration:underline; padding:0; margin-bottom:20px; }
+  .btn-retour:hover { color:var(--ink); }
+
+  /* Chargement / erreur */
+  .chargement { text-align:center; padding:30px; color:var(--grey); font-size:14px; }
+  .erreur-bloc { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px;
+                 padding:12px 16px; font-size:13px; margin-bottom:14px; }
+
+  @media (max-width:520px) {
+    .cartes-types { grid-template-columns:1fr; }
+    .row2 { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Laurence Mermet-Bijon</h1>
+  <p>Accompagnement féminin · Prise de rendez-vous</p>
+</div>
+
+<!-- Étapes -->
+<div class="etapes">
+  <div class="etape active" id="et-1">
+    <div class="etape-num">1</div>
+    <div class="etape-label">Séance</div>
+  </div>
+  <div class="etape" id="et-2">
+    <div class="etape-num">2</div>
+    <div class="etape-label">Date</div>
+  </div>
+  <div class="etape" id="et-3">
+    <div class="etape-num">3</div>
+    <div class="etape-label">Créneau</div>
+  </div>
+  <div class="etape" id="et-4">
+    <div class="etape-num">4</div>
+    <div class="etape-label">Vos infos</div>
+  </div>
+</div>
+
+<div class="contenu">
+  <!-- ÉTAPE 1 : Choisir le type de séance -->
+  <div id="step-1">
+    <h2 class="titre-etape">Quelle séance souhaitez-vous&nbsp;?</h2>
+    <div id="liste-types" class="chargement">Chargement des séances disponibles…</div>
+    <div id="choix-modalite" style="display:none;margin-top:20px;">
+      <p style="font-size:13px;color:var(--grey);margin:0 0 10px;">Cette séance est disponible en cabinet ou en visio :</p>
+      <div class="choix-modalite">
+        <button class="btn-modalite" onclick="choisirModalite('cabinet')">🏠 Cabinet</button>
+        <button class="btn-modalite" onclick="choisirModalite('visio')">🎥 Visio</button>
+      </div>
+    </div>
+    <button class="btn-suite" id="btn-step1" onclick="allerStep2()" disabled>Continuer →</button>
+  </div>
+
+  <!-- ÉTAPE 2 : Choisir la date -->
+  <div id="step-2" style="display:none;">
+    <button class="btn-retour" onclick="allerStep(1)">← Retour</button>
+    <h2 class="titre-etape">Choisissez une date</h2>
+    <div class="cal-header">
+      <button class="cal-nav" onclick="changerMois(-1)">‹</button>
+      <span class="cal-titre" id="cal-label"></span>
+      <button class="cal-nav" onclick="changerMois(1)">›</button>
+    </div>
+    <div class="cal-grille">
+      <div class="cal-ent">Lun</div><div class="cal-ent">Mar</div><div class="cal-ent">Mer</div>
+      <div class="cal-ent">Jeu</div><div class="cal-ent">Ven</div><div class="cal-ent">Sam</div>
+      <div class="cal-ent">Dim</div>
+      <div id="cal-jours"></div>
+    </div>
+    <p id="cal-message" class="chargement" style="display:none;margin-top:16px;"></p>
+  </div>
+
+  <!-- ÉTAPE 3 : Choisir le créneau horaire -->
+  <div id="step-3" style="display:none;">
+    <button class="btn-retour" onclick="allerStep(2)">← Retour</button>
+    <h2 class="titre-etape" id="step3-titre">Créneaux disponibles</h2>
+    <div id="liste-creneaux" class="chargement">Chargement…</div>
+    <button class="btn-suite" id="btn-step3" onclick="allerStep4()" disabled style="margin-top:16px;">Continuer →</button>
+  </div>
+
+  <!-- ÉTAPE 4 : Formulaire -->
+  <div id="step-4" style="display:none;">
+    <button class="btn-retour" onclick="allerStep(3)">← Retour</button>
+    <h2 class="titre-etape">Vos coordonnées</h2>
+
+    <div class="recap" id="recap-rdv"></div>
+
+    <div id="erreur-form"></div>
+
+    <form id="form-rdv" onsubmit="soumettre(event)">
+      <div class="row2">
+        <div class="groupe">
+          <label>Prénom *</label>
+          <input name="prenom" required placeholder="Marie">
+        </div>
+        <div class="groupe">
+          <label>Nom *</label>
+          <input name="nom" required placeholder="Dupont">
+        </div>
+      </div>
+      <div class="groupe">
+        <label>Email *</label>
+        <input name="email" type="email" required placeholder="marie@exemple.fr">
+        <p style="font-size:11px;color:var(--grey);margin:4px 0 0;">
+          La confirmation et le lien de calendrier (.ics) vous seront envoyés à cette adresse.
+        </p>
+      </div>
+      <div class="groupe">
+        <label>Téléphone</label>
+        <input name="telephone" type="tel" placeholder="06 xx xx xx xx">
+      </div>
+      <div class="groupe">
+        <label>Message (optionnel)</label>
+        <textarea name="message" placeholder="Quelques mots sur votre situation ou vos attentes…"></textarea>
+      </div>
+      <button type="submit" class="btn-suite" id="btn-submit">Confirmer le rendez-vous</button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// État
+// ============================================================
+let etat = {
+  typeSeance: null,       // objet {id, nom, duree_minutes, modalite, couleur_hex}
+  modalite: null,         // 'cabinet' | 'visio'
+  lieuxDispos: [],        // [{id, nom, type_lieu, lien_visio}]
+  lieu: null,             // objet lieu choisi
+  dateChoisie: null,      // string 'YYYY-MM-DD'
+  creneauChoisi: null,    // {debut:'HH:MM', fin:'HH:MM'}
+  moisCal: new Date(),
+  joursDispo: [],         // ['YYYY-MM-DD', …] mois courant
+};
+etat.moisCal.setDate(1);
+
+// ============================================================
+// Étapes : navigation
+// ============================================================
+function allerStep(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('step-' + i).style.display = i === n ? '' : 'none';
+    const et = document.getElementById('et-' + i);
+    et.classList.toggle('active', i === n);
+    et.classList.toggle('done', i < n);
+  });
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ============================================================
+// Étape 1 : Types de séances
+// ============================================================
+async function chargerTypes() {
+  const c = document.getElementById('liste-types');
+  try {
+    const r = await fetch('/api/agenda/types-seances?actif=1').then(r => r.json());
+    const types = (r.types || []).filter(t => t.actif);
+    if (!types.length) {
+      c.innerHTML = '<p style="color:var(--grey);font-size:14px;">Aucune séance disponible pour le moment.</p>';
+      return;
+    }
+    c.innerHTML = `<div class="cartes-types">${types.map(t => `
+      <div class="carte-type" onclick="choisirType(${t.id})" data-id="${t.id}">
+        <div class="nom">
+          <span class="puce" style="background:${t.couleur_hex||'#B8922A'};"></span>${t.nom}
+        </div>
+        <div class="detail">${t.duree_minutes} min · ${modaliteLabel(t.modalite)}</div>
+        ${t.description ? `<div class="detail" style="margin-top:6px;">${t.description}</div>` : ''}
+      </div>`).join('')}
+    </div>`;
+    window._typesCache = types;
+  } catch(e) {
+    c.innerHTML = '<p style="color:#B3503D;">Impossible de charger les séances. Veuillez réessayer.</p>';
+  }
+}
+
+function modaliteLabel(m) {
+  return {cabinet:'Cabinet', visio:'Visio', les_deux:'Cabinet ou visio'}[m] || m;
+}
+
+function choisirType(id) {
+  const types = window._typesCache || [];
+  const type = types.find(t => t.id === id);
+  if (!type) return;
+  etat.typeSeance = type;
+  etat.modalite = null;
+  etat.lieuxDispos = [];
+
+  document.querySelectorAll('.carte-type').forEach(c => c.classList.toggle('active', parseInt(c.dataset.id) === id));
+
+  const divModalite = document.getElementById('choix-modalite');
+  if (type.modalite === 'les_deux') {
+    divModalite.style.display = '';
+    document.querySelectorAll('.btn-modalite').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-step1').disabled = true;
+  } else {
+    divModalite.style.display = 'none';
+    choisirModalite(type.modalite);
+  }
+}
+
+function choisirModalite(m) {
+  etat.modalite = m;
+  document.querySelectorAll('.btn-modalite').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(m)));
+  document.getElementById('btn-step1').disabled = !etat.typeSeance;
+}
+
+async function allerStep2() {
+  if (!etat.typeSeance) return;
+  allerStep(2);
+  etat.moisCal = new Date();
+  etat.moisCal.setDate(1);
+  await chargerMois();
+}
+
+// ============================================================
+// Étape 2 : Calendrier
+// ============================================================
+async function chargerMois() {
+  const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  document.getElementById('cal-label').textContent =
+    MOIS[etat.moisCal.getMonth()] + ' ' + etat.moisCal.getFullYear();
+
+  const msg = document.getElementById('cal-message');
+  msg.style.display = '';
+  msg.textContent = 'Chargement des disponibilités…';
+  document.getElementById('cal-jours').innerHTML = '';
+
+  try {
+    const annee = etat.moisCal.getFullYear();
+    const mois = etat.moisCal.getMonth() + 1;
+    const url = `/api/agenda/disponibilites?type_seance_id=${etat.typeSeance.id}&modalite=${etat.modalite}&annee=${annee}&mois=${mois}`;
+    const r = await fetch(url).then(r => r.json());
+    etat.joursDispo = r.jours_dispos || [];
+    msg.style.display = 'none';
+    genererCal();
+  } catch(e) {
+    msg.textContent = 'Impossible de charger le calendrier.';
+  }
+}
+
+function genererCal() {
+  const grille = document.getElementById('cal-jours');
+  const annee = etat.moisCal.getFullYear();
+  const mois = etat.moisCal.getMonth();
+  const premier = new Date(annee, mois, 1);
+  const dernier = new Date(annee, mois + 1, 0);
+  const auj = new Date(); auj.setHours(0,0,0,0);
+
+  // Offset : lundi = 0
+  const offset = (premier.getDay() + 6) % 7;
+
+  let html = '';
+  // Cellules vides avant le 1er
+  for (let i = 0; i < offset; i++) html += '<div></div>';
+
+  for (let j = 1; j <= dernier.getDate(); j++) {
+    const d = new Date(annee, mois, j);
+    const iso = d.toISOString().split('T')[0];
+    const estPasse = d < auj;
+    const estDispo = etat.joursDispo.includes(iso);
+    const estActive = etat.dateChoisie === iso;
+
+    let cls = 'cal-jour';
+    if (d.toDateString() === auj.toDateString()) cls += ' today';
+    if (estPasse) cls += ' passe';
+    if (estDispo && !estPasse) cls += ' dispo';
+    if (estActive) cls += ' active';
+
+    const onclick = (estDispo && !estPasse) ? `onclick="choisirDate('${iso}')"` : '';
+    html += `<div class="${cls}" ${onclick}>${j}</div>`;
+  }
+  grille.innerHTML = html;
+}
+
+function changerMois(delta) {
+  etat.moisCal.setMonth(etat.moisCal.getMonth() + delta);
+  chargerMois();
+}
+
+async function choisirDate(iso) {
+  etat.dateChoisie = iso;
+  document.querySelectorAll('.cal-jour').forEach(j => j.classList.remove('active'));
+  event.target.classList.add('active');
+
+  // Aller à l'étape 3
+  const d = new Date(iso + 'T00:00:00');
+  const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+  document.getElementById('step3-titre').textContent = 'Créneaux du ' + dateLabel;
+
+  allerStep(3);
+  await chargerCreneaux();
+}
+
+// ============================================================
+// Étape 3 : Créneaux
+// ============================================================
+async function chargerCreneaux() {
+  const c = document.getElementById('liste-creneaux');
+  c.innerHTML = '<div class="chargement">Chargement…</div>';
+  etat.creneauChoisi = null;
+  document.getElementById('btn-step3').disabled = true;
+
+  try {
+    const url = `/api/agenda/creneaux?type_seance_id=${etat.typeSeance.id}&modalite=${etat.modalite}&date=${etat.dateChoisie}`;
+    const r = await fetch(url).then(r => r.json());
+    const creneaux = r.creneaux || [];
+    if (!creneaux.length) {
+      c.innerHTML = '<p style="color:var(--grey);font-size:14px;">Aucun créneau disponible pour cette date.</p>';
+      return;
+    }
+    c.innerHTML = `<div class="creneaux">${creneaux.map(cr =>
+      `<button class="creneau" onclick="choisirCreneau('${cr.debut}','${cr.fin}',this)">${cr.debut}</button>`
+    ).join('')}</div>`;
+  } catch(e) {
+    c.innerHTML = '<p style="color:#B3503D;">Impossible de charger les créneaux.</p>';
+  }
+}
+
+function choisirCreneau(debut, fin, btn) {
+  etat.creneauChoisi = {debut, fin};
+  etat.lieu = null;  // sera déterminé côté serveur
+  document.querySelectorAll('.creneau').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('btn-step3').disabled = false;
+}
+
+function allerStep4() {
+  if (!etat.creneauChoisi) return;
+  afficherRecap();
+  allerStep(4);
+}
+
+// ============================================================
+// Étape 4 : Formulaire + recap
+// ============================================================
+function afficherRecap() {
+  const d = new Date(etat.dateChoisie + 'T00:00:00');
+  const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  document.getElementById('recap-rdv').innerHTML = `
+    <div class="ligne"><span class="l">Séance</span><span class="v">${etat.typeSeance.nom}</span></div>
+    <div class="ligne"><span class="l">Date</span><span class="v">${dateLabel}</span></div>
+    <div class="ligne"><span class="l">Heure</span><span class="v">${etat.creneauChoisi.debut}</span></div>
+    <div class="ligne"><span class="l">Durée</span><span class="v">${etat.typeSeance.duree_minutes} min</span></div>
+    <div class="ligne"><span class="l">Format</span><span class="v">${etat.modalite === 'visio' ? '🎥 Visio' : '🏠 Cabinet'}</span></div>
+  `;
+}
+
+async function soumettre(evt) {
+  evt.preventDefault();
+  const btn = document.getElementById('btn-submit');
+  const errDiv = document.getElementById('erreur-form');
+  errDiv.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours…';
+
+  const fd = new FormData(evt.target);
+  const payload = {
+    type_seance_id: etat.typeSeance.id,
+    modalite: etat.modalite,
+    date: etat.dateChoisie,
+    heure_debut: etat.creneauChoisi.debut,
+    prenom: fd.get('prenom'),
+    nom: fd.get('nom'),
+    email: fd.get('email'),
+    telephone: fd.get('telephone') || null,
+    message: fd.get('message') || null,
+  };
+
+  try {
+    const resp = await fetch('/api/agenda/reserver', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({detail: 'Une erreur est survenue.'}));
+      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    }
+    const data = await resp.json();
+    window.location.href = '/rendez-vous/confirmation?token=' + data.token_annulation;
+  } catch(e) {
+    errDiv.innerHTML = `<div class="erreur-bloc">${e.message}</div>`;
+    btn.disabled = false;
+    btn.textContent = 'Confirmer le rendez-vous';
+  }
+}
+
+// ============================================================
+// Init
+// ============================================================
+chargerTypes();
+</script>
+</body>
+</html>

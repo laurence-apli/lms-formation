@@ -39,6 +39,11 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE jours_accompagnement_niveau ADD COLUMN IF NOT EXISTS jours_visio INTEGER DEFAULT 0",
     "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS type_accompagnement VARCHAR(20) DEFAULT 'cabinet'",
     "ALTER TABLE formations ADD COLUMN IF NOT EXISTS acces_auto BOOLEAN DEFAULT FALSE",
+    # --- AGENDA (ajouté oct. 2026) ---
+    # Les tables agenda_* sont des nouvelles tables créées par create_all,
+    # pas de ALTER TABLE nécessaire pour elles.
+    # Colonne de liaison sur seances_accompagnement : réservation native
+    "ALTER TABLE seances_accompagnement ADD COLUMN IF NOT EXISTS reservation_id INTEGER",
 ]
 
 

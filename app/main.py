@@ -123,3 +123,15 @@ app.include_router(messagerie.admin_router)
 # Offres publiques et paiements
 app.include_router(offres_admin.router, prefix="/admin", tags=["offres-admin"])
 app.include_router(offres_publiques.router, tags=["offres-publiques"])
+
+# Agenda natif (remplace Resalib)
+from .routes.agenda import (
+    admin_router as agenda_admin_router,
+    public_router as agenda_public_router,
+    api_router as agenda_api_router,
+    cron_router as agenda_cron_router,
+)
+app.include_router(agenda_admin_router)
+app.include_router(agenda_public_router)
+app.include_router(agenda_api_router)
+app.include_router(agenda_cron_router)
