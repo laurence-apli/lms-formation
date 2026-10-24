@@ -29,6 +29,13 @@
     <span id="label-semaine" style="font-family:'EB Garamond',serif;font-size:18px;font-weight:600;min-width:220px;text-align:center;"></span>
     <button class="btn btn-sm" onclick="changerSemaine(1)">Suiv. ›</button>
     <button class="btn btn-sm" onclick="allerAujourd_hui()">Aujourd'hui</button>
+    <!-- Zoom / Dézoom -->
+    <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;gap:0;">
+      <button onclick="ajusterZoom(-12)" title="Dézoom"
+              style="padding:5px 10px;font-size:14px;background:var(--panel);color:var(--ink);border:none;cursor:pointer;border-right:1px solid var(--border);">−</button>
+      <button onclick="ajusterZoom(12)" title="Zoom"
+              style="padding:5px 10px;font-size:14px;background:var(--panel);color:var(--ink);border:none;cursor:pointer;">+</button>
+    </div>
     <!-- Toggle mode vue -->
     <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-left:auto;">
       <button id="btn-mode-creneaux" onclick="setModeVue('creneaux')"
@@ -56,7 +63,7 @@
 
     <!-- Plages horaires 8h–20h -->
     {% for h in range(8, 20) %}
-    <div style="background:var(--panel);padding:4px 6px;font-size:11px;color:var(--grey);
+    <div class="label-heure" style="background:var(--panel);padding:4px 6px;font-size:11px;color:var(--grey);
                 text-align:right;border-top:1px solid var(--border);height:52px;line-height:1;">
       {{ '%02d'|format(h) }}h
     </div>
@@ -200,6 +207,16 @@ let offsetSemaine = 0;
 let modeVue = 'creneaux'; // 'creneaux' | 'reservations'
 let typesSeances = [];
 let lieux = [];
+let hauteurHeure = 52; // px par tranche horaire, ajustable avec zoom
+
+function ajusterZoom(delta) {
+  hauteurHeure = Math.max(28, Math.min(120, hauteurHeure + delta));
+  // Mettre à jour toutes les cellules et les labels d'heures
+  document.querySelectorAll('.cellule-heure').forEach(c => c.style.height = hauteurHeure + 'px');
+  document.querySelectorAll('.label-heure').forEach(c => c.style.height = hauteurHeure + 'px');
+  // Recharger la semaine pour repositionner les blocs
+  chargerSemaine();
+}
 
 // ============================================================
 // Onglets
@@ -336,26 +353,26 @@ function afficherRdvGrille(rdv, lundi) {
   if (!cible) return;
 
   const dureeH = heureFin - heureDebut;
-  const offsetTop = (heureDebut - Math.floor(heureDebut)) * 52;
-  const hauteur = dureeH * 52 - 2;
+  const offsetTop = (heureDebut - Math.floor(heureDebut)) * hauteurHeure;
+  const hauteur = Math.max(20, dureeH * hauteurHeure - 2);
 
   const couleur = rdv.couleur || '#B8922A';
   const div = document.createElement('div');
   div.className = 'rdv-bloc';
-  div.style.cssText = `top:${offsetTop}px;height:${hauteur}px;background:${couleur};`;
+  div.style.cssText = `top:${offsetTop}px;height:${hauteur}px;background:${couleur};cursor:pointer;`;
   div.innerHTML = `<div>${rdv.prenom} ${rdv.nom[0]}.</div><div style="font-weight:400;opacity:.9">${debut.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>`;
   div.onclick = () => ouvrirDetailReservation(rdv.id);
   cible.appendChild(div);
 }
 
-function afficherCreneauGrille(creneau, lundi) {
-  // creneau : {date, heure_debut, heure_fin, type_seance_nom, couleur, lieu_nom}
-  const dateC = new Date(creneau.date + 'T00:00');
+function afficherCreneauGrille(bandeau, lundi) {
+  // bandeau : {date, plage_id, heure_debut, heure_fin, type_seance_nom, duree_minutes, modalite, couleur, lieu_nom}
+  const dateC = new Date(bandeau.date + 'T00:00');
   const jourIdx = Math.round((dateC - new Date(lundi.toDateString())) / 86400000);
   if (jourIdx < 0 || jourIdx > 6) return;
 
-  const [hD, mD] = creneau.heure_debut.split(':').map(Number);
-  const [hF, mF] = creneau.heure_fin.split(':').map(Number);
+  const [hD, mD] = bandeau.heure_debut.split(':').map(Number);
+  const [hF, mF] = bandeau.heure_fin.split(':').map(Number);
   const heureDebut = hD + mD / 60;
   const heureFin = hF + mF / 60;
 
@@ -369,16 +386,63 @@ function afficherCreneauGrille(creneau, lundi) {
   if (!cible) return;
 
   const dureeH = heureFin - heureDebut;
-  const offsetTop = (heureDebut - Math.floor(heureDebut)) * 52;
-  const hauteur = dureeH * 52 - 2;
+  const offsetTop = (mD / 60) * hauteurHeure;
+  const hauteur = Math.max(20, dureeH * hauteurHeure - 2);
 
-  const couleur = creneau.couleur || '#B8922A';
-  // Couleur de fond avec opacité pour les créneaux (distinction visuelle avec les RDV)
+  const couleur = bandeau.couleur || '#B8922A';
+
+  // Bandeau plein couvrant toute la plage horaire
   const div = document.createElement('div');
   div.className = 'rdv-bloc';
-  div.style.cssText = `top:${offsetTop}px;height:${hauteur}px;background:${couleur};opacity:0.55;border:2px solid ${couleur};box-sizing:border-box;`;
-  div.innerHTML = `<div style="font-size:10px;line-height:1.2;">${creneau.type_seance_nom}</div><div style="font-weight:400;font-size:10px;opacity:.9;">${creneau.heure_debut}${creneau.lieu_nom ? ' · ' + creneau.lieu_nom : ''}</div>`;
+  div.style.cssText = `
+    top:${offsetTop}px;
+    height:${hauteur}px;
+    background:${couleur};
+    opacity:0.75;
+    border-left:4px solid ${couleur};
+    filter:brightness(1.1);
+    box-sizing:border-box;
+    cursor:pointer;
+    overflow:hidden;
+  `;
+  div.innerHTML = `
+    <div style="font-size:11px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+      ${bandeau.type_seance_nom}
+    </div>
+    <div style="font-weight:400;font-size:10px;opacity:.9;">
+      ${bandeau.heure_debut.slice(0,5)}–${bandeau.heure_fin.slice(0,5)}${bandeau.lieu_nom ? ' · ' + bandeau.lieu_nom : ''}
+    </div>
+  `;
+  div.onclick = () => ouvrirInfoPlage(bandeau);
   cible.appendChild(div);
+}
+
+function ouvrirInfoPlage(bandeau) {
+  const modaliteLabel = {cabinet:'Cabinet',visio:'Visio',les_deux:'Cabinet ou Visio'}[bandeau.modalite] || bandeau.modalite || '';
+  const html = `
+    <div class="overlay" onclick="if(event.target===this)fermerModal()">
+      <div class="modal" style="max-width:380px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="width:16px;height:40px;border-radius:4px;background:${bandeau.couleur || '#B8922A'};flex-shrink:0;"></div>
+          <h3 style="margin:0;">${bandeau.type_seance_nom}</h3>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14px;">
+          <span style="color:var(--grey);font-size:12px;font-weight:600;">Horaire</span>
+          <span>${bandeau.heure_debut ? bandeau.heure_debut.slice(0,5) : '—'} – ${bandeau.heure_fin ? bandeau.heure_fin.slice(0,5) : '—'}</span>
+          <span style="color:var(--grey);font-size:12px;font-weight:600;">Durée séance</span>
+          <span>${bandeau.duree_minutes || '—'} min</span>
+          ${bandeau.lieu_nom ? `<span style="color:var(--grey);font-size:12px;font-weight:600;">Lieu</span><span>${bandeau.lieu_nom}</span>` : ''}
+          ${modaliteLabel ? `<span style="color:var(--grey);font-size:12px;font-weight:600;">Modalité</span><span>${modaliteLabel}</span>` : ''}
+          <span style="color:var(--grey);font-size:12px;font-weight:600;">Date</span>
+          <span>${new Date(bandeau.date + 'T00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})}</span>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="fermerModal()">Fermer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 async function afficherIndisposGrille(debutStr, finStr, lundi) {

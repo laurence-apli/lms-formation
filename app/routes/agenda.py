@@ -701,10 +701,16 @@ def api_creneaux_semaine(
         .all()
     )
 
-    creneaux_par_jour = []
+    bandeaux = []
     d = dt_debut
     while d <= dt_fin:
         for plage in plages:
+            # Vérifier validité de période
+            if plage.valide_du and d < plage.valide_du.date():
+                continue
+            if plage.valide_au and d > plage.valide_au.date():
+                continue
+
             # Vérifier si la plage couvre ce jour
             couvre = False
             if plage.date_unique:
@@ -715,23 +721,24 @@ def api_creneaux_semaine(
             if not couvre:
                 continue
 
-            creneaux = _creneaux_pour_plage(plage, d)
-            for (h_debut, h_fin) in creneaux:
-                # Vérifier que ce créneau n'est pas bloqué par une indispo
-                dt_creneau = datetime.combine(d, time(*[int(x) for x in h_debut.split(":")]))
-                if _indispo_pour_datetime(dt_creneau, session):
-                    continue
-                creneaux_par_jour.append({
-                    "date": d.isoformat(),
-                    "heure_debut": h_debut,
-                    "heure_fin": h_fin,
-                    "type_seance_nom": plage.type_seance.nom if plage.type_seance else "",
-                    "couleur": plage.type_seance.couleur_hex if plage.type_seance else "#B8922A",
-                    "lieu_nom": plage.lieu.nom if plage.lieu else "",
-                })
+            # Un seul bandeau par plage, de heure_debut à heure_fin
+            # (ignore les pauses — juste l'enveloppe de la plage)
+            bandeaux.append({
+                "date": d.isoformat(),
+                "plage_id": plage.id,
+                "heure_debut": plage.heure_debut,
+                "heure_fin": plage.heure_fin,
+                "type_seance_id": plage.type_seance_id,
+                "type_seance_nom": plage.type_seance.nom if plage.type_seance else "",
+                "duree_minutes": plage.type_seance.duree_minutes if plage.type_seance else 60,
+                "modalite": plage.type_seance.modalite if plage.type_seance else "",
+                "couleur": plage.type_seance.couleur_hex if plage.type_seance else "#B8922A",
+                "lieu_nom": plage.lieu.nom if plage.lieu else "",
+                "lieu_id": plage.lieu_id,
+            })
         d += timedelta(days=1)
 
-    return creneaux_par_jour
+    return bandeaux
 
 
 @api_router.get("/semaine")
