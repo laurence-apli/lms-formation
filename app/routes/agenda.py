@@ -71,9 +71,9 @@ def page_agenda_admin(request: Request, session: Session = Depends(obtenir_sessi
     )
 
     return templates.TemplateResponse(
+        request,
         "admin/agenda.html",
         {
-            "request": request,
             "page_active": "agenda",
             "types_seances": types_seances,
             "lieux": lieux,
@@ -988,9 +988,9 @@ def page_rendez_vous(request: Request, session: Session = Depends(obtenir_sessio
         .all()
     )
     return templates.TemplateResponse(
+        request,
         "rendez_vous.html",
         {
-            "request": request,
             "types_seances": types_seances,
         },
     )
@@ -1009,9 +1009,9 @@ def page_confirmation_rdv_query(
     if not resa:
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
     return templates.TemplateResponse(
+        request,
         "rendez_vous_confirmation.html",
         {
-            "request": request,
             "reservation": resa,
             "type_seance": resa.type_seance,
             "lieu": resa.lieu,
@@ -1030,9 +1030,9 @@ def page_confirmation_rendez_vous(
     if not resa:
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
     return templates.TemplateResponse(
+        request,
         "rendez_vous_confirmation.html",
         {
-            "request": request,
             "reservation": resa,
             "type_seance": resa.type_seance,
             "lieu": resa.lieu,
@@ -1050,12 +1050,14 @@ def page_annuler_rendez_vous(
     resa = session.query(Reservation).filter_by(token_annulation=token).first()
     if not resa:
         return templates.TemplateResponse(
+            request,
             "rendez_vous_annulation.html",
-            {"request": request, "reservation": None, "token": token, "erreur": "introuvable"},
+            {"reservation": None, "token": token, "erreur": "introuvable"},
         )
     return templates.TemplateResponse(
+        request,
         "rendez_vous_annulation.html",
-        {"request": request, "reservation": resa, "token": token},
+        {"reservation": resa, "token": token},
     )
 
 
@@ -1069,26 +1071,30 @@ def confirmer_annulation_rendez_vous(
     resa = session.query(Reservation).filter_by(token_annulation=token).first()
     if not resa:
         return templates.TemplateResponse(
+            request,
             "rendez_vous_annulation.html",
-            {"request": request, "reservation": None, "token": token, "erreur": "introuvable"},
+            {"reservation": None, "token": token, "erreur": "introuvable"},
         )
     if resa.statut == "annulee":
         return templates.TemplateResponse(
+            request,
             "rendez_vous_annulation.html",
-            {"request": request, "reservation": resa, "token": token, "erreur": "deja_annulee"},
+            {"reservation": resa, "token": token, "erreur": "deja_annulee"},
         )
     # Vérifier délai 24h
     delai = resa.date_debut - datetime.utcnow()
     if delai.total_seconds() < 86400:
         return templates.TemplateResponse(
+            request,
             "rendez_vous_annulation.html",
-            {"request": request, "reservation": resa, "token": token, "erreur": "trop_tard"},
+            {"reservation": resa, "token": token, "erreur": "trop_tard"},
         )
     resa.statut = "annulee"
     session.commit()
     return templates.TemplateResponse(
+        request,
         "rendez_vous_annulation.html",
-        {"request": request, "reservation": resa, "token": token, "annulation_ok": True},
+        {"reservation": resa, "token": token, "annulation_ok": True},
     )
 
 
