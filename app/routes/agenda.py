@@ -21,7 +21,7 @@ from ..models import (
     TypeSeance, Lieu, PlageDisponibilite, Reservation, RappelEnvoye,
     SeanceAccompagnement, AccesFormation, Eleve,
 )
-from .auth import admin_connecte, eleve_connecte_optionnel
+from .auth import admin_connecte
 
 templates = Jinja2Templates(directory="app/templates")
 
