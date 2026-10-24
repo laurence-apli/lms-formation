@@ -24,11 +24,22 @@
 
 <!-- ===== ONGLET SEMAINE ===== -->
 <div id="tab-semaine">
-  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
     <button class="btn btn-sm" onclick="changerSemaine(-1)">‹ Préc.</button>
     <span id="label-semaine" style="font-family:'EB Garamond',serif;font-size:18px;font-weight:600;min-width:220px;text-align:center;"></span>
     <button class="btn btn-sm" onclick="changerSemaine(1)">Suiv. ›</button>
     <button class="btn btn-sm" onclick="allerAujourd_hui()">Aujourd'hui</button>
+    <!-- Toggle mode vue -->
+    <div style="display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-left:auto;">
+      <button id="btn-mode-creneaux" onclick="setModeVue('creneaux')"
+              style="padding:5px 14px;font-size:12px;font-family:'League Spartan',sans-serif;font-weight:700;letter-spacing:.04em;background:var(--gold);color:#fff;border:none;cursor:pointer;">
+        📅 Créneaux
+      </button>
+      <button id="btn-mode-reservations" onclick="setModeVue('reservations')"
+              style="padding:5px 14px;font-size:12px;font-family:'League Spartan',sans-serif;font-weight:700;letter-spacing:.04em;background:var(--panel);color:var(--grey);border:none;cursor:pointer;border-left:1px solid var(--border);">
+        📋 Réservations
+      </button>
+    </div>
   </div>
 
   <div id="grille-semaine" style="display:grid;grid-template-columns:60px repeat(7,1fr);gap:1px;background:var(--border);border-radius:8px;overflow:hidden;">
@@ -186,6 +197,7 @@
 // État global
 // ============================================================
 let offsetSemaine = 0;
+let modeVue = 'creneaux'; // 'creneaux' | 'reservations'
 let typesSeances = [];
 let lieux = [];
 
@@ -223,6 +235,24 @@ function allerAujourd_hui() {
   chargerSemaine();
 }
 
+function setModeVue(mode) {
+  modeVue = mode;
+  const gold = 'var(--gold)';
+  const panel = 'var(--panel)';
+  const white = '#fff';
+  const grey = 'var(--grey)';
+  const btnC = document.getElementById('btn-mode-creneaux');
+  const btnR = document.getElementById('btn-mode-reservations');
+  if (mode === 'creneaux') {
+    btnC.style.background = gold; btnC.style.color = white;
+    btnR.style.background = panel; btnR.style.color = grey;
+  } else {
+    btnR.style.background = gold; btnR.style.color = white;
+    btnC.style.background = panel; btnC.style.color = grey;
+  }
+  chargerSemaine();
+}
+
 function formatDateISO(d) {
   return d.toISOString().split('T')[0];
 }
@@ -241,7 +271,6 @@ async function chargerSemaine() {
 
   // Mettre à jour les entêtes
   const JOURS = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
-  const optsDate = {day:'numeric'};
   document.querySelectorAll('.entete-jour').forEach((el, i) => {
     const d = new Date(lundi);
     d.setDate(d.getDate() + i);
@@ -263,12 +292,23 @@ async function chargerSemaine() {
   // Vider les cellules
   document.querySelectorAll('.cellule-heure').forEach(c => c.innerHTML = '');
 
-  // Charger les réservations de la semaine
   const fin = new Date(lundi);
   fin.setDate(fin.getDate() + 6);
+  const debutStr = formatDateISO(lundi);
+  const finStr = formatDateISO(fin);
+
   try {
-    const r = await appelApi(`/api/agenda/semaine?debut=${formatDateISO(lundi)}&fin=${formatDateISO(fin)}`);
-    (r.reservations || []).forEach(rdv => afficherRdvGrille(rdv, lundi));
+    if (modeVue === 'reservations') {
+      // Mode réservations : afficher les RDV pris
+      const r = await appelApi(`/api/agenda/semaine?debut=${debutStr}&fin=${finStr}`);
+      (r.reservations || r || []).forEach(rdv => afficherRdvGrille(rdv, lundi));
+    } else {
+      // Mode créneaux : afficher les plages disponibles générées
+      const creneaux = await appelApi(`/api/agenda/creneaux-semaine?debut=${debutStr}&fin=${finStr}`);
+      (Array.isArray(creneaux) ? creneaux : []).forEach(c => afficherCreneauGrille(c, lundi));
+    }
+    // Toujours charger et afficher les indisponibilités
+    await afficherIndisposGrille(debutStr, finStr, lundi);
   } catch(e) { console.error('Erreur chargement semaine:', e); }
 }
 
@@ -306,6 +346,85 @@ function afficherRdvGrille(rdv, lundi) {
   div.innerHTML = `<div>${rdv.prenom} ${rdv.nom[0]}.</div><div style="font-weight:400;opacity:.9">${debut.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div>`;
   div.onclick = () => ouvrirDetailReservation(rdv.id);
   cible.appendChild(div);
+}
+
+function afficherCreneauGrille(creneau, lundi) {
+  // creneau : {date, heure_debut, heure_fin, type_seance_nom, couleur, lieu_nom}
+  const dateC = new Date(creneau.date + 'T00:00');
+  const jourIdx = Math.round((dateC - new Date(lundi.toDateString())) / 86400000);
+  if (jourIdx < 0 || jourIdx > 6) return;
+
+  const [hD, mD] = creneau.heure_debut.split(':').map(Number);
+  const [hF, mF] = creneau.heure_fin.split(':').map(Number);
+  const heureDebut = hD + mD / 60;
+  const heureFin = hF + mF / 60;
+
+  if (heureDebut < 8 || heureDebut >= 20) return;
+
+  const cells = document.querySelectorAll('.cellule-heure');
+  let cible = null;
+  cells.forEach(c => {
+    if (parseInt(c.dataset.heure) === hD && parseInt(c.dataset.jour) === jourIdx) cible = c;
+  });
+  if (!cible) return;
+
+  const dureeH = heureFin - heureDebut;
+  const offsetTop = (heureDebut - Math.floor(heureDebut)) * 52;
+  const hauteur = dureeH * 52 - 2;
+
+  const couleur = creneau.couleur || '#B8922A';
+  // Couleur de fond avec opacité pour les créneaux (distinction visuelle avec les RDV)
+  const div = document.createElement('div');
+  div.className = 'rdv-bloc';
+  div.style.cssText = `top:${offsetTop}px;height:${hauteur}px;background:${couleur};opacity:0.55;border:2px solid ${couleur};box-sizing:border-box;`;
+  div.innerHTML = `<div style="font-size:10px;line-height:1.2;">${creneau.type_seance_nom}</div><div style="font-weight:400;font-size:10px;opacity:.9;">${creneau.heure_debut}${creneau.lieu_nom ? ' · ' + creneau.lieu_nom : ''}</div>`;
+  cible.appendChild(div);
+}
+
+async function afficherIndisposGrille(debutStr, finStr, lundi) {
+  try {
+    const indispos = await appelApi(`/api/agenda/indisponibilites`);
+    if (!Array.isArray(indispos)) return;
+    // Pour chaque indispo qui chevauche la semaine, colorier les colonnes/cellules
+    indispos.forEach(indispo => {
+      const dtDebut = new Date(indispo.date_debut);
+      const dtFin = new Date(indispo.date_fin);
+      // Parcourir les 7 jours de la semaine
+      for (let i = 0; i < 7; i++) {
+        const jourDate = new Date(lundi);
+        jourDate.setDate(lundi.getDate() + i);
+        const finJour = new Date(jourDate);
+        finJour.setHours(23,59,59);
+        // Chevauche ce jour ?
+        if (dtDebut > finJour || dtFin < jourDate) continue;
+        // Heures de début/fin sur ce jour
+        const hDebutJour = jourDate.toDateString() === dtDebut.toDateString()
+          ? dtDebut.getHours() + dtDebut.getMinutes()/60 : 0;
+        const hFinJour = jourDate.toDateString() === dtFin.toDateString()
+          ? dtFin.getHours() + dtFin.getMinutes()/60 : 24;
+        // Cellules concernées (8h–20h)
+        const hStart = Math.max(8, Math.floor(hDebutJour));
+        const hEnd = Math.min(20, Math.ceil(hFinJour));
+        for (let h = hStart; h < hEnd; h++) {
+          const cells = document.querySelectorAll('.cellule-heure');
+          cells.forEach(c => {
+            if (parseInt(c.dataset.heure) === h && parseInt(c.dataset.jour) === i) {
+              // Overlay indispo
+              const ov = document.createElement('div');
+              ov.style.cssText = 'position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(220,38,38,0.12) 0px,rgba(220,38,38,0.12) 4px,transparent 4px,transparent 8px);pointer-events:none;z-index:5;';
+              if (indispo.motif && h === hStart) {
+                const label = document.createElement('div');
+                label.style.cssText = 'position:absolute;top:2px;left:2px;font-size:9px;color:#991B1B;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;z-index:6;pointer-events:none;';
+                label.textContent = '🚫 ' + indispo.motif;
+                c.appendChild(label);
+              }
+              c.appendChild(ov);
+            }
+          });
+        }
+      }
+    });
+  } catch(e) { console.warn('Indispos non chargées:', e); }
 }
 
 // ============================================================
@@ -776,15 +895,15 @@ async function chargerPlages() {
           <th style="padding:6px;text-align:left;">Séance</th>
           <th style="padding:6px;text-align:left;">Lieu</th>
           <th style="padding:6px;text-align:left;">Horaires</th>
-          <th style="padding:6px;text-align:left;">Validité</th>
+          <th style="padding:6px;text-align:left;">Début période</th>
+          <th style="padding:6px;text-align:left;">Fin période</th>
           <th style="padding:6px;"></th>
         </tr>
       </thead>
       <tbody>
       ${plages.map(p => {
-        const validite = (p.valide_du || p.valide_au)
-          ? `<span style="font-size:11px;color:var(--grey);">${p.valide_du ? 'Du ' + new Date(p.valide_du+'T00:00').toLocaleDateString('fr-FR') : ''} ${p.valide_au ? 'au ' + new Date(p.valide_au+'T00:00').toLocaleDateString('fr-FR') : ''}</span>`
-          : '<span style="color:var(--grey);font-size:11px;">Sans limite</span>';
+        const dateDebut = p.valide_du ? new Date(p.valide_du+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
+        const dateFin = p.valide_au ? new Date(p.valide_au+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
         return `<tr style="border-top:1px solid var(--border);">
           <td style="padding:8px 0;">
             ${p.date_unique ? new Date(p.date_unique+'T00:00').toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
@@ -795,7 +914,8 @@ async function chargerPlages() {
           </td>
           <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
           <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
-          <td style="padding:8px 6px;">${validite}</td>
+          <td style="padding:8px 6px;font-size:12px;">${dateDebut}</td>
+          <td style="padding:8px 6px;font-size:12px;">${dateFin}</td>
           <td style="padding:8px 0;text-align:right;">
             <div style="display:flex;gap:4px;justify-content:flex-end;">
               <button class="btn btn-sm" onclick="ouvrirModalModifierPlage(${p.id})" title="Modifier">✏️</button>

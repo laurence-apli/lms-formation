@@ -680,6 +680,59 @@ def api_lister_indisponibilites(session: Session = Depends(obtenir_session)):
     ]
 
 
+@api_router.get("/creneaux-semaine")
+def api_creneaux_semaine(
+    debut: Optional[str] = None,
+    fin: Optional[str] = None,
+    session: Session = Depends(obtenir_session),
+):
+    """Retourne tous les créneaux générés par les plages de disponibilité pour une semaine.
+    Format : liste de {date, heure_debut, heure_fin, type_seance, couleur, lieu}."""
+    try:
+        dt_debut = date.fromisoformat(debut) if debut else date.today()
+        dt_fin = date.fromisoformat(fin) if fin else dt_debut + timedelta(days=6)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Format de date invalide (YYYY-MM-DD attendu).")
+
+    plages = (
+        session.query(PlageDisponibilite)
+        .filter_by(actif=True)
+        .all()
+    )
+
+    creneaux_par_jour = []
+    d = dt_debut
+    while d <= dt_fin:
+        for plage in plages:
+            # Vérifier si la plage couvre ce jour
+            couvre = False
+            if plage.date_unique:
+                couvre = plage.date_unique.date() == d
+            elif plage.jour_semaine is not None:
+                couvre = d.weekday() == plage.jour_semaine
+
+            if not couvre:
+                continue
+
+            creneaux = _creneaux_pour_plage(plage, d)
+            for (h_debut, h_fin) in creneaux:
+                # Vérifier que ce créneau n'est pas bloqué par une indispo
+                dt_creneau = datetime.combine(d, time(*[int(x) for x in h_debut.split(":")]))
+                if _indispo_pour_datetime(dt_creneau, session):
+                    continue
+                creneaux_par_jour.append({
+                    "date": d.isoformat(),
+                    "heure_debut": h_debut,
+                    "heure_fin": h_fin,
+                    "type_seance_nom": plage.type_seance.nom if plage.type_seance else "",
+                    "couleur": plage.type_seance.couleur if plage.type_seance else "#B8922A",
+                    "lieu_nom": plage.lieu.nom if plage.lieu else "",
+                })
+        d += timedelta(days=1)
+
+    return creneaux_par_jour
+
+
 @api_router.get("/semaine")
 def api_semaine(
     debut: Optional[str] = None,
