@@ -1453,7 +1453,6 @@ def page_rendez_vous(
                 "prenom": eleve.prenom or "",
                 "nom": eleve.nom or "",
                 "email": eleve.email or "",
-                "telephone": eleve.telephone or "",
             }
 
     # Tout sérialiser en un seul bloc JSON pour le template (évite les pb Jinja2)
