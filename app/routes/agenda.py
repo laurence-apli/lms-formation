@@ -1406,6 +1406,47 @@ def annuler_reservation(token: str, session: Session = Depends(obtenir_session))
 
 
 # ===========================================================================
+# ENVOI DE MESSAGE SANS RÉSERVATION — /rendez-vous/message
+# ===========================================================================
+
+class MessageContactSchema(BaseModel):
+    prenom: str
+    nom: str
+    email: str
+    telephone: str = ""
+    message: str
+
+@public_router.post("/rendez-vous/message")
+async def envoyer_message_contact(data: MessageContactSchema):
+    """Envoie un message à Laurence sans prendre de rendez-vous."""
+    from ..emails_agenda import _envoyer_simple, EMAIL_ADMIN
+
+    if not data.message.strip():
+        raise HTTPException(status_code=400, detail="Le message ne peut pas être vide.")
+
+    corps = f"""
+<p>Bonjour Laurence,</p>
+<p><strong>{data.prenom} {data.nom}</strong> vous a envoyé un message depuis la page de réservation :</p>
+<blockquote style="border-left:3px solid #c9a96e;padding:10px 16px;margin:16px 0;color:#444;">
+  {data.message}
+</blockquote>
+<p><strong>Coordonnées :</strong><br>
+E-mail : <a href="mailto:{data.email}">{data.email}</a><br>
+{"Téléphone : " + data.telephone if data.telephone else ""}
+</p>
+<p style="color:#888;font-size:12px;">Message envoyé depuis lms-formation.onrender.com/rendez-vous</p>
+"""
+    ok = _envoyer_simple(
+        destinataire=EMAIL_ADMIN,
+        sujet=f"Message de {data.prenom} {data.nom} (sans réservation)",
+        corps_html=corps,
+    )
+    if not ok:
+        raise HTTPException(status_code=500, detail="Erreur lors de l'envoi de l'email.")
+    return {"ok": True}
+
+
+# ===========================================================================
 # PAGE PUBLIQUE — /rendez-vous
 # ===========================================================================
 

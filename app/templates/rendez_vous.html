@@ -1295,6 +1295,18 @@ body {
             <label for="dCreerCompte" style="font-size:12px;color:var(--text-secondary,#6b7280);cursor:pointer;line-height:1.5;">Créer un espace personnel pour suivre mes réservations<br><span style="color:var(--text-tertiary,#9ca3af);">Vous recevrez un e-mail pour choisir votre mot de passe.</span></label>
           </div>
 
+          <!-- Bouton envoyer un message sans RDV -->
+          <div id="dMessageSeul" style="margin-top:10px;">
+            <button type="button" id="dBtnMessage" onclick="deskEnvoyerMessage()" style="width:100%;padding:10px 16px;background:none;border:1px solid var(--gold,#c9a96e);border-radius:8px;color:var(--gold,#c9a96e);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Envoyer un message sans réserver
+            </button>
+            <div id="dMessageSeulOk" style="display:none;margin-top:8px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:13px;color:#166534;">
+              ✓ Votre message a bien été envoyé à Laurence.
+            </div>
+            <div id="dMessageSeulErr" style="display:none;margin-top:8px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:13px;color:#b91c1c;"></div>
+          </div>
+
           <div id="dFormErreur" style="display:none;margin-top:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;"></div>
         </div>
 
@@ -2147,6 +2159,49 @@ function escHtml(str) {
 function capitalize(str) {
   if (!str) return '';
   return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ═══════════════════════════════════════════════════════
+// ENVOYER UN MESSAGE SANS RÉSERVATION (desktop)
+// ═══════════════════════════════════════════════════════
+async function deskEnvoyerMessage() {
+  const prenom = (document.getElementById('dPrenom')?.value || '').trim();
+  const nom = (document.getElementById('dNom')?.value || '').trim();
+  const email = (document.getElementById('dEmail')?.value || '').trim();
+  const tel = (document.getElementById('dTel')?.value || '').trim();
+  const msg = (document.getElementById('dMessage')?.value || '').trim();
+  const okEl = document.getElementById('dMessageSeulOk');
+  const errEl = document.getElementById('dMessageSeulErr');
+  const btn = document.getElementById('dBtnMessage');
+
+  okEl.style.display = 'none';
+  errEl.style.display = 'none';
+
+  if (!prenom || !nom || !email) { errEl.textContent = 'Merci de renseigner votre prénom, nom et e-mail.'; errEl.style.display = 'block'; return; }
+  if (!msg) { errEl.textContent = 'Merci d\'écrire un message avant d\'envoyer.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours…';
+  try {
+    const r = await fetch('/rendez-vous/message', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prenom, nom, email, telephone: tel, message: msg})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      okEl.style.display = 'block';
+      document.getElementById('dMessage').value = '';
+    } else {
+      errEl.textContent = d.detail || 'Erreur lors de l\'envoi.';
+      errEl.style.display = 'block';
+    }
+  } catch(e) {
+    errEl.textContent = 'Erreur réseau, veuillez réessayer.';
+    errEl.style.display = 'block';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Envoyer un message sans réserver';
 }
 </script>
 </body>
