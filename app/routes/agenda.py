@@ -948,6 +948,7 @@ def disponibilites(
     annee: Optional[int] = None,       # depuis le template public
     mois_num_param: Optional[int] = None,  # param nommé "mois" en int — alias géré ci-dessous
     modalite: Optional[str] = None,    # ignoré pour le filtrage, juste accepté
+    admin: Optional[int] = None,       # admin=1 → pas de filtre d'overlap (admin peut poser librement)
     session: Session = Depends(obtenir_session),
 ):
     """Retourne les jours disponibles pour un type de séance dans un mois donné.
@@ -1007,25 +1008,30 @@ def disponibilites(
                 continue
 
             # Filtrer les créneaux déjà réservés (overlap réel, toutes séances confondues)
-            debut_jour = datetime.combine(d, time(0, 0))
-            fin_jour = datetime.combine(d, time(23, 59))
-            reservations_jour = (
-                session.query(Reservation)
-                .filter(
-                    Reservation.date_debut >= debut_jour,
-                    Reservation.date_debut <= fin_jour,
-                    Reservation.statut.in_(["en_attente", "confirmee"]),
+            # En mode admin, on ne filtre pas les overlaps (l'admin peut poser librement)
+            if not admin:
+                debut_jour = datetime.combine(d, time(0, 0))
+                fin_jour = datetime.combine(d, time(23, 59))
+                reservations_jour = (
+                    session.query(Reservation)
+                    .filter(
+                        Reservation.date_debut >= debut_jour,
+                        Reservation.date_debut <= fin_jour,
+                        Reservation.statut.in_(["en_attente", "confirmee"]),
+                    )
+                    .all()
                 )
-                .all()
-            )
 
-            def _creneau_chevauche_resa(h_debut: str, h_fin: str) -> bool:
-                dt_c_debut = datetime.combine(d, time(int(h_debut[:2]), int(h_debut[3:])))
-                dt_c_fin = datetime.combine(d, time(int(h_fin[:2]), int(h_fin[3:])))
-                return any(
-                    r.date_debut < dt_c_fin and r.date_fin > dt_c_debut
-                    for r in reservations_jour
-                )
+                def _creneau_chevauche_resa(h_debut: str, h_fin: str) -> bool:
+                    dt_c_debut = datetime.combine(d, time(int(h_debut[:2]), int(h_debut[3:])))
+                    dt_c_fin = datetime.combine(d, time(int(h_fin[:2]), int(h_fin[3:])))
+                    return any(
+                        r.date_debut < dt_c_fin and r.date_fin > dt_c_debut
+                        for r in reservations_jour
+                    )
+            else:
+                def _creneau_chevauche_resa(h_debut: str, h_fin: str) -> bool:
+                    return False
 
             # Filtrer les créneaux bloqués par une indisponibilité
             def _heure_en_indispo(h: str) -> bool:

@@ -828,7 +828,7 @@ async function craChargerDispo() {
   const moisStr = `${mois.getFullYear()}-${String(mois.getMonth()+1).padStart(2,'0')}`;
   craRenderCal('Chargement…');
   try {
-    const data = await appelApi(`/api/agenda/disponibilites?type_seance_id=${_CRA.typeId}&mois=${moisStr}`);
+    const data = await appelApi(`/api/agenda/disponibilites?type_seance_id=${_CRA.typeId}&mois=${moisStr}&admin=1`);
     _CRA.joursDispo = {};
     (data.jours_disponibles || data || []).forEach(d => { _CRA.joursDispo[d] = true; });
   } catch(e) { _CRA.joursDispo = {}; }
