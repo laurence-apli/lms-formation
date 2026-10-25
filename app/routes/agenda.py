@@ -654,6 +654,7 @@ def api_lister_types_seances(
             "prix": float(t.prix) if t.prix is not None else None,
             "mode_paiement": t.mode_paiement or "sans_paiement",
             "visibilite": t.visibilite or "public",
+            "code_acces": t.code_acces or "",
         }
         for t in ts
     ]
