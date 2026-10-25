@@ -295,7 +295,11 @@ function setModeVue(mode) {
 }
 
 function formatDateISO(d) {
-  return d.toISOString().split('T')[0];
+  // Utiliser la date locale (pas UTC) pour éviter le décalage de fuseau horaire
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const j = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${j}`;
 }
 
 function labelSemaine(lundi) {
@@ -837,7 +841,7 @@ function craRenderCal(msg) {
     cal.appendChild(document.createElement('div'));
   }
   const nbJours = new Date(mois.getFullYear(), mois.getMonth()+1, 0).getDate();
-  const auj = new Date().toISOString().slice(0,10);
+  const aujDate = new Date(); const auj = `${aujDate.getFullYear()}-${String(aujDate.getMonth()+1).padStart(2,'0')}-${String(aujDate.getDate()).padStart(2,'0')}`;
   for (let j = 1; j <= nbJours; j++) {
     const iso = `${mois.getFullYear()}-${String(mois.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
     const dispo = !!_CRA.joursDispo[iso];
@@ -946,7 +950,7 @@ function craToggleLibre() {
     _CRA.dateChoisie = null;
     document.getElementById('cra-btn-suite').disabled = true;
     // Pré-remplir la date d'aujourd'hui
-    const auj = new Date().toISOString().slice(0,10);
+    const aujLibre = new Date(); const auj = `${aujLibre.getFullYear()}-${String(aujLibre.getMonth()+1).padStart(2,'0')}-${String(aujLibre.getDate()).padStart(2,'0')}`;
     document.getElementById('cra-libre-date').value = auj;
     craCheckLibre();
   } else {
