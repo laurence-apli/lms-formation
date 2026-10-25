@@ -129,7 +129,22 @@
         <h3 style="margin:0;font-family:'EB Garamond',serif;font-size:18px;">Plages de disponibilité</h3>
         <button class="btn btn-sm btn-primary" onclick="ouvrirModalPlage()">+ Ajouter</button>
       </div>
-      <p style="font-size:12px;color:var(--grey);margin:0 0 14px;">Associez un type de séance, un lieu et des horaires. Les créneaux sont générés automatiquement selon la durée de la séance. Une plage hebdomadaire se répète chaque semaine ; une date unique n'apparaît qu'une fois.</p>
+      <p style="font-size:12px;color:var(--grey);margin:0 0 10px;">Associez un type de séance, un lieu et des horaires. Les créneaux sont générés automatiquement selon la durée de la séance. Une plage hebdomadaire se répète chaque semaine ; une date unique n'apparaît qu'une fois.</p>
+      <!-- Filtres plages -->
+      <div id="filtres-plages" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center;">
+        <select id="filtre-plage-type" onchange="filtrerPlages()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);cursor:pointer;">
+          <option value="">Tous les types</option>
+        </select>
+        <select id="filtre-plage-recurrence" onchange="filtrerPlages()" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);cursor:pointer;">
+          <option value="">Toute récurrence</option>
+          <option value="hebdo">Hebdomadaire</option>
+          <option value="unique">Date unique</option>
+        </select>
+        <input type="time" id="filtre-plage-debut" onchange="filtrerPlages()" placeholder="Début ≥" title="Heure de début ≥" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);">
+        <input type="time" id="filtre-plage-fin" onchange="filtrerPlages()" placeholder="Fin ≤" title="Heure de fin ≤" style="font-size:12px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--ink);">
+        <button onclick="reinitFiltresPlages()" style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:none;color:var(--grey);cursor:pointer;">✕ Réinitialiser</button>
+        <span id="compteur-plages" style="font-size:11px;color:var(--grey);margin-left:4px;"></span>
+      </div>
       <div id="liste-plages"></div>
     </div>
 
@@ -1373,13 +1388,16 @@ const JOURS_LABEL = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dim
 // ============================================================
 // Paramètres — Plages de disponibilité
 // ============================================================
-function ouvrirModalPlage() {
-  const optsTypes = typesSeances.map(t => `<option value="${t.id}">${t.nom}</option>`).join('');
-  const optsLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
+function ouvrirModalPlage(src) {
+  // src : undefined = nouvelle plage vierge, objet = duplication avec pré-remplissage
+  const estUnique = src ? !!src.date_unique : false;
+  const optsTypes = typesSeances.map(t => `<option value="${t.id}" ${src && src.type_seance_id === t.id ? 'selected' : ''}>${t.nom}</option>`).join('');
+  const optsLieux = lieux.map(l => `<option value="${l.id}" ${src && src.lieu_id === l.id ? 'selected' : ''}>${l.nom}</option>`).join('');
+  const titre = src ? `Dupliquer la plage <span style="font-size:13px;color:var(--grey);font-weight:400;">(nouvelle plage pré-remplie)</span>` : 'Nouvelle plage de disponibilité';
   const html = `
   <div class="overlay">
   <div class="modal" onclick="event.stopPropagation()">
-    <h3>Nouvelle plage de disponibilité</h3>
+    <h3 style="margin:0 0 16px;">${titre}</h3>
     <form onsubmit="sauvegarderPlage(event)">
       <label>Type de séance *</label>
       <select name="type_seance_id" required>${optsTypes}</select>
@@ -1387,27 +1405,27 @@ function ouvrirModalPlage() {
       <select name="lieu_id" required>${optsLieux}</select>
       <label>Récurrence</label>
       <select name="type_recurrence" onchange="toggleDateUnique(this.value)">
-        <option value="hebdo">Hebdomadaire (chaque semaine)</option>
-        <option value="unique">Date unique</option>
+        <option value="hebdo" ${!estUnique ? 'selected' : ''}>Hebdomadaire (chaque semaine)</option>
+        <option value="unique" ${estUnique ? 'selected' : ''}>Date unique</option>
       </select>
-      <div id="champ-jour">
+      <div id="champ-jour" style="${estUnique ? 'display:none' : ''}">
         <label>Jour de la semaine *</label>
         <select name="jour_semaine">
-          ${JOURS_LABEL.map((j,i) => `<option value="${i}">${j}</option>`).join('')}
+          ${JOURS_LABEL.map((j,i) => `<option value="${i}" ${src && src.jour_semaine === i ? 'selected' : ''}>${j}</option>`).join('')}
         </select>
       </div>
-      <div id="champ-date-unique" style="display:none;">
+      <div id="champ-date-unique" style="${!estUnique ? 'display:none' : ''}">
         <label>Date *</label>
-        <input name="date_unique" type="date">
+        <input name="date_unique" type="date" value="${src && src.date_unique ? src.date_unique : ''}">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
           <label>Heure début *</label>
-          <input name="heure_debut" type="time" value="09:00" required>
+          <input name="heure_debut" type="time" value="${src ? src.heure_debut : '09:00'}" required>
         </div>
         <div>
           <label>Heure fin *</label>
-          <input name="heure_fin" type="time" value="17:00" required>
+          <input name="heure_fin" type="time" value="${src ? src.heure_fin : '17:00'}" required>
         </div>
       </div>
       <p class="helper-text" style="margin:14px 0 4px;font-weight:600;color:var(--ink);">Période de validité (optionnel)</p>
@@ -1415,16 +1433,16 @@ function ouvrirModalPlage() {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
         <div>
           <label>Valide à partir du</label>
-          <input name="valide_du" type="date">
+          <input name="valide_du" type="date" value="${src && src.valide_du ? src.valide_du : ''}">
         </div>
         <div>
           <label>Valide jusqu'au</label>
-          <input name="valide_au" type="date">
+          <input name="valide_au" type="date" value="${src && src.valide_au ? src.valide_au : ''}">
         </div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
-        <button type="submit" class="btn btn-primary">Enregistrer</button>
+        <button type="submit" class="btn btn-primary">${src ? 'Créer la copie' : 'Enregistrer'}</button>
       </div>
     </form>
   </div></div>`;
@@ -1483,45 +1501,99 @@ async function chargerPlages() {
       c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage configurée.</div>';
       return;
     }
-    c.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead>
-        <tr style="color:var(--grey);font-family:'League Spartan',sans-serif;font-size:11px;letter-spacing:.05em;">
-          <th style="padding:6px 0;text-align:left;">Récurrence</th>
-          <th style="padding:6px;text-align:left;">Séance</th>
-          <th style="padding:6px;text-align:left;">Lieu</th>
-          <th style="padding:6px;text-align:left;">Horaires</th>
-          <th style="padding:6px;text-align:left;">Début période</th>
-          <th style="padding:6px;text-align:left;">Fin période</th>
-          <th style="padding:6px;"></th>
-        </tr>
-      </thead>
-      <tbody>
-      ${plages.map(p => {
-        const dateDebut = p.valide_du ? new Date(p.valide_du+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
-        const dateFin = p.valide_au ? new Date(p.valide_au+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
-        return `<tr style="border-top:1px solid var(--border);">
-          <td style="padding:8px 0;">
-            ${p.date_unique ? new Date(p.date_unique+'T00:00').toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
-            ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
-          </td>
-          <td style="padding:8px 6px;">
-            <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.type_seance_couleur||'#B8922A'};margin-right:6px;vertical-align:middle;"></span>${p.type_seance_nom || '—'}
-          </td>
-          <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
-          <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
-          <td style="padding:8px 6px;font-size:12px;">${dateDebut}</td>
-          <td style="padding:8px 6px;font-size:12px;">${dateFin}</td>
-          <td style="padding:8px 0;text-align:right;">
-            <div style="display:flex;gap:4px;justify-content:flex-end;">
-              <button class="btn btn-sm" onclick="ouvrirModalModifierPlage(${p.id})" title="Modifier">✏️</button>
-              <button class="btn btn-sm btn-danger-outline" onclick="supprimerPlage(${p.id})" title="Supprimer">🗑</button>
-            </div>
-          </td>
-        </tr>`;
-      }).join('')}
-      </tbody>
-    </table>`;
+    // Remplir le filtre type de séance
+    const sel = document.getElementById('filtre-plage-type');
+    const valActuelle = sel.value;
+    sel.innerHTML = '<option value="">Tous les types</option>';
+    const typesVus = new Set();
+    plages.forEach(p => {
+      if (p.type_seance_id && !typesVus.has(p.type_seance_id)) {
+        typesVus.add(p.type_seance_id);
+        sel.innerHTML += `<option value="${p.type_seance_id}">${p.type_seance_nom || p.type_seance_id}</option>`;
+      }
+    });
+    if (valActuelle) sel.value = valActuelle;
+    filtrerPlages();
   } catch(e) { console.error(e); }
+}
+
+function filtrerPlages() {
+  const typeId = document.getElementById('filtre-plage-type').value;
+  const recurrence = document.getElementById('filtre-plage-recurrence').value;
+  const debutMin = document.getElementById('filtre-plage-debut').value;
+  const finMax = document.getElementById('filtre-plage-fin').value;
+
+  const filtrees = (plagesCachees || []).filter(p => {
+    if (typeId && String(p.type_seance_id) !== typeId) return false;
+    if (recurrence === 'hebdo' && p.date_unique) return false;
+    if (recurrence === 'unique' && !p.date_unique) return false;
+    if (debutMin && p.heure_debut < debutMin) return false;
+    if (finMax && p.heure_fin > finMax) return false;
+    return true;
+  });
+
+  const c = document.getElementById('liste-plages');
+  const cpt = document.getElementById('compteur-plages');
+  cpt.textContent = filtrees.length !== plagesCachees.length ? `${filtrees.length} / ${plagesCachees.length}` : '';
+
+  if (!filtrees.length) {
+    c.innerHTML = '<div class="empty-state" style="padding:20px;">Aucune plage ne correspond aux filtres.</div>';
+    return;
+  }
+  c.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="color:var(--grey);font-family:'League Spartan',sans-serif;font-size:11px;letter-spacing:.05em;">
+        <th style="padding:6px 0;text-align:left;">Récurrence</th>
+        <th style="padding:6px;text-align:left;">Séance</th>
+        <th style="padding:6px;text-align:left;">Lieu</th>
+        <th style="padding:6px;text-align:left;">Horaires</th>
+        <th style="padding:6px;text-align:left;">Début période</th>
+        <th style="padding:6px;text-align:left;">Fin période</th>
+        <th style="padding:6px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+    ${filtrees.map(p => {
+      const dateDebut = p.valide_du ? new Date(p.valide_du+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
+      const dateFin = p.valide_au ? new Date(p.valide_au+'T00:00').toLocaleDateString('fr-FR') : '<span style="color:var(--grey);font-size:11px;">—</span>';
+      return `<tr style="border-top:1px solid var(--border);">
+        <td style="padding:8px 0;">
+          ${p.date_unique ? new Date(p.date_unique+'T00:00').toLocaleDateString('fr-FR') : (JOURS_LABEL[p.jour_semaine] || '—')}
+          ${!p.actif ? '<em style="color:var(--danger);"> (inactif)</em>' : ''}
+        </td>
+        <td style="padding:8px 6px;">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${p.type_seance_couleur||'#B8922A'};margin-right:6px;vertical-align:middle;"></span>${p.type_seance_nom || '—'}
+        </td>
+        <td style="padding:8px 6px;">${p.lieu_nom || '—'}</td>
+        <td style="padding:8px 6px;">${p.heure_debut} – ${p.heure_fin}</td>
+        <td style="padding:8px 6px;font-size:12px;">${dateDebut}</td>
+        <td style="padding:8px 6px;font-size:12px;">${dateFin}</td>
+        <td style="padding:8px 0;text-align:right;">
+          <div style="display:flex;gap:4px;justify-content:flex-end;">
+            <button class="btn btn-sm" onclick="dupliquerPlage(${p.id})" title="Dupliquer">⧉</button>
+            <button class="btn btn-sm" onclick="ouvrirModalModifierPlage(${p.id})" title="Modifier">✏️</button>
+            <button class="btn btn-sm btn-danger-outline" onclick="supprimerPlage(${p.id})" title="Supprimer">🗑</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function reinitFiltresPlages() {
+  document.getElementById('filtre-plage-type').value = '';
+  document.getElementById('filtre-plage-recurrence').value = '';
+  document.getElementById('filtre-plage-debut').value = '';
+  document.getElementById('filtre-plage-fin').value = '';
+  filtrerPlages();
+}
+
+function dupliquerPlage(id) {
+  const p = plagesCachees.find(x => x.id === id);
+  if (!p) { afficherToast('Plage introuvable'); return; }
+  // Ouvre le modal de création pré-rempli avec les valeurs de la plage source
+  ouvrirModalPlage(p);
 }
 
 function ouvrirModalModifierPlage(id) {
