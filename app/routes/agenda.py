@@ -1246,7 +1246,6 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
             prenom=prenom_str,
             nom=nom_str,
             email=email_norm,
-            telephone=tel_str,
             actif=True,
         )
         session.add(eleve)

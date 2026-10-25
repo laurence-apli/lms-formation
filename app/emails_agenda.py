@@ -278,6 +278,33 @@ def _corps_email(contenu_html: str, couleur_barre: str = "#B8922A") -> str:
 # Email 1 : Confirmation de réservation
 # ---------------------------------------------------------------------------
 
+def _lien_google_agenda(reservation, type_seance, lieu) -> str:
+    """Génère un lien 'Ajouter à Google Agenda' pré-rempli."""
+    import urllib.parse
+    titre = type_seance.nom if type_seance else "Rendez-vous"
+    titre_encode = urllib.parse.quote(f"{titre} — Laurence Mermet-Bijon")
+    # Format Google : YYYYMMDDTHHmmssZ
+    debut = reservation.date_debut.strftime("%Y%m%dT%H%M%SZ")
+    fin = reservation.date_fin.strftime("%Y%m%dT%H%M%SZ") if reservation.date_fin else debut
+    if lieu and lieu.type_lieu == "visio":
+        location = urllib.parse.quote("Séance en visio")
+    elif lieu and lieu.adresse:
+        location = urllib.parse.quote(lieu.adresse)
+    elif lieu:
+        location = urllib.parse.quote(lieu.nom)
+    else:
+        location = ""
+    lien_annulation = f"{URL_PLATEFORME}/rendez-vous/annuler/{reservation.token_annulation}"
+    details = urllib.parse.quote(lien_annulation)
+    return (
+        f"https://calendar.google.com/calendar/render?action=TEMPLATE"
+        f"&text={titre_encode}"
+        f"&dates={debut}/{fin}"
+        f"&location={location}"
+        f"&details={details}"
+    )
+
+
 def email_confirmation_reservation(destinataire: str, prenom: str, reservation, type_seance, lieu) -> bool:
     """
     Email envoyé immédiatement après la réservation, avec le fichier .ics en pièce jointe.
@@ -308,6 +335,7 @@ def email_confirmation_reservation(destinataire: str, prenom: str, reservation, 
       </div>"""
 
     lien_annulation = f"{URL_PLATEFORME}/rendez-vous/annuler/{reservation.token_annulation}"
+    lien_google = _lien_google_agenda(reservation, type_seance, lieu)
 
     contenu = f"""
       <p style="margin:0 0 20px;font-size:17px;color:#2E2210;line-height:1.6;">
@@ -315,7 +343,7 @@ def email_confirmation_reservation(destinataire: str, prenom: str, reservation, 
       </p>
       <p style="margin:0 0 20px;font-size:15px;color:#3a2f1a;line-height:1.7;">
         Votre rendez-vous est confirmé. Vous trouverez ci-joint le fichier <strong>.ics</strong>
-        à ajouter à votre calendrier (Google Agenda, Apple Calendar, Outlook…).
+        à ajouter à votre calendrier (Apple Calendar, Outlook…).
       </p>
 
       <div style="background:#FAF5E8;border:1px solid #E8DFC8;border-radius:8px;padding:20px 24px;margin:20px 0;">
@@ -344,6 +372,18 @@ def email_confirmation_reservation(destinataire: str, prenom: str, reservation, 
       </div>
 
       {bloc_visio}
+
+      <div style="margin:24px 0;text-align:center;">
+        <a href="{lien_google}"
+           style="display:inline-block;background:#4285F4;color:#FFFFFF;text-decoration:none;
+                  font-family:Arial,sans-serif;font-size:13px;font-weight:700;
+                  padding:11px 22px;border-radius:6px;margin-bottom:8px;">
+          📅 Ajouter à Google Agenda
+        </a>
+        <p style="margin:8px 0 0;font-size:12px;color:#7A6A56;">
+          Apple Calendar / Outlook : ouvrez le fichier <strong>.ics</strong> en pièce jointe.
+        </p>
+      </div>
 
       <p style="margin:20px 0 8px;font-size:13px;color:#7A6A56;line-height:1.6;">
         Pour annuler (possible jusqu'à 24h avant la séance) :
