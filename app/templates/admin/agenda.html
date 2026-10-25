@@ -77,6 +77,7 @@
     </select>
     <input type="date" id="filtre-date" onchange="chargerReservations()" class="btn btn-sm" style="font-family:inherit;">
     <button class="btn btn-sm" onclick="reinitialiserFiltres()">Réinitialiser</button>
+    <button class="btn btn-sm btn-primary" onclick="ouvrirModalCreerResa()" style="margin-left:auto;">+ Créer un RDV</button>
   </div>
 
   <div id="liste-reservations">
@@ -587,11 +588,12 @@ async function chargerReservations() {
   conteneur.innerHTML = '<div class="empty-state"><div class="big">⏳</div>Chargement…</div>';
   try {
     const r = await appelApi('/api/agenda/reservations?' + params.toString());
-    if (!r.reservations || r.reservations.length === 0) {
+    const liste = Array.isArray(r) ? r : (r.reservations || []);
+    if (liste.length === 0) {
       conteneur.innerHTML = '<div class="empty-state"><div class="big">📋</div>Aucune réservation trouvée.</div>';
       return;
     }
-    conteneur.innerHTML = r.reservations.map(rdv => carteReservation(rdv)).join('');
+    conteneur.innerHTML = liste.map(rdv => carteReservation(rdv)).join('');
   } catch(e) {
     conteneur.innerHTML = `<div class="message-erreur">${e.message}</div>`;
   }
@@ -626,6 +628,108 @@ function reinitialiserFiltres() {
   document.getElementById('filtre-statut').value = '';
   document.getElementById('filtre-date').value = '';
   chargerReservations();
+}
+
+// ============================================================
+// Créer un RDV manuellement (admin)
+// ============================================================
+async function ouvrirModalCreerResa() {
+  // Charger types et lieux
+  let types = [], lieux = [];
+  try { types = await appelApi('/api/agenda/types-seances'); } catch(e) {}
+  try { lieux = await appelApi('/api/agenda/lieux'); } catch(e) {}
+
+  const optTypes = types.map(t => `<option value="${t.id}">${t.nom} (${t.duree_minutes} min)</option>`).join('');
+  const optLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
+
+  const html = `
+  <div class="overlay" onclick="fermerModal()">
+  <div class="modal" style="width:520px;" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;">Créer un RDV</h3>
+      <button class="btn btn-sm" onclick="fermerModal()">✕</button>
+    </div>
+    <form id="form-creer-resa" onsubmit="soumettreCreerResa(event)">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Prénom *</label>
+          <input name="prenom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Nom *</label>
+          <input name="nom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">E-mail *</label>
+        <input name="email" type="email" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Téléphone</label>
+        <input name="telephone" class="champ-texte" style="width:100%;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Type de séance *</label>
+          <select name="type_seance_id" class="champ-texte" style="width:100%;box-sizing:border-box;" required>${optTypes}</select>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Lieu *</label>
+          <select name="lieu_id" class="champ-texte" style="width:100%;box-sizing:border-box;" required>${optLieux}</select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Date *</label>
+          <input name="date" type="date" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        </div>
+        <div>
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Heure *</label>
+          <input name="heure" type="time" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Note interne</label>
+        <textarea name="note_admin" class="champ-texte" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical;"></textarea>
+      </div>
+      <div id="creer-resa-erreur" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button type="button" class="btn btn-sm" onclick="fermerModal()">Annuler</button>
+        <button type="submit" class="btn btn-sm btn-primary">Créer le RDV</button>
+      </div>
+    </form>
+  </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function soumettreCreerResa(e) {
+  e.preventDefault();
+  const form = e.target;
+  const errDiv = document.getElementById('creer-resa-erreur');
+  errDiv.style.display = 'none';
+  const date = form.date.value;
+  const heure = form.heure.value;
+  const date_debut = `${date}T${heure}:00`;
+  const body = new URLSearchParams({
+    prenom: form.prenom.value.trim(),
+    nom: form.nom.value.trim(),
+    email: form.email.value.trim(),
+    telephone: form.telephone.value.trim(),
+    type_seance_id: form.type_seance_id.value,
+    lieu_id: form.lieu_id.value,
+    date_debut,
+    note_admin: form.note_admin.value.trim(),
+  });
+  try {
+    const resp = await fetch('/admin/agenda/reservations/creer', { method: 'POST', body });
+    const data = await resp.json();
+    if (!resp.ok) { errDiv.textContent = data.detail || 'Erreur'; errDiv.style.display = 'block'; return; }
+    fermerModal();
+    chargerReservations();
+  } catch(e) {
+    errDiv.textContent = 'Erreur réseau'; errDiv.style.display = 'block';
+  }
 }
 
 // ============================================================
