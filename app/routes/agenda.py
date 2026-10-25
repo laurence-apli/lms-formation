@@ -583,6 +583,19 @@ def creer_reservation_admin(
 
     dt_fin = dt_debut + timedelta(minutes=ts.duree_minutes)
 
+    # Vérifier qu'aucune réservation active ne chevauche ce créneau
+    conflit = (
+        session.query(Reservation)
+        .filter(
+            Reservation.statut.in_(["en_attente", "confirmee"]),
+            Reservation.date_debut < dt_fin,
+            Reservation.date_fin > dt_debut,
+        )
+        .first()
+    )
+    if conflit:
+        raise HTTPException(status_code=409, detail=f"Ce créneau chevauche une réservation existante ({conflit.prenom} {conflit.nom}, {conflit.date_debut.strftime('%H:%M')}).")
+
     # Lien visio unique si séance visio
     lieu = session.get(Lieu, lieu_id)
     lien_visio = None
@@ -1209,20 +1222,20 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
         if not lieu:
             raise HTTPException(status_code=400, detail="Aucun lieu disponible pour ce créneau.")
 
-    # Vérifier que le créneau est toujours libre
+    dt_fin = dt_debut + timedelta(minutes=ts.duree_minutes)
+
+    # Vérifier qu'aucune réservation active ne chevauche ce créneau
     conflit = (
         session.query(Reservation)
         .filter(
-            Reservation.type_seance_id == ts.id,
-            Reservation.date_debut == dt_debut,
-            Reservation.statut == "en_attente",
+            Reservation.statut.in_(["en_attente", "confirmee"]),
+            Reservation.date_debut < dt_fin,
+            Reservation.date_fin > dt_debut,
         )
         .first()
     )
     if conflit:
-        raise HTTPException(status_code=409, detail="Ce créneau vient d'être réservé. Veuillez en choisir un autre.")
-
-    dt_fin = dt_debut + timedelta(minutes=ts.duree_minutes)
+        raise HTTPException(status_code=409, detail="Ce créneau chevauche une réservation existante. Veuillez en choisir un autre.")
 
     # Lien visio unique : on utilise le lien du lieu (à terme : lien by-session via Whereby/Jitsi)
     lien_visio = None
