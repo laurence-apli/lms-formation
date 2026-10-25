@@ -631,76 +631,277 @@ function reinitialiserFiltres() {
 }
 
 // ============================================================
-// Créer un RDV manuellement (admin)
+// Créer un RDV manuellement (admin) — 2 étapes avec créneaux réels
 // ============================================================
-async function ouvrirModalCreerResa() {
-  // Charger types et lieux
-  let types = [], lieux = [];
-  try { types = await appelApi('/api/agenda/types-seances'); } catch(e) {}
-  try { lieux = await appelApi('/api/agenda/lieux'); } catch(e) {}
 
-  const optTypes = types.map(t => `<option value="${t.id}">${t.nom} (${t.duree_minutes} min)</option>`).join('');
-  const optLieux = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
+// État interne du modal de création
+const _CRA = {
+  types: [], lieux: [],
+  typeId: null, lieuId: null,
+  mois: new Date(),         // mois affiché dans le mini-cal
+  joursDispo: {},           // { "YYYY-MM-DD": true }
+  dateChoisie: null,
+  creneaux: [],
+  creneauChoisi: null,      // { debut: "HH:MM", fin: "HH:MM" }
+};
+
+const _CRA_JOURS = ['Lu','Ma','Me','Je','Ve','Sa','Di'];
+const _CRA_MOIS  = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+async function ouvrirModalCreerResa() {
+  _CRA.mois = new Date(); _CRA.mois.setDate(1);
+  _CRA.joursDispo = {}; _CRA.dateChoisie = null;
+  _CRA.creneaux = []; _CRA.creneauChoisi = null;
+  _CRA.typeId = null; _CRA.lieuId = null;
+
+  [_CRA.types, _CRA.lieux] = await Promise.all([
+    appelApi('/api/agenda/types-seances').catch(() => []),
+    appelApi('/api/agenda/lieux').catch(() => []),
+  ]);
+  if (_CRA.types.length) _CRA.typeId = _CRA.types[0].id;
+  if (_CRA.lieux.length) _CRA.lieuId = _CRA.lieux[0].id;
+
+  const optTypes = _CRA.types.map(t =>
+    `<option value="${t.id}">${t.nom} (${t.duree_minutes} min)</option>`).join('');
+  const optLieux = _CRA.lieux.map(l =>
+    `<option value="${l.id}">${l.nom}</option>`).join('');
 
   const html = `
-  <div class="overlay" onclick="fermerModal()">
-  <div class="modal" style="width:520px;" onclick="event.stopPropagation()">
+  <div class="overlay" id="overlay-creer-rdv" onclick="fermerModal()">
+  <div class="modal" style="width:580px;max-width:95vw;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
       <h3 style="margin:0;">Créer un RDV</h3>
       <button class="btn btn-sm" onclick="fermerModal()">✕</button>
     </div>
-    <form id="form-creer-resa" onsubmit="soumettreCreerResa(event)">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Prénom *</label>
-          <input name="prenom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
-        </div>
-        <div>
-          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Nom *</label>
-          <input name="nom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
-        </div>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">E-mail *</label>
-        <input name="email" type="email" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Téléphone</label>
-        <input name="telephone" class="champ-texte" style="width:100%;box-sizing:border-box;">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+
+    <!-- ÉTAPE 1 : Choix créneau -->
+    <div id="cra-etape1">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;">
         <div>
           <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Type de séance *</label>
-          <select name="type_seance_id" class="champ-texte" style="width:100%;box-sizing:border-box;" required>${optTypes}</select>
+          <select id="cra-type" class="champ-texte" style="width:100%;box-sizing:border-box;" onchange="craChangerType(this.value)">${optTypes}</select>
         </div>
         <div>
           <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Lieu *</label>
-          <select name="lieu_id" class="champ-texte" style="width:100%;box-sizing:border-box;" required>${optLieux}</select>
+          <select id="cra-lieu" class="champ-texte" style="width:100%;box-sizing:border-box;">${optLieux}</select>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
-        <div>
-          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Date *</label>
-          <input name="date" type="date" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+
+      <!-- Mini calendrier -->
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <button class="btn btn-sm" onclick="craMoisNav(-1)">◀</button>
+          <span id="cra-mois-label" style="font-weight:600;"></span>
+          <button class="btn btn-sm" onclick="craMoisNav(1)">▶</button>
         </div>
-        <div>
-          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Heure *</label>
-          <input name="heure" type="time" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        <div id="cra-cal" style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center;"></div>
+      </div>
+
+      <!-- Créneaux du jour -->
+      <div id="cra-creneaux-section" style="display:none;margin-bottom:14px;">
+        <p style="font-size:12px;color:var(--grey);margin:0 0 8px;">Créneaux disponibles :</p>
+        <div id="cra-creneaux" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+      </div>
+
+      <div id="cra-aucun" style="display:none;color:var(--grey);font-size:13px;margin-bottom:14px;">
+        Aucun créneau disponible pour cette date.
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button class="btn btn-sm btn-primary" id="cra-btn-suite" onclick="craEtape2()" disabled>
+          Suivant — Infos cliente →
+        </button>
+      </div>
+    </div>
+
+    <!-- ÉTAPE 2 : Infos cliente -->
+    <div id="cra-etape2" style="display:none;">
+      <div id="cra-recap" style="background:var(--bg-alt,#f5f0e8);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px;"></div>
+      <form id="form-creer-resa" onsubmit="soumettreCreerResa(event)">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Prénom *</label>
+            <input name="prenom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Nom *</label>
+            <input name="nom" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+          </div>
         </div>
-      </div>
-      <div style="margin-bottom:16px;">
-        <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Note interne</label>
-        <textarea name="note_admin" class="champ-texte" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical;"></textarea>
-      </div>
-      <div id="creer-resa-erreur" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;"></div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;">
-        <button type="button" class="btn btn-sm" onclick="fermerModal()">Annuler</button>
-        <button type="submit" class="btn btn-sm btn-primary">Créer le RDV</button>
-      </div>
-    </form>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">E-mail *</label>
+          <input name="email" type="email" class="champ-texte" style="width:100%;box-sizing:border-box;" required>
+        </div>
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Téléphone</label>
+          <input name="telephone" class="champ-texte" style="width:100%;box-sizing:border-box;">
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Note interne</label>
+          <textarea name="note_admin" class="champ-texte" style="width:100%;box-sizing:border-box;min-height:60px;resize:vertical;"></textarea>
+        </div>
+        <div id="creer-resa-erreur" style="color:#c0392b;font-size:13px;margin-bottom:8px;display:none;"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button type="button" class="btn btn-sm" onclick="craRetourEtape1()">← Retour</button>
+          <button type="button" class="btn btn-sm" onclick="fermerModal()">Annuler</button>
+          <button type="submit" class="btn btn-sm btn-primary">✓ Créer le RDV</button>
+        </div>
+      </form>
+    </div>
   </div>
   </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+  await craChargerDispo();
+}
+
+function craRetourEtape1() {
+  document.getElementById('cra-etape1').style.display = '';
+  document.getElementById('cra-etape2').style.display = 'none';
+}
+
+function craEtape2() {
+  if (!_CRA.creneauChoisi || !_CRA.dateChoisie) return;
+  const type = _CRA.types.find(t => t.id == _CRA.typeId);
+  const lieu = _CRA.lieux.find(l => l.id == _CRA.lieuId);
+  const dateFmt = new Date(_CRA.dateChoisie + 'T00:00:00').toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('cra-recap').innerHTML =
+    `<strong>${type ? type.nom : ''}</strong> · ${lieu ? lieu.nom : ''}<br>
+     📅 ${dateFmt} · ${_CRA.creneauChoisi.debut} – ${_CRA.creneauChoisi.fin}`;
+  document.getElementById('cra-etape1').style.display = 'none';
+  document.getElementById('cra-etape2').style.display = '';
+  document.querySelector('#form-creer-resa [name=prenom]').focus();
+}
+
+async function craChangerType(valeur) {
+  _CRA.typeId = parseInt(valeur);
+  _CRA.joursDispo = {};
+  _CRA.dateChoisie = null;
+  _CRA.creneauChoisi = null;
+  document.getElementById('cra-creneaux-section').style.display = 'none';
+  document.getElementById('cra-aucun').style.display = 'none';
+  document.getElementById('cra-btn-suite').disabled = true;
+  await craChargerDispo();
+}
+
+async function craChargerDispo() {
+  const mois = _CRA.mois;
+  const moisStr = `${mois.getFullYear()}-${String(mois.getMonth()+1).padStart(2,'0')}`;
+  craRenderCal('Chargement…');
+  try {
+    const data = await appelApi(`/api/agenda/disponibilites?type_seance_id=${_CRA.typeId}&mois=${moisStr}`);
+    _CRA.joursDispo = {};
+    (data.jours_disponibles || data || []).forEach(d => { _CRA.joursDispo[d] = true; });
+  } catch(e) { _CRA.joursDispo = {}; }
+  craRenderCal();
+}
+
+function craRenderCal(msg) {
+  const cal = document.getElementById('cra-cal');
+  const lbl = document.getElementById('cra-mois-label');
+  if (!cal) return;
+  const mois = _CRA.mois;
+  lbl.textContent = `${_CRA_MOIS[mois.getMonth()]} ${mois.getFullYear()}`;
+  cal.innerHTML = '';
+  if (msg) { cal.innerHTML = `<div style="grid-column:1/-1;color:var(--grey);font-size:12px;padding:8px 0;">${msg}</div>`; return; }
+  // En-têtes
+  _CRA_JOURS.forEach(j => {
+    const d = document.createElement('div');
+    d.style.cssText = 'font-size:11px;color:var(--grey);font-weight:600;padding:2px 0;';
+    d.textContent = j;
+    cal.appendChild(d);
+  });
+  const premier = new Date(mois.getFullYear(), mois.getMonth(), 1);
+  let decalage = premier.getDay() === 0 ? 6 : premier.getDay() - 1; // lundi=0
+  for (let i = 0; i < decalage; i++) {
+    cal.appendChild(document.createElement('div'));
+  }
+  const nbJours = new Date(mois.getFullYear(), mois.getMonth()+1, 0).getDate();
+  const auj = new Date().toISOString().slice(0,10);
+  for (let j = 1; j <= nbJours; j++) {
+    const iso = `${mois.getFullYear()}-${String(mois.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
+    const dispo = !!_CRA.joursDispo[iso];
+    const passe = iso < auj;
+    const choisi = iso === _CRA.dateChoisie;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = j;
+    let style = 'width:100%;aspect-ratio:1;border-radius:50%;border:none;cursor:pointer;font-size:13px;transition:background .15s;';
+    if (choisi) {
+      style += 'background:var(--primary,#c9a96e);color:#fff;font-weight:700;';
+    } else if (passe || !dispo) {
+      style += 'background:transparent;color:var(--grey,#aaa);cursor:default;opacity:.45;';
+      btn.disabled = true;
+    } else {
+      style += 'background:#f0e8d8;color:var(--text,#3a2e24);';
+      btn.onmouseover = () => btn.style.background = '#e0d0b0';
+      btn.onmouseout  = () => btn.style.background = '#f0e8d8';
+    }
+    btn.style.cssText = style;
+    if (!passe && dispo) btn.onclick = () => craChoisirDate(iso);
+    cal.appendChild(btn);
+  }
+}
+
+async function craMoisNav(dir) {
+  _CRA.mois = new Date(_CRA.mois.getFullYear(), _CRA.mois.getMonth() + dir, 1);
+  _CRA.joursDispo = {};
+  _CRA.dateChoisie = null;
+  _CRA.creneauChoisi = null;
+  document.getElementById('cra-creneaux-section').style.display = 'none';
+  document.getElementById('cra-aucun').style.display = 'none';
+  document.getElementById('cra-btn-suite').disabled = true;
+  await craChargerDispo();
+}
+
+async function craChoisirDate(iso) {
+  _CRA.dateChoisie = iso;
+  _CRA.creneauChoisi = null;
+  document.getElementById('cra-btn-suite').disabled = true;
+  craRenderCal();
+  // Charger créneaux
+  const secCreneaux = document.getElementById('cra-creneaux-section');
+  const secAucun = document.getElementById('cra-aucun');
+  const conteneur = document.getElementById('cra-creneaux');
+  secCreneaux.style.display = 'none';
+  secAucun.style.display = 'none';
+  conteneur.innerHTML = '<span style="color:var(--grey);font-size:13px;">Chargement…</span>';
+  secCreneaux.style.display = '';
+  try {
+    const data = await appelApi(`/api/agenda/creneaux?type_seance_id=${_CRA.typeId}&date_str=${iso}`);
+    const creneaux = data.creneaux || [];
+    if (creneaux.length === 0) {
+      secCreneaux.style.display = 'none';
+      secAucun.style.display = '';
+      return;
+    }
+    _CRA.creneaux = creneaux;
+    conteneur.innerHTML = '';
+    creneaux.forEach(cr => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = `${cr.debut} – ${cr.fin}`;
+      btn.style.cssText = 'padding:6px 12px;border-radius:20px;border:1.5px solid var(--primary,#c9a96e);background:transparent;color:var(--primary,#c9a96e);cursor:pointer;font-size:13px;transition:all .15s;';
+      btn.onclick = () => craChoisirCreneau(cr, btn);
+      conteneur.appendChild(btn);
+    });
+  } catch(e) {
+    conteneur.innerHTML = '<span style="color:#c0392b;font-size:13px;">Erreur lors du chargement</span>';
+  }
+}
+
+function craChoisirCreneau(cr, btnEl) {
+  _CRA.creneauChoisi = cr;
+  // Mettre en valeur le créneau sélectionné
+  document.querySelectorAll('#cra-creneaux button').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--primary,#c9a96e)';
+    b.style.fontWeight = 'normal';
+  });
+  btnEl.style.background = 'var(--primary,#c9a96e)';
+  btnEl.style.color = '#fff';
+  btnEl.style.fontWeight = '600';
+  document.getElementById('cra-btn-suite').disabled = false;
 }
 
 async function soumettreCreerResa(e) {
@@ -708,27 +909,39 @@ async function soumettreCreerResa(e) {
   const form = e.target;
   const errDiv = document.getElementById('creer-resa-erreur');
   errDiv.style.display = 'none';
-  const date = form.date.value;
-  const heure = form.heure.value;
-  const date_debut = `${date}T${heure}:00`;
+  const btnSubmit = form.querySelector('[type=submit]');
+  btnSubmit.disabled = true;
+  btnSubmit.textContent = 'Création…';
+  const lieuId = document.getElementById('cra-lieu') ? document.getElementById('cra-lieu').value : _CRA.lieuId;
+  const date_debut = `${_CRA.dateChoisie}T${_CRA.creneauChoisi.debut}:00`;
   const body = new URLSearchParams({
     prenom: form.prenom.value.trim(),
     nom: form.nom.value.trim(),
     email: form.email.value.trim(),
     telephone: form.telephone.value.trim(),
-    type_seance_id: form.type_seance_id.value,
-    lieu_id: form.lieu_id.value,
+    type_seance_id: _CRA.typeId,
+    lieu_id: lieuId,
     date_debut,
     note_admin: form.note_admin.value.trim(),
   });
   try {
     const resp = await fetch('/admin/agenda/reservations/creer', { method: 'POST', body });
     const data = await resp.json();
-    if (!resp.ok) { errDiv.textContent = data.detail || 'Erreur'; errDiv.style.display = 'block'; return; }
+    if (!resp.ok) {
+      errDiv.textContent = data.detail || 'Erreur';
+      errDiv.style.display = 'block';
+      btnSubmit.disabled = false;
+      btnSubmit.textContent = '✓ Créer le RDV';
+      return;
+    }
     fermerModal();
-    chargerReservations();
-  } catch(e) {
-    errDiv.textContent = 'Erreur réseau'; errDiv.style.display = 'block';
+    // Basculer sur l'onglet Réservations et recharger
+    changerOnglet('reservations');
+  } catch(err) {
+    errDiv.textContent = 'Erreur réseau';
+    errDiv.style.display = 'block';
+    btnSubmit.disabled = false;
+    btnSubmit.textContent = '✓ Créer le RDV';
   }
 }
 
