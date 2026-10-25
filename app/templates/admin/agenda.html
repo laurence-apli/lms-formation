@@ -655,8 +655,9 @@ async function ouvrirModalCreerResa() {
   _CRA.creneaux = []; _CRA.creneauChoisi = null;
   _CRA.typeId = null; _CRA.lieuId = null;
 
+  _CRA.modeLibre = false;  // true = pose libre sans contrainte de plage
   [_CRA.types, _CRA.lieux] = await Promise.all([
-    appelApi('/api/agenda/types-seances').catch(() => []),
+    appelApi('/api/agenda/types-seances?admin=1').catch(() => []),
     appelApi('/api/agenda/lieux').catch(() => []),
   ]);
   if (_CRA.types.length) _CRA.typeId = _CRA.types[0].id;
@@ -708,10 +709,28 @@ async function ouvrirModalCreerResa() {
         Aucun créneau disponible pour cette date.
       </div>
 
-      <div style="display:flex;justify-content:flex-end;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <button class="btn btn-sm" id="cra-btn-libre" onclick="craToggleLibre()" title="Poser le RDV sur n'importe quelle date/heure, sans contrainte de plage">
+          📌 Poser librement
+        </button>
         <button class="btn btn-sm btn-primary" id="cra-btn-suite" onclick="craEtape2()" disabled>
           Suivant — Infos cliente →
         </button>
+      </div>
+
+      <!-- Section "Pose libre" : date + heure sans contrainte de plage -->
+      <div id="cra-section-libre" style="display:none;margin-top:14px;border-top:1px solid var(--border,#e0d5c5);padding-top:14px;">
+        <p style="font-size:12px;color:var(--grey);margin:0 0 10px;">📌 <strong>Mode libre</strong> — saisissez la date et l'heure souhaitées (sans contrainte de disponibilité)</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Date *</label>
+            <input type="date" id="cra-libre-date" class="champ-texte" style="width:100%;box-sizing:border-box;" oninput="craCheckLibre()">
+          </div>
+          <div>
+            <label style="font-size:12px;color:var(--grey);display:block;margin-bottom:4px;">Heure de début *</label>
+            <input type="time" id="cra-libre-heure" class="champ-texte" style="width:100%;box-sizing:border-box;" value="09:00" oninput="craCheckLibre()">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -765,8 +784,9 @@ function craEtape2() {
   const type = _CRA.types.find(t => t.id == _CRA.typeId);
   const lieu = _CRA.lieux.find(l => l.id == _CRA.lieuId);
   const dateFmt = new Date(_CRA.dateChoisie + 'T00:00:00').toLocaleDateString('fr-FR', {weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const modeLibreLabel = _CRA.modeLibre ? ' <span style="font-size:11px;background:#e8f0fe;color:#1a73e8;border-radius:4px;padding:1px 6px;">📌 Pose libre</span>' : '';
   document.getElementById('cra-recap').innerHTML =
-    `<strong>${type ? type.nom : ''}</strong> · ${lieu ? lieu.nom : ''}<br>
+    `<strong>${type ? type.nom : ''}</strong> · ${lieu ? lieu.nom : ''}${modeLibreLabel}<br>
      📅 ${dateFmt} · ${_CRA.creneauChoisi.debut} – ${_CRA.creneauChoisi.fin}`;
   document.getElementById('cra-etape1').style.display = 'none';
   document.getElementById('cra-etape2').style.display = '';
@@ -902,6 +922,67 @@ function craChoisirCreneau(cr, btnEl) {
   btnEl.style.color = '#fff';
   btnEl.style.fontWeight = '600';
   document.getElementById('cra-btn-suite').disabled = false;
+}
+
+function craToggleLibre() {
+  _CRA.modeLibre = !_CRA.modeLibre;
+  const secLibre = document.getElementById('cra-section-libre');
+  const btnLibre = document.getElementById('cra-btn-libre');
+  const secCal = document.querySelector('#cra-etape1 > div:nth-child(2)');  // calendrier
+  const secCreneaux = document.getElementById('cra-creneaux-section');
+  const secAucun = document.getElementById('cra-aucun');
+
+  if (_CRA.modeLibre) {
+    secLibre.style.display = '';
+    btnLibre.textContent = '📅 Utiliser le calendrier';
+    btnLibre.style.background = 'var(--primary,#c9a96e)';
+    btnLibre.style.color = '#fff';
+    // Masquer calendrier et créneaux
+    if (secCal) secCal.style.display = 'none';
+    secCreneaux.style.display = 'none';
+    secAucun.style.display = 'none';
+    // Réinitialiser le créneau choisi (normal) mais laisser le bouton suite désactivé jusqu'à date+heure remplis
+    _CRA.creneauChoisi = null;
+    _CRA.dateChoisie = null;
+    document.getElementById('cra-btn-suite').disabled = true;
+    // Pré-remplir la date d'aujourd'hui
+    const auj = new Date().toISOString().slice(0,10);
+    document.getElementById('cra-libre-date').value = auj;
+    craCheckLibre();
+  } else {
+    secLibre.style.display = 'none';
+    btnLibre.textContent = '📌 Poser librement';
+    btnLibre.style.background = '';
+    btnLibre.style.color = '';
+    if (secCal) secCal.style.display = '';
+    // Réinitialiser
+    _CRA.dateChoisie = null;
+    _CRA.creneauChoisi = null;
+    document.getElementById('cra-btn-suite').disabled = true;
+    craRenderCal();
+  }
+}
+
+function craCheckLibre() {
+  const dateVal = document.getElementById('cra-libre-date')?.value;
+  const heureVal = document.getElementById('cra-libre-heure')?.value;
+  if (dateVal && heureVal) {
+    // Calculer l'heure de fin selon la durée du type
+    const type = _CRA.types.find(t => t.id == _CRA.typeId);
+    const duree = type ? (type.duree_minutes || 60) : 60;
+    const [h, m] = heureVal.split(':').map(Number);
+    const finMin = h * 60 + m + duree;
+    const finH = String(Math.floor(finMin / 60) % 24).padStart(2,'0');
+    const finM = String(finMin % 60).padStart(2,'0');
+    // Stocker comme si c'était un créneau choisi normal
+    _CRA.dateChoisie = dateVal;
+    _CRA.creneauChoisi = { debut: heureVal, fin: `${finH}:${finM}` };
+    document.getElementById('cra-btn-suite').disabled = false;
+  } else {
+    _CRA.dateChoisie = null;
+    _CRA.creneauChoisi = null;
+    document.getElementById('cra-btn-suite').disabled = true;
+  }
 }
 
 async function soumettreCreerResa(e) {
@@ -1106,6 +1187,21 @@ function ouvrirModalType(id = null) {
           </select>
         </div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Visibilité</label>
+          <select name="visibilite" style="width:100%;" onchange="toggleCodeAcces(this.value)">
+            <option value="public" ${(type?.visibilite||'public')==='public'?'selected':''}>🌐 Public — catalogue normal</option>
+            <option value="lien" ${type?.visibilite==='lien'?'selected':''}>🔗 Lien — accès via code URL</option>
+            <option value="admin" ${type?.visibilite==='admin'?'selected':''}>🔒 Admin uniquement</option>
+          </select>
+        </div>
+        <div id="div-code-acces" style="${(type?.visibilite||'public')==='lien'?'':'display:none;'}">
+          <label>Code d'accès <small style="color:var(--grey);font-weight:400;">(slug URL)</small></label>
+          <input name="code_acces" type="text" style="width:100%;" value="${type?.code_acces||''}" placeholder="ex : eclore, accomp-menopause">
+          <small style="color:var(--grey);font-size:11px;">Sera utilisé dans le lien : /rendez-vous?acces=<em>code</em></small>
+        </div>
+      </div>
       <label><input type="checkbox" name="actif" ${type?.actif!==false?'checked':''}> Actif (proposé à la réservation)</label>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
@@ -1113,6 +1209,11 @@ function ouvrirModalType(id = null) {
       </div>
     </form>
   </div></div>`;
+
+  // Afficher/masquer le champ code_acces selon la visibilité
+  document.querySelectorAll('[name=visibilite]').forEach(sel => {
+    sel.onchange = (e) => toggleCodeAcces(e.target.value);
+  });
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
@@ -1129,6 +1230,8 @@ async function sauvegarderType(evt, id) {
     description: fd.get('description') || '',
     prix: isNaN(prixVal) ? null : prixVal,
     mode_paiement: fd.get('mode_paiement') || 'sans_paiement',
+    visibilite: fd.get('visibilite') || 'public',
+    code_acces: fd.get('code_acces')?.trim() || null,
     actif: fd.get('actif') === 'on',
   };
   try {
@@ -1215,6 +1318,11 @@ function ouvrirModalLieu(id = null) {
     </form>
   </div></div>`;
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function toggleCodeAcces(val) {
+  const el = document.getElementById('div-code-acces');
+  if (el) el.style.display = val === 'lien' ? '' : 'none';
 }
 
 function toggleLienVisio(val) {

@@ -114,6 +114,8 @@ def lister_types_seances(session: Session = Depends(obtenir_session)):
             "format_seance": t.format_seance or "individuelle",
             "nb_places_max": t.nb_places_max,
             "actif": t.actif, "ordre": t.ordre,
+            "visibilite": t.visibilite or "public",
+            "code_acces": t.code_acces or "",
         }
         for t in ts
     ]
@@ -130,6 +132,8 @@ class TypeSeanceIn(BaseModel):
     nb_places_max: Optional[int] = None  # None si individuelle
     prix: Optional[float] = None         # Prix en € (None = gratuit)
     mode_paiement: str = "sans_paiement" # 'sans_paiement' | 'optionnel' | 'obligatoire'
+    visibilite: str = "public"           # 'public' | 'lien' | 'admin'
+    code_acces: Optional[str] = None     # slug unique pour accès par lien
     actif: bool = True
 
 
@@ -152,6 +156,8 @@ def creer_type_seance(data: TypeSeanceIn, session: Session = Depends(obtenir_ses
         nb_places_max=data.nb_places_max if data.format_seance == "collective" else None,
         prix=data.prix if data.prix and data.prix > 0 else None,
         mode_paiement=data.mode_paiement if data.mode_paiement in ("sans_paiement", "optionnel", "obligatoire") else "sans_paiement",
+        visibilite=data.visibilite if data.visibilite in ("public", "lien", "admin") else "public",
+        code_acces=data.code_acces.strip().lower() if data.code_acces else None,
         ordre=max_ordre,
     )
     session.add(ts)
@@ -174,6 +180,8 @@ def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depe
     ts.nb_places_max = data.nb_places_max if data.format_seance == "collective" else None
     ts.prix = data.prix if data.prix and data.prix > 0 else None
     ts.mode_paiement = data.mode_paiement if data.mode_paiement in ("sans_paiement", "optionnel", "obligatoire") else "sans_paiement"
+    ts.visibilite = data.visibilite if data.visibilite in ("public", "lien", "admin") else "public"
+    ts.code_acces = data.code_acces.strip().lower() if data.code_acces else None
     ts.actif = data.actif
     session.commit()
     return {"ok": True}
@@ -612,13 +620,31 @@ def creer_reservation_admin(
 @api_router.get("/types-seances")
 def api_lister_types_seances(
     actif: Optional[int] = None,
+    acces: Optional[str] = None,   # code slug pour débloquer les types 'lien'
+    admin: Optional[int] = None,   # 1 = mode admin (tous les types, sans filtre visibilité)
     session: Session = Depends(obtenir_session),
 ):
-    """Liste les types de séances (publique + admin JS)."""
+    """Liste les types de séances.
+    - Sans paramètres : types 'public' uniquement.
+    - ?acces=CODE : types 'public' + le type 'lien' correspondant au code.
+    - ?admin=1 : tous les types (réservé à l'usage admin JS, pas de vérification ici car déjà derrière auth).
+    """
     q = session.query(TypeSeance)
     if actif is not None:
         q = q.filter_by(actif=bool(actif))
-    ts = q.order_by(TypeSeance.ordre).all()
+
+    ts_all = q.order_by(TypeSeance.ordre).all()
+
+    # Filtrage visibilité côté Python (simple)
+    if admin:
+        ts = ts_all  # admin : tout voir
+    elif acces:
+        code = acces.strip().lower()
+        ts = [t for t in ts_all if (t.visibilite or "public") == "public"
+              or ((t.visibilite or "public") == "lien" and (t.code_acces or "").lower() == code)]
+    else:
+        ts = [t for t in ts_all if (t.visibilite or "public") == "public"]
+
     return [
         {
             "id": t.id, "nom": t.nom, "duree_minutes": t.duree_minutes,
@@ -627,6 +653,7 @@ def api_lister_types_seances(
             "description": t.description, "actif": t.actif, "ordre": t.ordre,
             "prix": float(t.prix) if t.prix is not None else None,
             "mode_paiement": t.mode_paiement or "sans_paiement",
+            "visibilite": t.visibilite or "public",
         }
         for t in ts
     ]
@@ -1383,19 +1410,32 @@ def annuler_reservation(token: str, session: Session = Depends(obtenir_session))
 # ===========================================================================
 
 @public_router.get("/rendez-vous", response_class=HTMLResponse)
-def page_rendez_vous(request: Request, session: Session = Depends(obtenir_session)):
-    """Page publique de réservation en ligne."""
-    types_seances = (
+def page_rendez_vous(
+    request: Request,
+    acces: Optional[str] = None,
+    session: Session = Depends(obtenir_session),
+):
+    """Page publique de réservation en ligne.
+    ?acces=CODE débloque les types de séance 'lien' ayant ce code.
+    """
+    all_ts = (
         session.query(TypeSeance)
         .filter_by(actif=True)
         .order_by(TypeSeance.ordre)
         .all()
     )
+    code = (acces or "").strip().lower()
+    if code:
+        types_seances = [t for t in all_ts if (t.visibilite or "public") in ("public", "lien")
+                         and ((t.visibilite or "public") == "public" or (t.code_acces or "").lower() == code)]
+    else:
+        types_seances = [t for t in all_ts if (t.visibilite or "public") == "public"]
     return templates.TemplateResponse(
         request,
         "rendez_vous.html",
         {
             "types_seances": types_seances,
+            "code_acces": code,  # passé au JS pour que l'API /api/agenda/types-seances soit appelée avec ?acces=
         },
     )
 

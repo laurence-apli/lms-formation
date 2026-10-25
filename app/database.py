@@ -58,6 +58,9 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS mode_paiement VARCHAR(20) DEFAULT 'sans_paiement'",
     "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS stripe_checkout_session_id VARCHAR(200)",
     "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS prix_paye NUMERIC(10,2)",
+    # Visibilité des types de séances (ajouté oct. 2026)
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS visibilite VARCHAR(20) DEFAULT 'public'",
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS code_acces VARCHAR(100)",
 ]
 
 

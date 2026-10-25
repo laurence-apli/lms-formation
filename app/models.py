@@ -632,6 +632,10 @@ class TypeSeance(Base):
     prix = Column(Numeric(10, 2), nullable=True)  # None = gratuit ou sur devis
     # 'sans_paiement' | 'optionnel' | 'obligatoire'
     mode_paiement = Column(String(20), nullable=False, default="sans_paiement")
+    # 'public' = visible dans le catalogue | 'lien' = accès par lien ?acces=CODE | 'admin' = admin uniquement
+    visibilite = Column(String(20), nullable=False, default="public")
+    # Code slug unique pour l'accès par lien (ex: "eclore", "accomp-menopause")
+    code_acces = Column(String(100), nullable=True)
 
     plages = relationship("PlageDisponibilite", back_populates="type_seance")
     reservations = relationship("Reservation", back_populates="type_seance")
