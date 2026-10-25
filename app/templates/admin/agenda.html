@@ -1110,7 +1110,7 @@ async function chargerParametres() {
 
 async function chargerTypes() {
   try {
-    const r = await appelApi('/api/agenda/types-seances');
+    const r = await appelApi('/api/agenda/types-seances?admin=1');
     // L'API retourne un tableau directement
     typesSeances = Array.isArray(r) ? r : (r.types || []);
     const c = document.getElementById('liste-types');
