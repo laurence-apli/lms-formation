@@ -1384,9 +1384,9 @@ function lundi(date) {
 // CHARGEMENT INITIAL
 // ═══════════════════════════════════════════════════════
 // Données serveur injectées par Jinja2
-const CODE_ACCES = {{ ('"' ~ code_acces ~ '"') if code_acces else 'null' }};
-const TYPE_PRESELECT_ID = {{ type_preselect_id if type_preselect_id is not none else 'null' }};
-const ELEVE_INFO = {{ eleve_info | tojson if eleve_info else 'null' }};
+const CODE_ACCES = {{ ('"' ~ code_acces ~ '"') | safe if code_acces else 'null' }};
+const TYPE_PRESELECT_ID = {{ type_preselect_id | safe }};
+const ELEVE_INFO = {{ eleve_info_json | safe }};
 
 document.addEventListener('DOMContentLoaded', async () => {
   // Vérifier paramètre ?annule=1

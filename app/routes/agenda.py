@@ -1440,28 +1440,29 @@ def page_rendez_vous(
         if len(lien_types) == 1:
             type_preselect_id = lien_types[0].id
 
-    # Infos élève connectée (pour pré-remplir le formulaire)
-    eleve_info = None
+    # Infos élève connectée (pour pré-remplir le formulaire) — sérialisées en JSON côté Python
+    import json as _json
+    eleve_info_json = "null"
     eleve_id_session = request.session.get("eleve_id")
     if eleve_id_session:
         eleve = session.get(Eleve, eleve_id_session)
         if eleve and eleve.actif:
-            eleve_info = {
+            eleve_info_json = _json.dumps({
                 "id": eleve.id,
                 "prenom": eleve.prenom or "",
                 "nom": eleve.nom or "",
                 "email": eleve.email or "",
                 "telephone": eleve.telephone or "",
-            }
+            })
 
     return templates.TemplateResponse(
         request,
         "rendez_vous.html",
         {
             "types_seances": types_seances,
-            "code_acces": code,  # passé au JS pour que l'API /api/agenda/types-seances soit appelée avec ?acces=
-            "type_preselect_id": type_preselect_id,  # id du type à pré-sélectionner (ou None)
-            "eleve_info": eleve_info,  # infos élève connectée (ou None)
+            "code_acces": code,
+            "type_preselect_id": type_preselect_id if type_preselect_id else "null",
+            "eleve_info_json": eleve_info_json,
         },
     )
 
