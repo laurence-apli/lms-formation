@@ -4,518 +4,1943 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Prendre rendez-vous — Laurence Mermet-Bijon</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Raleway:wght@300;400;500;600;700&display=swap">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@500;600&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500;600&display=swap');
-  :root {
-    --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0;
-    --panel:#FFFFFF; --border:#E5DCC3; --grey:#9B968A;
+:root {
+  --bg: #faf6f0;
+  --text: #3a2e24;
+  --gold: #c9a96e;
+  --cream: #f0e8d8;
+  --cream2: #fdf8f0;
+  --border: #e8ddd0;
+  --border2: #d4c5b0;
+  --muted: #6b5c4e;
+  --faint: #b5a898;
+  --stripe: #5469d4;
+  --dark: #2a2018;
+}
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: 'Raleway', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ─── HEADER ─── */
+.rdv-header {
+  background: var(--text);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.rdv-header-brand {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.rdv-header-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: #faf6f0;
+  font-weight: 400;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* ─── LAYOUT DESKTOP 3 PANNEAUX ─── */
+.rdv-desktop {
+  display: none;
+}
+.rdv-mobile {
+  display: block;
+}
+@media (min-width: 900px) {
+  body { background: var(--dark); }
+  .rdv-header { display: none; }
+  .rdv-mobile { display: none; }
+  .rdv-desktop {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+    position: relative;
   }
-  *, *::before, *::after { box-sizing:border-box; }
-  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); }
-
-  /* En-tête */
-  .header { background:var(--ink); padding:20px 24px; text-align:center; }
-  .header h1 { margin:0 0 2px; font-family:'EB Garamond',serif; font-size:22px; font-weight:600; color:var(--cream); }
-  .header p { margin:0; font-family:'League Spartan',sans-serif; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gold); }
-
-  /* Étapes */
-  .etapes { display:flex; justify-content:center; gap:0; padding:24px 24px 0; max-width:640px; margin:0 auto; }
-  .etape { flex:1; text-align:center; position:relative; }
-  .etape::after { content:''; position:absolute; top:14px; right:-50%; width:100%; height:2px; background:var(--border); z-index:0; }
-  .etape:last-child::after { display:none; }
-  .etape-num {
-    width:28px; height:28px; border-radius:50%; background:var(--border); color:var(--grey);
-    font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700;
-    display:inline-flex; align-items:center; justify-content:center; position:relative; z-index:1;
-    transition:all .2s;
+  .rdv-desktop::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(201,169,110,0.08) 0%, transparent 60%);
+    pointer-events: none;
   }
-  .etape.active .etape-num { background:var(--gold); color:#fff; }
-  .etape.done .etape-num { background:var(--ink); color:var(--cream); }
-  .etape-label { font-size:11px; font-family:'League Spartan',sans-serif; font-weight:600; letter-spacing:.04em; color:var(--grey); margin-top:6px; }
-  .etape.active .etape-label { color:var(--ink); }
+}
 
-  /* Contenu */
-  .contenu { max-width:640px; margin:0 auto; padding:28px 24px 60px; }
+.rdv-window {
+  width: 1100px;
+  max-width: 100%;
+  height: 800px;
+  background: var(--bg);
+  border-radius: 20px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.5);
+}
 
-  /* Titre d'étape */
-  .titre-etape { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 20px; }
+/* Barre titre fenêtre */
+.rdv-win-bar {
+  background: var(--text);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.rdv-win-dots { display: flex; gap: 8px; }
+.rdv-win-dots span { width: 12px; height: 12px; border-radius: 50%; display: block; }
+.rdv-win-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.rdv-win-brand-name {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.rdv-win-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 18px;
+  color: #faf6f0;
+  font-weight: 400;
+}
+.rdv-win-spacer { width: 160px; }
 
-  /* Cartes de choix */
-  .cartes-types { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  .carte-type {
-    background:var(--panel); border:2px solid var(--border); border-radius:10px;
-    padding:16px; cursor:pointer; transition:all .15s; text-align:left;
-  }
-  .carte-type:hover { border-color:var(--gold); }
-  .carte-type.active { border-color:var(--gold); background:#FEF8EE; }
-  .carte-type .nom { font-weight:600; font-size:15px; margin-bottom:4px; }
-  .carte-type .detail { font-size:12px; color:var(--grey); }
-  .carte-type .puce { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
+/* Corps 3 colonnes */
+.rdv-win-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
 
-  /* Choix modalité */
-  .choix-modalite { display:flex; gap:10px; margin-bottom:20px; }
-  .btn-modalite {
-    flex:1; padding:10px; border:2px solid var(--border); background:var(--panel);
-    border-radius:8px; cursor:pointer; font-family:'League Spartan',sans-serif;
-    font-size:13px; font-weight:600; letter-spacing:.03em; transition:all .15s;
-    text-align:center;
-  }
-  .btn-modalite.active { border-color:var(--gold); background:#FEF8EE; color:var(--gold); }
-  .btn-modalite:hover:not(.active) { border-color:var(--grey); }
+/* Colonne 1 — Séances */
+.col-seances {
+  width: 300px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: var(--bg);
+}
+/* Colonne 2 — Calendrier */
+.col-calendrier {
+  flex: 1;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  min-width: 0;
+}
+/* Colonne 3 — Formulaire */
+.col-formulaire {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  flex-shrink: 0;
+}
 
-  /* Calendrier */
-  .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-  .cal-titre { font-family:'EB Garamond',serif; font-size:18px; font-weight:600; }
-  .cal-nav { background:none; border:1px solid var(--border); border-radius:6px;
-             width:32px; height:32px; cursor:pointer; font-size:16px; }
-  .cal-nav:hover { border-color:var(--gold); }
-  .cal-grille { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-  .cal-ent { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700;
-             letter-spacing:.05em; color:var(--grey); text-align:center; padding:4px 0; }
-  .cal-jour {
-    aspect-ratio:1; border-radius:6px; display:flex; align-items:center; justify-content:center;
-    font-size:14px; border:none; background:none; cursor:default; color:var(--grey);
-  }
-  .cal-jour.dispo { cursor:pointer; background:var(--panel); border:1px solid var(--border); color:var(--ink); }
-  .cal-jour.dispo:hover { background:#FEF8EE; border-color:var(--gold); }
-  .cal-jour.active { background:var(--gold) !important; color:#fff !important; border-color:var(--gold) !important; }
-  .cal-jour.today { font-weight:700; }
-  .cal-jour.passe { opacity:.35; }
+.col-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--cream);
+}
+.col-header-step {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.col-header-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  color: var(--text);
+}
 
-  /* Créneaux */
-  .creneaux { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
-  .creneau {
-    padding:9px 16px; border:1px solid var(--border); border-radius:6px; cursor:pointer;
-    font-family:'League Spartan',sans-serif; font-size:13px; font-weight:600;
-    background:var(--panel); transition:all .15s;
-  }
-  .creneau:hover { border-color:var(--gold); }
-  .creneau.active { background:var(--gold); color:#fff; border-color:var(--gold); }
+/* ─── ACCORDION SÉANCES ─── */
+.seances-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.seance-item {
+  border-left: 3px solid transparent;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.seance-item.selected {
+  border-left-color: var(--gold);
+  background: var(--cream2);
+}
+.seance-item-row {
+  padding: 11px 16px 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.seance-radio {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.seance-item.selected .seance-radio {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.seance-info { flex: 1; min-width: 0; }
+.seance-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.3;
+}
+.seance-item:not(.selected) .seance-name { font-weight: 500; }
+.seance-sub {
+  font-size: 11px;
+  color: var(--faint);
+}
+.seance-item.selected .seance-sub { color: var(--muted); }
+.seance-prix {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  white-space: nowrap;
+}
+.seance-item:not(.selected) .seance-prix {
+  font-weight: 600;
+  color: var(--muted);
+}
+.seance-detail {
+  padding: 0 16px 12px 42px;
+  display: none;
+}
+.seance-item.selected .seance-detail { display: block; }
+.seance-tags { display: flex; gap: 6px; margin-bottom: 7px; flex-wrap: wrap; }
+.tag {
+  background: var(--cream);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+}
+.tag-green { background: #edf5f1; color: #4a8a6f; }
+.seance-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.55;
+}
 
-  /* Formulaire */
-  .groupe { margin-bottom:14px; }
-  .groupe label { display:block; font-size:12px; font-weight:600; color:var(--grey); margin-bottom:4px;
-                  font-family:'League Spartan',sans-serif; letter-spacing:.04em; text-transform:uppercase; }
-  .groupe input, .groupe textarea {
-    width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:6px;
-    font-family:'Inter',sans-serif; font-size:14px; outline:none; transition:border-color .15s;
-    background:var(--panel);
-  }
-  .groupe input:focus, .groupe textarea:focus { border-color:var(--gold); }
-  .groupe textarea { min-height:80px; resize:vertical; }
-  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+/* ─── CALENDRIER ─── */
+.cal-nav {
+  padding: 12px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f5f0e8;
+}
+.cal-nav-btn {
+  background: none;
+  border: 1.5px solid var(--border2);
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  font-family: 'Raleway', sans-serif;
+}
+.cal-nav-btn:hover { background: var(--cream); }
+.cal-nav-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.cal-grid {
+  padding: 12px 16px 8px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  text-align: center;
+}
+.cal-dow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 6px;
+}
+.cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: default;
+}
+.cal-day.dispo { cursor: pointer; }
+.cal-day-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--faint);
+  transition: all .12s;
+}
+.cal-day.dispo .cal-day-num {
+  background: #f5eddc;
+  color: var(--text);
+}
+.cal-day.selected .cal-day-num {
+  background: var(--gold);
+  color: #fff;
+  font-weight: 700;
+}
+.cal-day.ferme .cal-day-num { color: #d4c5b0; }
+.cal-day.autre-mois .cal-day-num { color: #d4c5b0; opacity: 0.5; }
+.cal-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: transparent;
+}
+.cal-day.dispo .cal-dot,
+.cal-day.selected .cal-dot { background: var(--gold); }
 
-  /* Récap */
-  .recap {
-    background:#FAF5E8; border:1px solid #E8DFC8; border-radius:8px; padding:16px 20px; margin-bottom:20px;
-  }
-  .recap .ligne { display:flex; gap:12px; padding:4px 0; font-size:13px; }
-  .recap .l { color:var(--grey); width:90px; }
-  .recap .v { color:var(--ink); font-weight:600; }
+.cal-legend {
+  padding: 4px 16px 10px;
+  display: flex;
+  gap: 14px;
+}
+.cal-legend-item { display: flex; align-items: center; gap: 5px; }
+.cal-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.cal-legend-label { font-size: 10px; color: var(--faint); }
 
-  /* Boutons */
-  .btn-suite {
-    width:100%; padding:14px; background:var(--ink); color:var(--cream); border:none;
-    border-radius:8px; font-family:'League Spartan',sans-serif; font-size:14px; font-weight:700;
-    letter-spacing:.06em; text-transform:uppercase; cursor:pointer; transition:background .15s;
-  }
-  .btn-suite:hover:not(:disabled) { background:#3d2e14; }
-  .btn-suite:disabled { opacity:.45; cursor:not-allowed; }
-  .btn-retour { background:none; border:none; color:var(--grey); cursor:pointer; font-size:13px;
-                text-decoration:underline; padding:0; margin-bottom:20px; }
-  .btn-retour:hover { color:var(--ink); }
+/* Créneaux */
+.creneaux-zone {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 16px 12px;
+}
+.creneaux-date-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.creneaux-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.creneau-pill {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all .12s;
+}
+.creneau-pill:hover { border-color: var(--gold); background: var(--cream2); }
+.creneau-pill.selected {
+  border: 2px solid var(--gold);
+  background: var(--cream2);
+}
+.creneau-pill.complet { opacity: 0.5; cursor: default; background: #f8f4ef; border-color: #ece5dc; }
+.creneau-heure { font-size: 14px; font-weight: 700; color: var(--text); }
+.creneau-fin { font-size: 10px; color: var(--muted); }
+.creneau-pill.selected .creneau-fin { color: var(--gold); }
+.creneau-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.creneau-choisir { font-size: 10px; color: var(--gold); font-weight: 600; }
 
-  /* Chargement / erreur */
-  .chargement { text-align:center; padding:30px; color:var(--grey); font-size:14px; }
-  .erreur-bloc { background:#FBEAF0; border:1px solid #ED93B1; color:#72243E; border-radius:8px;
-                 padding:12px 16px; font-size:13px; margin-bottom:14px; }
+/* ─── FORMULAIRE (colonne 3 desktop) ─── */
+.form-recap {
+  margin: 14px 16px 0;
+  background: var(--bg);
+  border: 1.5px solid var(--cream);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-recap-nom { font-size: 12px; font-weight: 600; color: var(--text); }
+.form-recap-date { font-size: 11px; color: var(--muted); }
+.form-recap-prix { font-size: 14px; font-weight: 700; color: var(--gold); }
 
-  @media (max-width:520px) {
-    .cartes-types { grid-template-columns:1fr; }
-    .row2 { grid-template-columns:1fr; }
-  }
+.form-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.form-row { display: flex; gap: 8px; }
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+}
+.form-input {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: 'Raleway', sans-serif;
+  outline: none;
+  transition: border-color .15s;
+  width: 100%;
+}
+.form-input:focus { border-color: var(--gold); }
+.form-textarea {
+  resize: none;
+  min-height: 60px;
+  line-height: 1.4;
+}
+.form-note {
+  background: var(--cream2);
+  border: 1px solid #f0e4cc;
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.form-note-text { font-size: 10px; color: var(--muted); line-height: 1.5; }
+
+/* Bouton paiement */
+.form-footer {
+  padding: 14px 16px;
+  border-top: 1px solid var(--cream);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.btn-payer {
+  background: var(--stripe);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 13px 16px;
+  width: 100%;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .15s;
+}
+.btn-payer:hover { opacity: 0.9; }
+.btn-payer:disabled { opacity: 0.5; cursor: default; }
+.btn-confirmer {
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 13px 16px;
+  width: 100%;
+  font-family: 'Raleway', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .15s;
+}
+.btn-confirmer:hover { opacity: 0.9; }
+.btn-confirmer:disabled { opacity: 0.5; cursor: default; }
+.secure-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.secure-badge span { font-size: 10px; color: var(--faint); }
+
+/* ─── MOBILE : 4 étapes ─── */
+.mobile-header {
+  background: var(--text);
+  padding: 18px 20px 14px;
+  text-align: center;
+}
+.mobile-brand {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--gold);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.mobile-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  color: #faf6f0;
+  font-weight: 400;
+}
+
+/* Stepper mobile */
+.stepper {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+}
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  transition: opacity .2s;
+}
+.stepper-step.done { opacity: 0.5; }
+.stepper-step.upcoming { opacity: 0.4; }
+.stepper-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--faint);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stepper-step.active .stepper-num { background: var(--gold); }
+.stepper-step.done .stepper-num { background: var(--faint); }
+.stepper-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+.stepper-step.active .stepper-label { color: var(--text); }
+.stepper-sep {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 2px;
+  background: var(--border2);
+  margin: 0 2px;
+}
+.stepper-sep.done { background: var(--gold); }
+
+/* Zones d'étapes mobiles */
+.mobile-step { display: none; }
+.mobile-step.active { display: block; }
+
+/* Accordion mobile */
+.mobile-seances { padding: 16px; }
+.mobile-seance-item {
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.mobile-seance-item.selected { border-color: var(--gold); background: var(--cream2); }
+.mobile-seance-row {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mobile-seance-radio {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mobile-seance-item.selected .mobile-seance-radio {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.mobile-seance-info { flex: 1; }
+.mobile-seance-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.mobile-seance-sub { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.mobile-seance-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.mobile-seance-prix { font-size: 14px; font-weight: 700; color: var(--muted); }
+.mobile-seance-item.selected .mobile-seance-prix { color: var(--gold); }
+.mobile-seance-chevron { font-size: 14px; color: var(--faint); }
+.mobile-seance-item.selected .mobile-seance-chevron { color: var(--gold); }
+.mobile-seance-detail {
+  display: none;
+  padding: 0 16px 14px 46px;
+}
+.mobile-seance-item.selected .mobile-seance-detail { display: block; }
+
+/* Bouton "Suivant" mobile */
+.mobile-btn-suivant {
+  display: block;
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  width: calc(100% - 32px);
+  margin: 4px 16px 24px;
+  font-family: 'Raleway', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: opacity .15s;
+}
+.mobile-btn-suivant:hover { opacity: 0.9; }
+.mobile-btn-suivant:disabled { opacity: 0.4; cursor: default; }
+
+/* Calendrier mobile */
+.mobile-cal { padding: 16px; }
+.mobile-cal-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.mobile-cal-nav-btn {
+  background: none;
+  border: 1.5px solid var(--border2);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 16px;
+  padding: 0;
+}
+.mobile-cal-label { font-size: 15px; font-weight: 600; color: var(--text); }
+.mobile-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.mobile-cal-dow {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--faint);
+  text-transform: uppercase;
+  padding-bottom: 8px;
+}
+.mobile-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: default;
+  padding: 2px 0;
+}
+.mobile-cal-day.dispo { cursor: pointer; }
+.mobile-cal-day-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--faint);
+}
+.mobile-cal-day.dispo .mobile-cal-day-num { background: #f5eddc; color: var(--text); }
+.mobile-cal-day.selected .mobile-cal-day-num { background: var(--gold); color: #fff; font-weight: 700; }
+.mobile-cal-day.ferme .mobile-cal-day-num { color: #d4c5b0; }
+.mobile-cal-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.mobile-cal-day.dispo .mobile-cal-dot,
+.mobile-cal-day.selected .mobile-cal-dot { background: var(--gold); }
+
+.mobile-creneaux-section { padding: 0 16px 8px; }
+.mobile-creneaux-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+.mobile-creneaux-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.mobile-creneau {
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all .12s;
+}
+.mobile-creneau.selected { border: 2px solid var(--gold); background: var(--cream2); }
+.mobile-creneau:hover:not(.complet) { border-color: var(--gold); }
+.mobile-creneau.complet { opacity: 0.5; cursor: default; background: #f8f4ef; }
+.mobile-creneau-heure { font-size: 15px; font-weight: 700; color: var(--text); }
+.mobile-creneau-fin { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.mobile-creneau.selected .mobile-creneau-fin { color: var(--gold); }
+
+/* Formulaire mobile */
+.mobile-form { padding: 16px; }
+.mobile-recap-card {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+.mobile-recap-seance { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.mobile-recap-date { font-size: 12px; color: var(--muted); }
+.mobile-recap-prix { font-size: 16px; font-weight: 700; color: var(--gold); margin-top: 6px; }
+.mobile-form-group { margin-bottom: 14px; }
+.mobile-form-row { display: flex; gap: 10px; margin-bottom: 14px; }
+.mobile-form-group-half { flex: 1; }
+.mobile-form-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  margin-bottom: 6px;
+}
+.mobile-form-input {
+  width: 100%;
+  background: #fff;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: 'Raleway', sans-serif;
+  outline: none;
+  transition: border-color .15s;
+}
+.mobile-form-input:focus { border-color: var(--gold); }
+.mobile-form-textarea { resize: none; min-height: 72px; line-height: 1.4; }
+.mobile-form-note {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.mobile-form-note-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+/* Confirmation mobile */
+.mobile-confirm { padding: 16px; }
+.confirm-card {
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1.5px solid var(--border);
+}
+.confirm-card-header {
+  background: linear-gradient(135deg, #3a2e24 0%, #5a4535 100%);
+  padding: 20px 20px 16px;
+}
+.confirm-card-check {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.confirm-card-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 20px;
+  color: #faf6f0;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.confirm-card-subtitle { font-size: 12px; color: rgba(250,246,240,0.7); }
+.confirm-card-body { background: #fff; padding: 16px 20px; }
+.confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--cream);
+}
+.confirm-row:last-child { border-bottom: none; }
+.confirm-row-label { font-size: 11px; color: var(--muted); }
+.confirm-row-value { font-size: 13px; font-weight: 600; color: var(--text); }
+.confirm-prix {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--gold);
+}
+
+.mobile-btn-payer {
+  background: var(--stripe);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  width: 100%;
+  font-family: 'Raleway', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  transition: opacity .15s;
+}
+.mobile-btn-payer:hover { opacity: 0.9; }
+.mobile-btn-confirmer {
+  background: var(--gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 16px;
+  width: 100%;
+  font-family: 'Raleway', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  transition: opacity .15s;
+}
+.mobile-btn-confirmer:hover { opacity: 0.9; }
+.mobile-secure { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 20px; }
+.mobile-secure span { font-size: 11px; color: var(--faint); }
+.confirm-info-box {
+  background: var(--cream);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.confirm-info-box p { margin: 0 0 6px; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.confirm-info-box p:last-child { margin: 0; }
+
+/* Loading */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(42,32,24,0.6);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.loading-overlay.visible { display: flex; }
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(201,169,110,0.3);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Message annulation */
+.annule-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 16px;
+  font-size: 13px;
+  color: #856404;
+  display: none;
+}
+
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>Laurence Mermet-Bijon</h1>
-  <p>Accompagnement féminin · Prise de rendez-vous</p>
-</div>
+<!-- ────────────── VERSION MOBILE ────────────── -->
+<div class="rdv-mobile">
+  <div class="mobile-header">
+    <div class="mobile-brand">Laurence Mermet-Bijon</div>
+    <div class="mobile-title">Prendre rendez-vous</div>
+  </div>
 
-<!-- Étapes -->
-<div class="etapes">
-  <div class="etape active" id="et-1">
-    <div class="etape-num">1</div>
-    <div class="etape-label">Séance</div>
+  <div class="annule-banner" id="mobileBannerAnnule">
+    ↩ Retour suite à une annulation de paiement. Recommencez si vous le souhaitez.
   </div>
-  <div class="etape" id="et-2">
-    <div class="etape-num">2</div>
-    <div class="etape-label">Date</div>
-  </div>
-  <div class="etape" id="et-3">
-    <div class="etape-num">3</div>
-    <div class="etape-label">Créneau</div>
-  </div>
-  <div class="etape" id="et-4">
-    <div class="etape-num">4</div>
-    <div class="etape-label">Vos infos</div>
-  </div>
-</div>
 
-<div class="contenu">
-  <!-- ÉTAPE 1 : Choisir le type de séance -->
-  <div id="step-1">
-    <h2 class="titre-etape">Quelle séance souhaitez-vous&nbsp;?</h2>
-    <div id="liste-types" class="chargement">Chargement des séances disponibles…</div>
-    <div id="choix-modalite" style="display:none;margin-top:20px;">
-      <p style="font-size:13px;color:var(--grey);margin:0 0 10px;">Cette séance est disponible en cabinet ou en visio :</p>
-      <div class="choix-modalite">
-        <button class="btn-modalite" onclick="choisirModalite('cabinet')">🏠 Cabinet</button>
-        <button class="btn-modalite" onclick="choisirModalite('visio')">🎥 Visio</button>
+  <!-- Stepper -->
+  <div class="stepper" id="mobileStepperEl">
+    <div class="stepper-step active" id="mStep1">
+      <div class="stepper-num">1</div>
+      <div class="stepper-label">Séance</div>
+    </div>
+    <div class="stepper-sep" id="mSep1"></div>
+    <div class="stepper-step upcoming" id="mStep2">
+      <div class="stepper-num">2</div>
+      <div class="stepper-label">Date</div>
+    </div>
+    <div class="stepper-sep" id="mSep2"></div>
+    <div class="stepper-step upcoming" id="mStep3">
+      <div class="stepper-num">3</div>
+      <div class="stepper-label">Infos</div>
+    </div>
+    <div class="stepper-sep" id="mSep3"></div>
+    <div class="stepper-step upcoming" id="mStep4">
+      <div class="stepper-num">4</div>
+      <div class="stepper-label">Paiement</div>
+    </div>
+  </div>
+
+  <!-- Étape 1 : Séance -->
+  <div class="mobile-step active" id="mobileEtape1">
+    <div class="mobile-seances" id="mobileSeancesList"></div>
+    <button class="mobile-btn-suivant" id="mBtnStep1" disabled onclick="mobileAller(2)">
+      Choisir un créneau →
+    </button>
+  </div>
+
+  <!-- Étape 2 : Calendrier -->
+  <div class="mobile-step" id="mobileEtape2">
+    <div class="mobile-cal">
+      <div class="mobile-cal-nav">
+        <button class="mobile-cal-nav-btn" onclick="mCalNaviguer(-1)">‹</button>
+        <div class="mobile-cal-label" id="mCalLabel"></div>
+        <button class="mobile-cal-nav-btn" onclick="mCalNaviguer(1)">›</button>
       </div>
-    </div>
-    <button class="btn-suite" id="btn-step1" onclick="allerStep2()" disabled>Continuer →</button>
-  </div>
-
-  <!-- ÉTAPE 2 : Choisir la date -->
-  <div id="step-2" style="display:none;">
-    <button class="btn-retour" onclick="allerStep(1)">← Retour</button>
-    <h2 class="titre-etape">Choisissez une date</h2>
-    <div class="cal-header">
-      <button class="cal-nav" onclick="changerMois(-1)">‹</button>
-      <span class="cal-titre" id="cal-label"></span>
-      <button class="cal-nav" onclick="changerMois(1)">›</button>
-    </div>
-    <div class="cal-grille">
-      <div class="cal-ent">Lun</div><div class="cal-ent">Mar</div><div class="cal-ent">Mer</div>
-      <div class="cal-ent">Jeu</div><div class="cal-ent">Ven</div><div class="cal-ent">Sam</div>
-      <div class="cal-ent">Dim</div>
-      <div id="cal-jours"></div>
-    </div>
-    <p id="cal-message" class="chargement" style="display:none;margin-top:16px;"></p>
-  </div>
-
-  <!-- ÉTAPE 3 : Choisir le créneau horaire -->
-  <div id="step-3" style="display:none;">
-    <button class="btn-retour" onclick="allerStep(2)">← Retour</button>
-    <h2 class="titre-etape" id="step3-titre">Créneaux disponibles</h2>
-    <div id="liste-creneaux" class="chargement">Chargement…</div>
-    <button class="btn-suite" id="btn-step3" onclick="allerStep4()" disabled style="margin-top:16px;">Continuer →</button>
-  </div>
-
-  <!-- ÉTAPE 4 : Formulaire -->
-  <div id="step-4" style="display:none;">
-    <button class="btn-retour" onclick="allerStep(3)">← Retour</button>
-    <h2 class="titre-etape">Vos coordonnées</h2>
-
-    <div class="recap" id="recap-rdv"></div>
-
-    <div id="erreur-form"></div>
-
-    <form id="form-rdv" onsubmit="soumettre(event)">
-      <div class="row2">
-        <div class="groupe">
-          <label>Prénom *</label>
-          <input name="prenom" required placeholder="Marie">
+      <div class="mobile-cal-grid" id="mCalGrid">
+        <div class="mobile-cal-dow">Lun</div>
+        <div class="mobile-cal-dow">Mar</div>
+        <div class="mobile-cal-dow">Mer</div>
+        <div class="mobile-cal-dow">Jeu</div>
+        <div class="mobile-cal-dow">Ven</div>
+        <div class="mobile-cal-dow">Sam</div>
+        <div class="mobile-cal-dow">Dim</div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:10px;height:10px;border-radius:3px;background:#f5eddc;border:1px solid #e8d5b0;"></div>
+          <span style="font-size:10px;color:var(--faint);">Disponible</span>
         </div>
-        <div class="groupe">
-          <label>Nom *</label>
-          <input name="nom" required placeholder="Dupont">
+        <div style="display:flex;align-items:center;gap:5px;">
+          <div style="width:10px;height:10px;border-radius:3px;background:var(--gold);"></div>
+          <span style="font-size:10px;color:var(--faint);">Sélectionné</span>
         </div>
       </div>
-      <div class="groupe">
-        <label>Email *</label>
-        <input name="email" type="email" required placeholder="marie@exemple.fr">
-        <p style="font-size:11px;color:var(--grey);margin:4px 0 0;">
-          La confirmation et le lien de calendrier (.ics) vous seront envoyés à cette adresse.
-        </p>
-      </div>
-      <div class="groupe">
-        <label>Téléphone</label>
-        <input name="telephone" type="tel" placeholder="06 xx xx xx xx">
-      </div>
-      <div class="groupe">
-        <label>Message (optionnel)</label>
-        <textarea name="message" placeholder="Quelques mots sur votre situation ou vos attentes…"></textarea>
-      </div>
-      <button type="submit" class="btn-suite" id="btn-submit">Confirmer le rendez-vous</button>
-    </form>
+    </div>
+    <div class="mobile-creneaux-section" id="mobileCreneauxSection" style="display:none;">
+      <div class="mobile-creneaux-label" id="mCreneauxLabel"></div>
+      <div class="mobile-creneaux-grid" id="mCreneauxGrid"></div>
+    </div>
+    <button class="mobile-btn-suivant" id="mBtnStep2" disabled onclick="mobileAller(3)" style="margin-top:16px;">
+      Saisir mes coordonnées →
+    </button>
   </div>
+
+  <!-- Étape 3 : Formulaire -->
+  <div class="mobile-step" id="mobileEtape3">
+    <div class="mobile-form">
+      <div class="mobile-recap-card">
+        <div class="mobile-recap-seance" id="mRecapSeance">—</div>
+        <div class="mobile-recap-date" id="mRecapDate">—</div>
+        <div class="mobile-recap-prix" id="mRecapPrix"></div>
+      </div>
+
+      <div class="mobile-form-row">
+        <div class="mobile-form-group-half">
+          <label class="mobile-form-label">Prénom *</label>
+          <input class="mobile-form-input" id="mPrenom" type="text" autocomplete="given-name" placeholder="Marie">
+        </div>
+        <div class="mobile-form-group-half">
+          <label class="mobile-form-label">Nom *</label>
+          <input class="mobile-form-input" id="mNom" type="text" autocomplete="family-name" placeholder="Dupont">
+        </div>
+      </div>
+      <div class="mobile-form-group">
+        <label class="mobile-form-label">E-mail *</label>
+        <input class="mobile-form-input" id="mEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
+      </div>
+      <div class="mobile-form-group" style="margin-top:14px;">
+        <label class="mobile-form-label">Téléphone</label>
+        <input class="mobile-form-input" id="mTel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78">
+      </div>
+      <div class="mobile-form-group" style="margin-top:14px;">
+        <label class="mobile-form-label">Message <span style="font-weight:400;">(optionnel)</span></label>
+        <textarea class="mobile-form-input mobile-form-textarea" id="mMessage" placeholder="Précisez vos symptômes ou questions éventuelles…"></textarea>
+      </div>
+
+      <div class="mobile-form-note">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <div class="mobile-form-note-text">Un compte sera automatiquement créé avec votre e-mail. Vous pourrez y accéder via « Mot de passe oublié ».</div>
+      </div>
+    </div>
+    <button class="mobile-btn-suivant" id="mBtnStep3" onclick="mobileValiderForm()">
+      Continuer →
+    </button>
+  </div>
+
+  <!-- Étape 4 : Confirmation + Paiement -->
+  <div class="mobile-step" id="mobileEtape4">
+    <div class="mobile-confirm">
+      <div class="confirm-card">
+        <div class="confirm-card-header">
+          <div class="confirm-card-check">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div class="confirm-card-title">Récapitulatif</div>
+          <div class="confirm-card-subtitle" id="mConfirmSubtitle">Vérifiez votre réservation avant de confirmer</div>
+        </div>
+        <div class="confirm-card-body">
+          <div class="confirm-row">
+            <span class="confirm-row-label">Séance</span>
+            <span class="confirm-row-value" id="mConfirmSeance">—</span>
+          </div>
+          <div class="confirm-row">
+            <span class="confirm-row-label">Date & heure</span>
+            <span class="confirm-row-value" id="mConfirmDate">—</span>
+          </div>
+          <div class="confirm-row">
+            <span class="confirm-row-label">Avec</span>
+            <span class="confirm-row-value" id="mConfirmPrenom">—</span>
+          </div>
+          <div class="confirm-row" id="mConfirmPrixRow">
+            <span class="confirm-row-label">Montant</span>
+            <span class="confirm-prix" id="mConfirmPrix">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="confirm-info-box">
+        <p>📧 Un e-mail de confirmation vous sera envoyé après validation.</p>
+        <p>📅 Vous recevrez un rappel 7 jours et 1 jour avant votre séance.</p>
+      </div>
+
+      <button class="mobile-btn-payer" id="mBtnPayer" style="display:none;" onclick="mobilePayer()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        <span id="mBtnPayerLabel">Payer en ligne</span>
+      </button>
+      <button class="mobile-btn-confirmer" id="mBtnConfirmer" onclick="mobileConfirmer()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Confirmer ma réservation
+      </button>
+      <div class="mobile-secure" id="mSecure" style="display:none;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span>Paiement sécurisé via Stripe</span>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /VERSION MOBILE -->
+
+
+<!-- ────────────── VERSION DESKTOP ────────────── -->
+<div class="rdv-desktop" id="rdvDesktop">
+  <div class="rdv-window">
+    <!-- Barre titre -->
+    <div class="rdv-win-bar">
+      <div class="rdv-win-brand">
+        <div class="rdv-win-dots">
+          <span style="background:#e05c5c;"></span>
+          <span style="background:#e0b45c;"></span>
+          <span style="background:#5ce07a;"></span>
+        </div>
+        <div style="width:1px;height:16px;background:rgba(255,255,255,0.15);"></div>
+        <div class="rdv-win-brand-name">Laurence Mermet-Bijon</div>
+      </div>
+      <div class="rdv-win-title">Prendre rendez-vous</div>
+      <div class="rdv-win-spacer"></div>
+    </div>
+
+    <!-- Corps 3 colonnes -->
+    <div class="rdv-win-body">
+
+      <!-- COLONNE 1 : Séances -->
+      <div class="col-seances">
+        <div class="col-header">
+          <div class="col-header-step">Étape 1</div>
+          <div class="col-header-title">Type de séance</div>
+        </div>
+        <div class="seances-list" id="dSeancesList"></div>
+      </div>
+
+      <!-- COLONNE 2 : Calendrier -->
+      <div class="col-calendrier">
+        <div class="col-header" style="display:flex;align-items:flex-end;justify-content:space-between;">
+          <div>
+            <div class="col-header-step">Étape 2</div>
+            <div class="col-header-title">Choisir un créneau</div>
+          </div>
+        </div>
+
+        <!-- Navigation mois/sem -->
+        <div class="cal-nav">
+          <button class="cal-nav-btn" onclick="dCalNaviguer(-1)">‹</button>
+          <span class="cal-nav-label" id="dCalLabel"></span>
+          <button class="cal-nav-btn" onclick="dCalNaviguer(1)">›</button>
+        </div>
+
+        <!-- Grille calendrier -->
+        <div class="cal-grid" id="dCalGrid">
+          <div class="cal-dow">Lun</div>
+          <div class="cal-dow">Mar</div>
+          <div class="cal-dow">Mer</div>
+          <div class="cal-dow">Jeu</div>
+          <div class="cal-dow">Ven</div>
+          <div class="cal-dow">Sam</div>
+          <div class="cal-dow">Dim</div>
+        </div>
+
+        <!-- Légende -->
+        <div class="cal-legend">
+          <div class="cal-legend-item">
+            <div class="cal-legend-swatch" style="background:#f5eddc;border:1px solid #e8d5b0;"></div>
+            <span class="cal-legend-label">Disponible</span>
+          </div>
+          <div class="cal-legend-item">
+            <div class="cal-legend-swatch" style="background:var(--gold);"></div>
+            <span class="cal-legend-label">Sélectionné</span>
+          </div>
+          <div class="cal-legend-item">
+            <div class="cal-legend-swatch" style="background:#f0ebe5;border:1px solid var(--border);"></div>
+            <span class="cal-legend-label">Indisponible</span>
+          </div>
+        </div>
+
+        <!-- Créneaux -->
+        <div class="creneaux-zone" id="dCreneauxZone">
+          <div style="text-align:center;padding:30px 20px;color:var(--faint);font-size:13px;">
+            ← Sélectionnez une séance puis choisissez une date
+          </div>
+        </div>
+      </div>
+
+      <!-- COLONNE 3 : Formulaire + Paiement -->
+      <div class="col-formulaire">
+        <div class="col-header">
+          <div class="col-header-step">Étape 3</div>
+          <div class="col-header-title" id="dColFormTitre">Vos coordonnées</div>
+        </div>
+
+        <!-- Récap sélection (masqué si rien sélectionné) -->
+        <div class="form-recap" id="dFormRecap" style="display:none;">
+          <div class="form-recap-nom" id="dRecapNom">—</div>
+          <div class="form-recap-date" id="dRecapDate">—</div>
+          <div class="form-recap-prix" id="dRecapPrix" style="display:none;"></div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="form-body" id="dFormBody">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Prénom *</label>
+              <input class="form-input" id="dPrenom" type="text" autocomplete="given-name" placeholder="Marie">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Nom *</label>
+              <input class="form-input" id="dNom" type="text" autocomplete="family-name" placeholder="Dupont">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-mail *</label>
+            <input class="form-input" id="dEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Téléphone</label>
+            <input class="form-input" id="dTel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Message <span style="font-weight:400;">(optionnel)</span></label>
+            <textarea class="form-input form-textarea" id="dMessage" placeholder="Précisez vos symptômes ou questions…"></textarea>
+          </div>
+          <div class="form-note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div class="form-note-text">Un compte sera créé avec votre e-mail. Accédez-y via « Mot de passe oublié ».</div>
+          </div>
+
+          <div id="dFormErreur" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;"></div>
+        </div>
+
+        <!-- Bouton paiement -->
+        <div class="form-footer">
+          <button class="btn-payer" id="dBtnPayer" style="display:none;" onclick="deskPayer()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+            <span id="dBtnPayerLabel">Payer en ligne</span>
+          </button>
+          <button class="btn-confirmer" id="dBtnConfirmer" onclick="deskReserver()" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+            Confirmer
+          </button>
+          <div class="secure-badge" id="dSecure" style="display:none;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>Paiement sécurisé via Stripe</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- /VERSION DESKTOP -->
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
 </div>
 
 <script>
-// ============================================================
-// État
-// ============================================================
-let etat = {
-  typeSeance: null,       // objet {id, nom, duree_minutes, modalite, couleur_hex}
-  modalite: null,         // 'cabinet' | 'visio'
-  lieuxDispos: [],        // [{id, nom, type_lieu, lien_visio}]
-  lieu: null,             // objet lieu choisi
-  dateChoisie: null,      // string 'YYYY-MM-DD'
-  creneauChoisi: null,    // {debut:'HH:MM', fin:'HH:MM'}
-  moisCal: new Date(),
-  joursDispo: [],         // ['YYYY-MM-DD', …] mois courant
+// ═══════════════════════════════════════════════════════
+// ÉTAT GLOBAL
+// ═══════════════════════════════════════════════════════
+const ETAT = {
+  types: [],           // TypeSeance[] chargés de l'API
+  typeChoisi: null,    // objet TypeSeance sélectionné
+  joursDispo: {},      // { "2025-10-27": true, ... }
+  moisCal: new Date(), // mois affiché dans le calendrier
+  dateChoisie: null,   // "YYYY-MM-DD"
+  creneaux: [],        // [{debut, fin}]
+  creneauChoisi: null, // {debut, fin}
+  tokenResa: null,     // token retourné par POST /reserver
+  mobileEtape: 1,
 };
-etat.moisCal.setDate(1);
+ETAT.moisCal.setDate(1);
 
-// ============================================================
-// Étapes : navigation
-// ============================================================
-function allerStep(n) {
-  [1,2,3,4].forEach(i => {
-    document.getElementById('step-' + i).style.display = i === n ? '' : 'none';
-    const et = document.getElementById('et-' + i);
-    et.classList.toggle('active', i === n);
-    et.classList.toggle('done', i < n);
-  });
-  window.scrollTo({top:0, behavior:'smooth'});
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function loading(on) {
+  document.getElementById('loadingOverlay').classList.toggle('visible', on);
 }
-
-// ============================================================
-// Étape 1 : Types de séances
-// ============================================================
-async function chargerTypes() {
-  const c = document.getElementById('liste-types');
-  try {
-    const r = await fetch('/api/agenda/types-seances?actif=1').then(r => r.json());
-    const types = (r.types || []).filter(t => t.actif);
-    if (!types.length) {
-      c.innerHTML = '<p style="color:var(--grey);font-size:14px;">Aucune séance disponible pour le moment.</p>';
-      return;
-    }
-    c.innerHTML = `<div class="cartes-types">${types.map(t => `
-      <div class="carte-type" onclick="choisirType(${t.id})" data-id="${t.id}">
-        <div class="nom">
-          <span class="puce" style="background:${t.couleur_hex||'#B8922A'};"></span>${t.nom}
-        </div>
-        <div class="detail">${t.duree_minutes} min · ${modaliteLabel(t.modalite)}</div>
-        ${t.description ? `<div class="detail" style="margin-top:6px;">${t.description}</div>` : ''}
-      </div>`).join('')}
-    </div>`;
-    window._typesCache = types;
-  } catch(e) {
-    c.innerHTML = '<p style="color:#B3503D;">Impossible de charger les séances. Veuillez réessayer.</p>';
-  }
-}
-
-function modaliteLabel(m) {
-  return {cabinet:'Cabinet', visio:'Visio', les_deux:'Cabinet ou visio'}[m] || m;
-}
-
-function choisirType(id) {
-  const types = window._typesCache || [];
-  const type = types.find(t => t.id === id);
-  if (!type) return;
-  etat.typeSeance = type;
-  etat.modalite = null;
-  etat.lieuxDispos = [];
-
-  document.querySelectorAll('.carte-type').forEach(c => c.classList.toggle('active', parseInt(c.dataset.id) === id));
-
-  const divModalite = document.getElementById('choix-modalite');
-  if (type.modalite === 'les_deux') {
-    divModalite.style.display = '';
-    document.querySelectorAll('.btn-modalite').forEach(b => b.classList.remove('active'));
-    document.getElementById('btn-step1').disabled = true;
-  } else {
-    divModalite.style.display = 'none';
-    choisirModalite(type.modalite);
-  }
-}
-
-function choisirModalite(m) {
-  etat.modalite = m;
-  document.querySelectorAll('.btn-modalite').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(m)));
-  document.getElementById('btn-step1').disabled = !etat.typeSeance;
-}
-
-async function allerStep2() {
-  if (!etat.typeSeance) return;
-  allerStep(2);
-  etat.moisCal = new Date();
-  etat.moisCal.setDate(1);
-  await chargerMois();
-}
-
-// ============================================================
-// Étape 2 : Calendrier
-// ============================================================
-async function chargerMois() {
-  const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
-  document.getElementById('cal-label').textContent =
-    MOIS[etat.moisCal.getMonth()] + ' ' + etat.moisCal.getFullYear();
-
-  const msg = document.getElementById('cal-message');
-  msg.style.display = '';
-  msg.textContent = 'Chargement des disponibilités…';
-  document.getElementById('cal-jours').innerHTML = '';
-
-  try {
-    const annee = etat.moisCal.getFullYear();
-    const mois = etat.moisCal.getMonth() + 1;
-    const url = `/api/agenda/disponibilites?type_seance_id=${etat.typeSeance.id}&modalite=${etat.modalite}&annee=${annee}&mois=${mois}`;
-    const r = await fetch(url).then(r => r.json());
-    etat.joursDispo = r.jours_dispos || [];
-    msg.style.display = 'none';
-    genererCal();
-  } catch(e) {
-    msg.textContent = 'Impossible de charger le calendrier.';
-  }
-}
-
-function genererCal() {
-  const grille = document.getElementById('cal-jours');
-  const annee = etat.moisCal.getFullYear();
-  const mois = etat.moisCal.getMonth();
-  const premier = new Date(annee, mois, 1);
-  const dernier = new Date(annee, mois + 1, 0);
-  const auj = new Date(); auj.setHours(0,0,0,0);
-
-  // Offset : lundi = 0
-  const offset = (premier.getDay() + 6) % 7;
-
-  let html = '';
-  // Cellules vides avant le 1er
-  for (let i = 0; i < offset; i++) html += '<div></div>';
-
-  for (let j = 1; j <= dernier.getDate(); j++) {
-    const d = new Date(annee, mois, j);
-    const iso = d.toISOString().split('T')[0];
-    const estPasse = d < auj;
-    const estDispo = etat.joursDispo.includes(iso);
-    const estActive = etat.dateChoisie === iso;
-
-    let cls = 'cal-jour';
-    if (d.toDateString() === auj.toDateString()) cls += ' today';
-    if (estPasse) cls += ' passe';
-    if (estDispo && !estPasse) cls += ' dispo';
-    if (estActive) cls += ' active';
-
-    const onclick = (estDispo && !estPasse) ? `onclick="choisirDate('${iso}')"` : '';
-    html += `<div class="${cls}" ${onclick}>${j}</div>`;
-  }
-  grille.innerHTML = html;
-}
-
-function changerMois(delta) {
-  etat.moisCal.setMonth(etat.moisCal.getMonth() + delta);
-  chargerMois();
-}
-
-async function choisirDate(iso) {
-  etat.dateChoisie = iso;
-  document.querySelectorAll('.cal-jour').forEach(j => j.classList.remove('active'));
-  event.target.classList.add('active');
-
-  // Aller à l'étape 3
+function fmtDate(iso) {
+  if (!iso) return '—';
   const d = new Date(iso + 'T00:00:00');
-  const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
-  document.getElementById('step3-titre').textContent = 'Créneaux du ' + dateLabel;
-
-  allerStep(3);
-  await chargerCreneaux();
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+}
+function fmtHeure(iso) {
+  if (!iso) return '—';
+  // Format ISO "2025-10-27T14:30:00" → "14h30"
+  // Format HH:MM "14:30" → "14h30"
+  const part = iso.includes('T') ? iso.slice(11, 16) : iso.slice(0, 5);
+  return part.replace(':', 'h');
+}
+function fmtPrix(type) {
+  if (!type) return '';
+  if (!type.prix || type.prix <= 0) return 'Gratuit';
+  return type.prix.toFixed(0).replace('.', ',') + ' €';
+}
+function fmtPrixNum(type) {
+  if (!type || !type.prix || type.prix <= 0) return null;
+  return type.prix.toFixed(0).replace('.', ',') + ' €';
+}
+function nomMois(date) {
+  return date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+}
+function lundi(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
 }
 
-// ============================================================
-// Étape 3 : Créneaux
-// ============================================================
+// ═══════════════════════════════════════════════════════
+// CHARGEMENT INITIAL
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', async () => {
+  // Vérifier paramètre ?annule=1
+  const params = new URLSearchParams(location.search);
+  if (params.get('annule') === '1') {
+    document.getElementById('mobileBannerAnnule').style.display = 'block';
+  }
+
+  loading(true);
+  try {
+    const r = await fetch('/api/agenda/types-seances?actif=1');
+    ETAT.types = await r.json();
+  } catch(e) {
+    ETAT.types = [];
+  }
+  loading(false);
+
+  renderSeancesDesk();
+  renderSeancesMobile();
+  renderCalDesk();
+  renderCalMobile();
+});
+
+// ═══════════════════════════════════════════════════════
+// RENDU SÉANCES — Desktop
+// ═══════════════════════════════════════════════════════
+function renderSeancesDesk() {
+  const el = document.getElementById('dSeancesList');
+  if (!ETAT.types.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;font-size:12px;color:var(--faint);">Aucun type de séance disponible.</div>';
+    return;
+  }
+  el.innerHTML = ETAT.types.map(t => {
+    const sel = ETAT.typeChoisi && ETAT.typeChoisi.id === t.id;
+    const prixLabel = fmtPrix(t);
+    const paixEn = t.mode_paiement === 'obligatoire' || t.mode_paiement === 'optionnel';
+    const tags = [
+      t.duree_minutes ? `${t.duree_minutes} min` : null,
+      t.modalite ? capitalize(t.modalite) : null,
+      paixEn ? null : null,
+    ].filter(Boolean);
+    return `
+    <div class="seance-item${sel ? ' selected' : ''}" onclick="choisirSeance(${t.id})">
+      <div class="seance-item-row">
+        <div class="seance-radio">
+          ${sel ? '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+        <div class="seance-info">
+          <div class="seance-name">${escHtml(t.nom)}</div>
+          <div class="seance-sub">${t.modalite ? capitalize(t.modalite) : ''}</div>
+        </div>
+        <div class="seance-prix">${escHtml(prixLabel)}</div>
+      </div>
+      ${sel ? `
+      <div class="seance-detail">
+        <div class="seance-tags">
+          ${t.duree_minutes ? `<span class="tag">${t.duree_minutes} min</span>` : ''}
+          ${t.modalite ? `<span class="tag">${capitalize(t.modalite)}</span>` : ''}
+          ${paixEn ? `<span class="tag tag-green">Paiement en ligne</span>` : ''}
+        </div>
+        ${t.description ? `<div class="seance-desc">${escHtml(t.description)}</div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU SÉANCES — Mobile
+// ═══════════════════════════════════════════════════════
+function renderSeancesMobile() {
+  const el = document.getElementById('mobileSeancesList');
+  if (!ETAT.types.length) {
+    el.innerHTML = '<div style="text-align:center;font-size:13px;color:var(--faint);padding:20px;">Aucun type de séance disponible.</div>';
+    return;
+  }
+  el.innerHTML = ETAT.types.map(t => {
+    const sel = ETAT.typeChoisi && ETAT.typeChoisi.id === t.id;
+    const prixLabel = fmtPrix(t);
+    const paixEn = t.mode_paiement === 'obligatoire' || t.mode_paiement === 'optionnel';
+    return `
+    <div class="mobile-seance-item${sel ? ' selected' : ''}" onclick="choisirSeanceMobile(${t.id})">
+      <div class="mobile-seance-row">
+        <div class="mobile-seance-radio">
+          ${sel ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+        </div>
+        <div class="mobile-seance-info">
+          <div class="mobile-seance-name">${escHtml(t.nom)}</div>
+          <div class="mobile-seance-sub">${t.modalite ? capitalize(t.modalite) : ''} ${t.duree_minutes ? '· ' + t.duree_minutes + ' min' : ''}</div>
+        </div>
+        <div class="mobile-seance-right">
+          <div class="mobile-seance-prix">${escHtml(prixLabel)}</div>
+          <div class="mobile-seance-chevron">${sel ? '▾' : '›'}</div>
+        </div>
+      </div>
+      ${sel ? `
+      <div class="mobile-seance-detail">
+        <div class="seance-tags">
+          ${t.duree_minutes ? `<span class="tag">${t.duree_minutes} min</span>` : ''}
+          ${t.modalite ? `<span class="tag">${capitalize(t.modalite)}</span>` : ''}
+          ${paixEn ? `<span class="tag tag-green">Paiement en ligne</span>` : ''}
+        </div>
+        ${t.description ? `<div class="seance-desc" style="margin-top:6px;">${escHtml(t.description)}</div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// SÉLECTION TYPE SÉANCE
+// ═══════════════════════════════════════════════════════
+function choisirSeance(id) {
+  ETAT.typeChoisi = ETAT.types.find(t => t.id === id) || null;
+  ETAT.dateChoisie = null;
+  ETAT.creneauChoisi = null;
+  ETAT.joursDispo = {};
+  renderSeancesDesk();
+  renderCalDesk();
+  chargerJoursDispoDesk();
+  majBoutonDesk();
+}
+function choisirSeanceMobile(id) {
+  ETAT.typeChoisi = ETAT.types.find(t => t.id === id) || null;
+  ETAT.dateChoisie = null;
+  ETAT.creneauChoisi = null;
+  ETAT.joursDispo = {};
+  renderSeancesMobile();
+  document.getElementById('mBtnStep1').disabled = !ETAT.typeChoisi;
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARGEMENT DISPONIBILITÉS (pour le calendrier)
+// ═══════════════════════════════════════════════════════
+async function chargerJoursDispo(mois, typeId) {
+  if (!typeId) return {};
+  // L'API attend mois=YYYY-MM
+  const annee = mois.getFullYear();
+  const moisNum = String(mois.getMonth() + 1).padStart(2, '0');
+  const moisStr = `${annee}-${moisNum}`;
+  try {
+    const r = await fetch(`/api/agenda/disponibilites?type_seance_id=${typeId}&mois=${moisStr}`);
+    const data = await r.json();
+    // data = { jours_disponibles: ["2025-10-27", ...] }
+    const map = {};
+    (data.jours_disponibles || data || []).forEach(d => { map[d] = true; });
+    return map;
+  } catch(e) { return {}; }
+}
+async function chargerJoursDispoDesk() {
+  if (!ETAT.typeChoisi) return;
+  loading(true);
+  ETAT.joursDispo = await chargerJoursDispo(ETAT.moisCal, ETAT.typeChoisi.id);
+  loading(false);
+  renderCalDesk();
+}
+async function chargerJoursDispoMobile() {
+  if (!ETAT.typeChoisi) return;
+  loading(true);
+  ETAT.joursDispo = await chargerJoursDispo(ETAT.moisCal, ETAT.typeChoisi.id);
+  loading(false);
+  renderCalMobile();
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU CALENDRIER — Desktop
+// ═══════════════════════════════════════════════════════
+function renderCalDesk() {
+  document.getElementById('dCalLabel').textContent = nomMois(ETAT.moisCal);
+  const grid = document.getElementById('dCalGrid');
+  // Garder les 7 en-têtes DOW
+  const headers = Array.from(grid.querySelectorAll('.cal-dow'));
+  grid.innerHTML = '';
+  headers.forEach(h => grid.appendChild(h));
+
+  const premier = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth(), 1);
+  const jourDebut = premier.getDay() === 0 ? 6 : premier.getDay() - 1; // lundi=0
+  const dernierJour = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth() + 1, 0).getDate();
+
+  // Cases vides avant le 1er
+  for (let i = 0; i < jourDebut; i++) {
+    const div = document.createElement('div');
+    div.className = 'cal-day autre-mois';
+    div.innerHTML = '<div class="cal-day-num"></div><div class="cal-dot"></div>';
+    grid.appendChild(div);
+  }
+  for (let j = 1; j <= dernierJour; j++) {
+    const isoDate = `${ETAT.moisCal.getFullYear()}-${String(ETAT.moisCal.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
+    const dow = new Date(isoDate + 'T00:00:00').getDay(); // 0=dim
+    const ferme = (dow === 0 || dow === 6);
+    const dispo = !ferme && ETAT.joursDispo[isoDate];
+    const sel = ETAT.dateChoisie === isoDate;
+    let cls = 'cal-day';
+    if (sel) cls += ' selected';
+    else if (dispo) cls += ' dispo';
+    else if (ferme) cls += ' ferme';
+    const div = document.createElement('div');
+    div.className = cls;
+    div.innerHTML = `<div class="cal-day-num">${j}</div><div class="cal-dot"></div>`;
+    if (dispo || sel) div.onclick = () => choisirDateDesk(isoDate);
+    grid.appendChild(div);
+  }
+}
+async function dCalNaviguer(dir) {
+  ETAT.moisCal = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth() + dir, 1);
+  ETAT.dateChoisie = null;
+  ETAT.creneauChoisi = null;
+  ETAT.joursDispo = {};
+  renderCalDesk();
+  if (ETAT.typeChoisi) await chargerJoursDispoDesk();
+}
+async function choisirDateDesk(iso) {
+  ETAT.dateChoisie = iso;
+  ETAT.creneauChoisi = null;
+  renderCalDesk();
+  await chargerCreneauxDesk();
+  majBoutonDesk();
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU CALENDRIER — Mobile
+// ═══════════════════════════════════════════════════════
+function renderCalMobile() {
+  document.getElementById('mCalLabel').textContent = nomMois(ETAT.moisCal);
+  const grid = document.getElementById('mCalGrid');
+  const headers = Array.from(grid.querySelectorAll('.mobile-cal-dow'));
+  grid.innerHTML = '';
+  headers.forEach(h => grid.appendChild(h));
+
+  const premier = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth(), 1);
+  const jourDebut = premier.getDay() === 0 ? 6 : premier.getDay() - 1;
+  const dernierJour = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth() + 1, 0).getDate();
+
+  for (let i = 0; i < jourDebut; i++) {
+    const div = document.createElement('div');
+    div.className = 'mobile-cal-day';
+    div.innerHTML = '<div class="mobile-cal-day-num"></div><div class="mobile-cal-dot"></div>';
+    grid.appendChild(div);
+  }
+  for (let j = 1; j <= dernierJour; j++) {
+    const isoDate = `${ETAT.moisCal.getFullYear()}-${String(ETAT.moisCal.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
+    const dow = new Date(isoDate + 'T00:00:00').getDay();
+    const ferme = (dow === 0 || dow === 6);
+    const dispo = !ferme && ETAT.joursDispo[isoDate];
+    const sel = ETAT.dateChoisie === isoDate;
+    let cls = 'mobile-cal-day';
+    if (sel) cls += ' selected';
+    else if (dispo) cls += ' dispo';
+    else if (ferme) cls += ' ferme';
+    const div = document.createElement('div');
+    div.className = cls;
+    div.innerHTML = `<div class="mobile-cal-day-num">${j}</div><div class="mobile-cal-dot"></div>`;
+    if (dispo || sel) div.onclick = () => choisirDateMobile(isoDate);
+    grid.appendChild(div);
+  }
+}
+async function mCalNaviguer(dir) {
+  ETAT.moisCal = new Date(ETAT.moisCal.getFullYear(), ETAT.moisCal.getMonth() + dir, 1);
+  ETAT.dateChoisie = null;
+  ETAT.creneauChoisi = null;
+  ETAT.joursDispo = {};
+  renderCalMobile();
+  document.getElementById('mobileCreneauxSection').style.display = 'none';
+  if (ETAT.typeChoisi) await chargerJoursDispoMobile();
+}
+async function choisirDateMobile(iso) {
+  ETAT.dateChoisie = iso;
+  ETAT.creneauChoisi = null;
+  renderCalMobile();
+  await chargerCreneauxMobile();
+  document.getElementById('mBtnStep2').disabled = true;
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARGEMENT CRÉNEAUX
+// ═══════════════════════════════════════════════════════
 async function chargerCreneaux() {
-  const c = document.getElementById('liste-creneaux');
-  c.innerHTML = '<div class="chargement">Chargement…</div>';
-  etat.creneauChoisi = null;
-  document.getElementById('btn-step3').disabled = true;
-
+  if (!ETAT.typeChoisi || !ETAT.dateChoisie) return [];
   try {
-    const url = `/api/agenda/creneaux?type_seance_id=${etat.typeSeance.id}&modalite=${etat.modalite}&date=${etat.dateChoisie}`;
-    const r = await fetch(url).then(r => r.json());
-    const creneaux = r.creneaux || [];
-    if (!creneaux.length) {
-      c.innerHTML = '<p style="color:var(--grey);font-size:14px;">Aucun créneau disponible pour cette date.</p>';
-      return;
-    }
-    c.innerHTML = `<div class="creneaux">${creneaux.map(cr =>
-      `<button class="creneau" onclick="choisirCreneau('${cr.debut}','${cr.fin}',this)">${cr.debut}</button>`
-    ).join('')}</div>`;
-  } catch(e) {
-    c.innerHTML = '<p style="color:#B3503D;">Impossible de charger les créneaux.</p>';
+    // L'API attend date_str=YYYY-MM-DD
+    const r = await fetch(`/api/agenda/creneaux?type_seance_id=${ETAT.typeChoisi.id}&date_str=${ETAT.dateChoisie}`);
+    const data = await r.json();
+    // data = { creneaux: [{debut: "HH:MM", fin: "HH:MM"}, ...], lieux: [...] }
+    // On enrichit avec l'ISO date pour l'affichage
+    return (data.creneaux || []).map(cr => ({
+      debut: `${ETAT.dateChoisie}T${cr.debut}:00`,
+      fin: `${ETAT.dateChoisie}T${cr.fin}:00`,
+      heure_debut: cr.debut,
+      heure_fin: cr.fin,
+      complet: false,
+    }));
+  } catch(e) { return []; }
+}
+async function chargerCreneauxDesk() {
+  loading(true);
+  ETAT.creneaux = await chargerCreneaux();
+  loading(false);
+  renderCreneauxDesk();
+}
+async function chargerCreneauxMobile() {
+  loading(true);
+  ETAT.creneaux = await chargerCreneaux();
+  loading(false);
+  renderCreneauxMobile();
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU CRÉNEAUX — Desktop
+// ═══════════════════════════════════════════════════════
+function renderCreneauxDesk() {
+  const zone = document.getElementById('dCreneauxZone');
+  if (!ETAT.dateChoisie) {
+    zone.innerHTML = '<div style="text-align:center;padding:30px 20px;color:var(--faint);font-size:13px;">← Sélectionnez une séance puis choisissez une date</div>';
+    return;
+  }
+  const labelDate = fmtDate(ETAT.dateChoisie);
+  let html = `<div class="creneaux-date-label">${labelDate}</div>`;
+  if (!ETAT.creneaux.length) {
+    html += '<div style="font-size:12px;color:var(--faint);padding:10px 0;">Aucun créneau disponible pour cette date.</div>';
+    zone.innerHTML = html;
+    return;
+  }
+  html += '<div class="creneaux-grid">';
+  ETAT.creneaux.forEach(cr => {
+    const sel = ETAT.creneauChoisi && ETAT.creneauChoisi.debut === cr.debut;
+    const complet = cr.complet || false;
+    html += `
+    <div class="creneau-pill${sel ? ' selected' : ''}${complet ? ' complet' : ''}" ${complet ? '' : `onclick="choisirCreneauDesk('${cr.debut}','${cr.fin}')"`}>
+      <div>
+        <div class="creneau-heure">${fmtHeure(cr.debut)}</div>
+        <div class="creneau-fin">${complet ? 'Complet' : '→ ' + fmtHeure(cr.fin)}</div>
+      </div>
+      ${sel ? `<div class="creneau-check"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>` : complet ? '<span style="font-size:10px;color:var(--faint);">—</span>' : '<span class="creneau-choisir">Choisir</span>'}
+    </div>`;
+  });
+  html += '</div>';
+  zone.innerHTML = html;
+}
+function choisirCreneauDesk(debut, fin) {
+  ETAT.creneauChoisi = { debut, fin };
+  renderCreneauxDesk();
+  majRecapDesk();
+  majBoutonDesk();
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU CRÉNEAUX — Mobile
+// ═══════════════════════════════════════════════════════
+function renderCreneauxMobile() {
+  const section = document.getElementById('mobileCreneauxSection');
+  if (!ETAT.creneaux.length) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  document.getElementById('mCreneauxLabel').textContent = fmtDate(ETAT.dateChoisie);
+  const grid = document.getElementById('mCreneauxGrid');
+  grid.innerHTML = ETAT.creneaux.map(cr => {
+    const sel = ETAT.creneauChoisi && ETAT.creneauChoisi.debut === cr.debut;
+    const complet = cr.complet || false;
+    return `
+    <div class="mobile-creneau${sel ? ' selected' : ''}${complet ? ' complet' : ''}" ${complet ? '' : `onclick="choisirCreneauMobile('${cr.debut}','${cr.fin}')"`}>
+      <div class="mobile-creneau-heure">${fmtHeure(cr.debut)}</div>
+      <div class="mobile-creneau-fin">${complet ? 'Complet' : '→ ' + fmtHeure(cr.fin)}</div>
+    </div>`;
+  }).join('');
+}
+function choisirCreneauMobile(debut, fin) {
+  ETAT.creneauChoisi = { debut, fin };
+  renderCreneauxMobile();
+  document.getElementById('mBtnStep2').disabled = false;
+}
+
+// ═══════════════════════════════════════════════════════
+// MAJ RÉCAP + BOUTON — Desktop
+// ═══════════════════════════════════════════════════════
+function majRecapDesk() {
+  const recap = document.getElementById('dFormRecap');
+  if (!ETAT.typeChoisi || !ETAT.creneauChoisi) { recap.style.display = 'none'; return; }
+  recap.style.display = 'flex';
+  document.getElementById('dRecapNom').textContent = ETAT.typeChoisi.nom + (ETAT.typeChoisi.modalite ? ' — ' + capitalize(ETAT.typeChoisi.modalite) : '');
+  document.getElementById('dRecapDate').textContent = fmtDate(ETAT.dateChoisie) + ' · ' + fmtHeure(ETAT.creneauChoisi.debut) + ' – ' + fmtHeure(ETAT.creneauChoisi.fin);
+  const prixEl = document.getElementById('dRecapPrix');
+  const px = fmtPrixNum(ETAT.typeChoisi);
+  if (px) { prixEl.textContent = px; prixEl.style.display = 'block'; }
+  else prixEl.style.display = 'none';
+}
+function majBoutonDesk() {
+  const btnC = document.getElementById('dBtnConfirmer');
+  const btnP = document.getElementById('dBtnPayer');
+  const sec = document.getElementById('dSecure');
+  const ok = !!(ETAT.typeChoisi && ETAT.creneauChoisi);
+  btnC.disabled = !ok;
+  if (!ok) { btnP.style.display = 'none'; sec.style.display = 'none'; return; }
+  const mode = ETAT.typeChoisi.mode_paiement || 'sans_paiement';
+  const prix = ETAT.typeChoisi.prix;
+  if (mode === 'obligatoire' && prix > 0) {
+    btnC.style.display = 'none';
+    const px = fmtPrixNum(ETAT.typeChoisi);
+    btnP.style.display = 'flex';
+    document.getElementById('dBtnPayerLabel').textContent = px ? `Payer ${px} — Confirmer` : 'Payer — Confirmer';
+    sec.style.display = 'flex';
+  } else if (mode === 'optionnel' && prix > 0) {
+    btnC.style.display = 'flex';
+    btnC.disabled = false;
+    btnC.querySelector('span') && (btnC.querySelector('span').textContent = 'Confirmer (payer plus tard)');
+    const px = fmtPrixNum(ETAT.typeChoisi);
+    btnP.style.display = 'flex';
+    document.getElementById('dBtnPayerLabel').textContent = px ? `Payer ${px} maintenant` : 'Payer maintenant';
+    sec.style.display = 'flex';
+  } else {
+    btnC.style.display = 'flex';
+    btnC.disabled = false;
+    btnP.style.display = 'none';
+    sec.style.display = 'none';
   }
 }
 
-function choisirCreneau(debut, fin, btn) {
-  etat.creneauChoisi = {debut, fin};
-  etat.lieu = null;  // sera déterminé côté serveur
-  document.querySelectorAll('.creneau').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('btn-step3').disabled = false;
+// ═══════════════════════════════════════════════════════
+// NAVIGATION MOBILE ENTRE ÉTAPES
+// ═══════════════════════════════════════════════════════
+function mobileAller(etape) {
+  // Masquer toutes
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById(`mobileEtape${i}`).classList.remove('active');
+    const s = document.getElementById(`mStep${i}`);
+    if (i < etape) { s.className = 'stepper-step done'; s.querySelector('.stepper-num').textContent = '✓'; }
+    else if (i === etape) { s.className = 'stepper-step active'; s.querySelector('.stepper-num').textContent = i; }
+    else { s.className = 'stepper-step upcoming'; s.querySelector('.stepper-num').textContent = i; }
+  }
+  for (let i = 1; i <= 3; i++) {
+    const sep = document.getElementById(`mSep${i}`);
+    sep.className = 'stepper-sep' + (i < etape ? ' done' : '');
+  }
+  document.getElementById(`mobileEtape${etape}`).classList.add('active');
+  ETAT.mobileEtape = etape;
+  // Charger dispo si étape 2
+  if (etape === 2 && ETAT.typeChoisi) chargerJoursDispoMobile();
+  // Remplir récap si étape 3
+  if (etape === 3) {
+    document.getElementById('mRecapSeance').textContent = ETAT.typeChoisi ? ETAT.typeChoisi.nom + (ETAT.typeChoisi.modalite ? ' — ' + capitalize(ETAT.typeChoisi.modalite) : '') : '—';
+    document.getElementById('mRecapDate').textContent = ETAT.dateChoisie && ETAT.creneauChoisi ? fmtDate(ETAT.dateChoisie) + ' · ' + fmtHeure(ETAT.creneauChoisi.debut) + ' – ' + fmtHeure(ETAT.creneauChoisi.fin) : '—';
+    const px = fmtPrixNum(ETAT.typeChoisi);
+    const prixEl = document.getElementById('mRecapPrix');
+    prixEl.textContent = px || '';
+    prixEl.style.display = px ? 'block' : 'none';
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function allerStep4() {
-  if (!etat.creneauChoisi) return;
-  afficherRecap();
-  allerStep(4);
+// ═══════════════════════════════════════════════════════
+// VALIDATION FORMULAIRE MOBILE
+// ═══════════════════════════════════════════════════════
+function mobileValiderForm() {
+  const prenom = document.getElementById('mPrenom').value.trim();
+  const nom = document.getElementById('mNom').value.trim();
+  const email = document.getElementById('mEmail').value.trim();
+  if (!prenom || !nom || !email || !email.includes('@')) {
+    alert('Veuillez remplir les champs obligatoires (Prénom, Nom, E-mail).');
+    return;
+  }
+  // Prépare conf mobile (étape 4)
+  document.getElementById('mConfirmSeance').textContent = ETAT.typeChoisi ? ETAT.typeChoisi.nom : '—';
+  document.getElementById('mConfirmDate').textContent = ETAT.dateChoisie && ETAT.creneauChoisi ? fmtDate(ETAT.dateChoisie) + ' · ' + fmtHeure(ETAT.creneauChoisi.debut) : '—';
+  document.getElementById('mConfirmPrenom').textContent = prenom + ' ' + nom;
+  const px = fmtPrixNum(ETAT.typeChoisi);
+  const prixRow = document.getElementById('mConfirmPrixRow');
+  const prixEl = document.getElementById('mConfirmPrix');
+  if (px) { prixRow.style.display = 'flex'; prixEl.textContent = px; }
+  else prixRow.style.display = 'none';
+  // Bouton payer ou confirmer
+  const mode = ETAT.typeChoisi?.mode_paiement || 'sans_paiement';
+  const prix = ETAT.typeChoisi?.prix;
+  const btnP = document.getElementById('mBtnPayer');
+  const btnC = document.getElementById('mBtnConfirmer');
+  const sec = document.getElementById('mSecure');
+  if (mode === 'obligatoire' && prix > 0) {
+    btnC.style.display = 'none';
+    btnP.style.display = 'flex';
+    document.getElementById('mBtnPayerLabel').textContent = px ? `Payer ${px} — Confirmer` : 'Payer — Confirmer';
+    sec.style.display = 'flex';
+  } else if (mode === 'optionnel' && prix > 0) {
+    btnC.style.display = 'flex';
+    btnC.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Confirmer (sans paiement)`;
+    btnP.style.display = 'flex';
+    document.getElementById('mBtnPayerLabel').textContent = px ? `Payer ${px} maintenant` : 'Payer maintenant';
+    sec.style.display = 'flex';
+  } else {
+    btnC.style.display = 'flex';
+    btnP.style.display = 'none';
+    sec.style.display = 'none';
+  }
+  mobileAller(4);
 }
 
-// ============================================================
-// Étape 4 : Formulaire + recap
-// ============================================================
-function afficherRecap() {
-  const d = new Date(etat.dateChoisie + 'T00:00:00');
-  const dateLabel = d.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
-  document.getElementById('recap-rdv').innerHTML = `
-    <div class="ligne"><span class="l">Séance</span><span class="v">${etat.typeSeance.nom}</span></div>
-    <div class="ligne"><span class="l">Date</span><span class="v">${dateLabel}</span></div>
-    <div class="ligne"><span class="l">Heure</span><span class="v">${etat.creneauChoisi.debut}</span></div>
-    <div class="ligne"><span class="l">Durée</span><span class="v">${etat.typeSeance.duree_minutes} min</span></div>
-    <div class="ligne"><span class="l">Format</span><span class="v">${etat.modalite === 'visio' ? '🎥 Visio' : '🏠 Cabinet'}</span></div>
-  `;
-}
-
-async function soumettre(evt) {
-  evt.preventDefault();
-  const btn = document.getElementById('btn-submit');
-  const errDiv = document.getElementById('erreur-form');
-  errDiv.innerHTML = '';
-  btn.disabled = true;
-  btn.textContent = 'Envoi en cours…';
-
-  const fd = new FormData(evt.target);
-  const payload = {
-    type_seance_id: etat.typeSeance.id,
-    modalite: etat.modalite,
-    date: etat.dateChoisie,
-    heure_debut: etat.creneauChoisi.debut,
-    prenom: fd.get('prenom'),
-    nom: fd.get('nom'),
-    email: fd.get('email'),
-    telephone: fd.get('telephone') || null,
-    message: fd.get('message') || null,
+// ═══════════════════════════════════════════════════════
+// RÉSERVATION (commun desktop + mobile)
+// ═══════════════════════════════════════════════════════
+function getFormData(isMobile) {
+  const p = id => document.getElementById((isMobile ? 'm' : 'd') + id);
+  return {
+    prenom: (p('Prenom') || {}).value?.trim() || '',
+    nom: (p('Nom') || {}).value?.trim() || '',
+    email: (p('Email') || {}).value?.trim() || '',
+    telephone: (p('Tel') || {}).value?.trim() || '',
+    message: (p('Message') || {}).value?.trim() || '',
   };
+}
 
+async function effectuerReservation(isMobile) {
+  const fd = getFormData(isMobile);
+  if (!fd.prenom || !fd.nom || !fd.email || !fd.email.includes('@')) {
+    const msg = 'Veuillez remplir Prénom, Nom et E-mail.';
+    if (!isMobile) { const e = document.getElementById('dFormErreur'); e.textContent = msg; e.style.display = 'block'; }
+    else alert(msg);
+    return null;
+  }
+  if (!ETAT.typeChoisi || !ETAT.creneauChoisi) {
+    const msg = 'Sélectionnez un type de séance et un créneau.';
+    if (!isMobile) { const e = document.getElementById('dFormErreur'); e.textContent = msg; e.style.display = 'block'; }
+    else alert(msg);
+    return null;
+  }
+  loading(true);
   try {
-    const resp = await fetch('/api/agenda/reserver', {
+    const r = await fetch('/api/agenda/reserver', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type_seance_id: ETAT.typeChoisi.id,
+        date: ETAT.dateChoisie,                    // "YYYY-MM-DD"
+        heure_debut: ETAT.creneauChoisi.heure_debut, // "HH:MM"
+        prenom: fd.prenom,
+        nom: fd.nom,
+        email: fd.email,
+        telephone: fd.telephone,
+        message: fd.message,
+      }),
     });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({detail: 'Une erreur est survenue.'}));
-      throw new Error(typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail));
+    const data = await r.json();
+    loading(false);
+    if (!r.ok) {
+      const msg = data.detail || 'Erreur lors de la réservation.';
+      if (!isMobile) { const e = document.getElementById('dFormErreur'); e.textContent = msg; e.style.display = 'block'; }
+      else alert(msg);
+      return null;
     }
-    const data = await resp.json();
-    window.location.href = '/rendez-vous/confirmation?token=' + data.token_annulation;
+    ETAT.tokenResa = data.token_annulation;
+    return data.token_annulation;
   } catch(e) {
-    errDiv.innerHTML = `<div class="erreur-bloc">${e.message}</div>`;
-    btn.disabled = false;
-    btn.textContent = 'Confirmer le rendez-vous';
+    loading(false);
+    const msg = 'Erreur réseau, veuillez réessayer.';
+    if (!isMobile) { const e2 = document.getElementById('dFormErreur'); e2.textContent = msg; e2.style.display = 'block'; }
+    else alert(msg);
+    return null;
   }
 }
 
-// ============================================================
-// Init
-// ============================================================
-chargerTypes();
+async function demanderPaiement(token) {
+  loading(true);
+  try {
+    const r = await fetch('/api/agenda/paiement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token_annulation: token }),
+    });
+    const data = await r.json();
+    loading(false);
+    if (r.ok && data.checkout_url) {
+      window.location.href = data.checkout_url;
+    }
+  } catch(e) {
+    loading(false);
+    alert('Erreur lors de la redirection vers le paiement.');
+  }
+}
+
+// Desktop
+async function deskReserver() {
+  const token = await effectuerReservation(false);
+  if (!token) return;
+  // Pas de paiement ou optionnel sans paiement → confirmation directe
+  window.location.href = '/rendez-vous/confirmation?token=' + token;
+}
+async function deskPayer() {
+  const token = await effectuerReservation(false);
+  if (!token) return;
+  await demanderPaiement(token);
+}
+
+// Mobile
+async function mobileConfirmer() {
+  if (ETAT.tokenResa) {
+    window.location.href = '/rendez-vous/confirmation?token=' + ETAT.tokenResa;
+    return;
+  }
+  const token = await effectuerReservation(true);
+  if (!token) return;
+  window.location.href = '/rendez-vous/confirmation?token=' + token;
+}
+async function mobilePayer() {
+  if (!ETAT.tokenResa) {
+    const token = await effectuerReservation(true);
+    if (!token) return;
+  }
+  await demanderPaiement(ETAT.tokenResa);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
 </script>
 </body>
 </html>

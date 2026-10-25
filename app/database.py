@@ -53,6 +53,11 @@ _MIGRATIONS_COLONNES = [
     # Format individuelle/collective + places max (ajouté oct. 2026)
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS format_seance VARCHAR(20) DEFAULT 'individuelle'",
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS nb_places_max INTEGER",
+    # Tarification + Stripe (ajouté oct. 2026)
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS prix NUMERIC(10,2)",
+    "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS mode_paiement VARCHAR(20) DEFAULT 'sans_paiement'",
+    "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS stripe_checkout_session_id VARCHAR(200)",
+    "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS prix_paye NUMERIC(10,2)",
 ]
 
 

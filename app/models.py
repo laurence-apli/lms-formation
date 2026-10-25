@@ -628,6 +628,10 @@ class TypeSeance(Base):
     nb_places_max = Column(Integer, nullable=True)   # None si individuelle
     actif = Column(Boolean, default=True)
     ordre = Column(Integer, default=0)
+    # Tarification
+    prix = Column(Numeric(10, 2), nullable=True)  # None = gratuit ou sur devis
+    # 'sans_paiement' | 'optionnel' | 'obligatoire'
+    mode_paiement = Column(String(20), nullable=False, default="sans_paiement")
 
     plages = relationship("PlageDisponibilite", back_populates="type_seance")
     reservations = relationship("Reservation", back_populates="type_seance")
@@ -731,6 +735,9 @@ class Reservation(Base):
     cree_le = Column(DateTime, default=datetime.utcnow)
     # Note interne admin (non visible par la cliente)
     note_admin = Column(Text, nullable=True)
+    # Paiement Stripe
+    stripe_checkout_session_id = Column(String(200), nullable=True, unique=True)
+    prix_paye = Column(Numeric(10, 2), nullable=True)  # Montant réellement encaissé
 
     type_seance = relationship("TypeSeance", back_populates="reservations")
     lieu = relationship("Lieu", back_populates="reservations")

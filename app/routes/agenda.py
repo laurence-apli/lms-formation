@@ -7,6 +7,7 @@ Couvre :
   - Cron : envoi des rappels J-7, J-1 et suivi post-séance
 """
 import json
+import os
 import secrets
 from datetime import datetime, timedelta, date, time
 from typing import Optional
@@ -45,6 +46,7 @@ admin_router = APIRouter(prefix="/admin/agenda", dependencies=[Depends(admin_con
 public_router = APIRouter()
 api_router = APIRouter(prefix="/api/agenda")
 cron_router = APIRouter(prefix="/cron")
+webhook_router = APIRouter()  # webhook Stripe agenda : /webhooks/agenda-stripe
 
 
 # ===========================================================================
@@ -126,6 +128,8 @@ class TypeSeanceIn(BaseModel):
     description: Optional[str] = None   # le JS peut envoyer null si vide
     format_seance: str = "individuelle"  # 'individuelle' | 'collective'
     nb_places_max: Optional[int] = None  # None si individuelle
+    prix: Optional[float] = None         # Prix en € (None = gratuit)
+    mode_paiement: str = "sans_paiement" # 'sans_paiement' | 'optionnel' | 'obligatoire'
     actif: bool = True
 
 
@@ -146,6 +150,8 @@ def creer_type_seance(data: TypeSeanceIn, session: Session = Depends(obtenir_ses
         description=data.description.strip() if data.description else None,
         format_seance=data.format_seance if data.format_seance in ("individuelle", "collective") else "individuelle",
         nb_places_max=data.nb_places_max if data.format_seance == "collective" else None,
+        prix=data.prix if data.prix and data.prix > 0 else None,
+        mode_paiement=data.mode_paiement if data.mode_paiement in ("sans_paiement", "optionnel", "obligatoire") else "sans_paiement",
         ordre=max_ordre,
     )
     session.add(ts)
@@ -166,6 +172,8 @@ def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depe
     ts.description = data.description.strip() if data.description else None
     ts.format_seance = data.format_seance if data.format_seance in ("individuelle", "collective") else "individuelle"
     ts.nb_places_max = data.nb_places_max if data.format_seance == "collective" else None
+    ts.prix = data.prix if data.prix and data.prix > 0 else None
+    ts.mode_paiement = data.mode_paiement if data.mode_paiement in ("sans_paiement", "optionnel", "obligatoire") else "sans_paiement"
     ts.actif = data.actif
     session.commit()
     return {"ok": True}
@@ -617,6 +625,8 @@ def api_lister_types_seances(
             "pause_apres_minutes": t.pause_apres_minutes or 0,
             "modalite": t.modalite, "couleur_hex": t.couleur_hex,
             "description": t.description, "actif": t.actif, "ordre": t.ordre,
+            "prix": float(t.prix) if t.prix is not None else None,
+            "mode_paiement": t.mode_paiement or "sans_paiement",
         }
         for t in ts
     ]
@@ -1212,6 +1222,66 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
     }
 
 
+@api_router.post("/paiement")
+async def creer_paiement_rdv(request: Request, session: Session = Depends(obtenir_session)):
+    """Crée une session Stripe Checkout pour une réservation d'agenda.
+    Body JSON : { token_annulation: "...", url_retour: "https://..." }
+    Retourne : { checkout_url: "https://checkout.stripe.com/..." }
+    Si mode_paiement='sans_paiement' ou prix=0, confirme directement sans Stripe.
+    """
+    try:
+        import stripe as _stripe
+        _stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Module Stripe non installé.")
+
+    data = await request.json()
+    token = data.get("token_annulation", "")
+    url_retour = data.get("url_retour", "")
+
+    resa = session.query(Reservation).filter_by(token_annulation=token).first()
+    if not resa:
+        raise HTTPException(status_code=404, detail="Réservation introuvable.")
+    if resa.statut != "en_attente":
+        raise HTTPException(status_code=400, detail="Cette réservation n'est plus en attente.")
+
+    ts = resa.type_seance
+    prix = float(ts.prix) if ts and ts.prix else 0.0
+    mode_paiement = (ts.mode_paiement or "sans_paiement") if ts else "sans_paiement"
+
+    # Paiement non requis ou gratuit → on retourne simplement la page de confirmation
+    if mode_paiement == "sans_paiement" or prix <= 0:
+        url_base = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
+        return {"checkout_url": f"{url_base}/rendez-vous/confirmation?token={token}"}
+
+    # Stripe actif
+    if not _stripe.api_key:
+        raise HTTPException(status_code=503, detail="Paiement indisponible (configuration Stripe manquante).")
+
+    url_base = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
+    nom_seance = ts.nom if ts else "Séance"
+
+    checkout_session = _stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[{
+            "price_data": {
+                "currency": "eur",
+                "product_data": {"name": nom_seance},
+                "unit_amount": round(prix * 100),
+            },
+            "quantity": 1,
+        }],
+        customer_email=resa.email,
+        success_url=f"{url_base}/rendez-vous/confirmation?token={token}&stripe_ok=1",
+        cancel_url=f"{url_base}/rendez-vous?annule=1",
+        metadata={"token_annulation": token, "reservation_id": str(resa.id)},
+    )
+
+    resa.stripe_checkout_session_id = checkout_session.id
+    session.commit()
+    return {"checkout_url": checkout_session.url}
+
+
 @api_router.post("/annuler/{token}")
 def annuler_reservation(token: str, session: Session = Depends(obtenir_session)):
     """Annulation d'une réservation via le token reçu par email."""
@@ -1471,3 +1541,55 @@ def _serialiser_reservation(r: Reservation) -> dict:
         "token_annulation": r.token_annulation,
         "eleve_id": r.eleve_id,
     }
+
+
+# ===========================================================================
+# WEBHOOK Stripe — Paiement agenda
+# ===========================================================================
+
+@webhook_router.post("/webhooks/agenda-stripe")
+async def webhook_stripe_agenda(request: Request, session: Session = Depends(obtenir_session)):
+    """Webhook Stripe : confirme le paiement d'un RDV agenda.
+    Stripe appelle cette URL automatiquement après un paiement réussi.
+    """
+    import json as _json
+    try:
+        import stripe as _stripe
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Module Stripe non installé.")
+
+    _stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
+    webhook_secret = os.environ.get("STRIPE_WEBHOOK_SECRET_AGENDA", "")
+
+    payload = await request.body()
+    signature = request.headers.get("stripe-signature", "")
+
+    try:
+        if webhook_secret:
+            event_obj = _stripe.Webhook.construct_event(payload, signature, webhook_secret)
+            event = _json.loads(payload)
+        else:
+            event = _json.loads(payload)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Signature webhook invalide.")
+
+    type_event = event.get("type", "")
+    if type_event != "checkout.session.completed":
+        return {"ok": True, "ignored": True}
+
+    stripe_session = event.get("data", {}).get("object", {})
+    metadata = stripe_session.get("metadata", {})
+    token = metadata.get("token_annulation", "")
+    montant_recu = stripe_session.get("amount_total", 0)  # en centimes
+
+    if not token:
+        return {"ok": True, "ignored": True}
+
+    resa = session.query(Reservation).filter_by(token_annulation=token).first()
+    if not resa:
+        return {"ok": True, "ignored": True}
+
+    from decimal import Decimal
+    resa.prix_paye = Decimal(montant_recu) / 100
+    session.commit()
+    return {"ok": True}

@@ -1,0 +1,95 @@
+<!--
+  BOUTON "PRENDRE RENDEZ-VOUS" — À INTÉGRER SUR laurence-mermet-bijon.fr
+  ========================================================================
+  Ce bouton remplace le lien vers Resalib. Il pointe directement vers la
+  page de prise de rendez-vous intégrée à la plateforme de formation.
+
+  COMMENT L'UTILISER :
+  1. Copier le bloc <style> dans la feuille de style de votre site (ou dans
+     le <head> de votre page), si les styles ne sont pas déjà définis.
+  2. Copier le lien <a> ci-dessous et le placer dans le menu de navigation,
+     en remplacement du lien Resalib existant.
+
+  ADRESSE DE DESTINATION : https://lms-formation.onrender.com/rendez-vous
+  (Si un sous-domaine personnalisé a été configuré, remplacer par l'adresse
+  correspondante, par exemple https://formation.laurence-mermet-bijon.fr/rendez-vous)
+-->
+
+<style>
+  /* ── Bouton autonome (hero, page d'accueil, etc.) ── */
+  .bouton-rdv {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #B8922A;         /* doré, couleur principale du site */
+    color: #fff;
+    padding: 13px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-family: 'League Spartan', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.03em;
+    transition: background 0.18s, transform 0.12s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  }
+  .bouton-rdv:hover {
+    background: #9a7820;
+    transform: translateY(-1px);
+  }
+  .bouton-rdv:active {
+    transform: translateY(0);
+  }
+
+  /* ── Lien dans le menu de navigation ── */
+  .lien-rdv-menu {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #2E2210;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    padding: 8px 18px;
+    border: 1.5px solid #B8922A;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .lien-rdv-menu:hover {
+    background: #B8922A;
+    color: #fff;
+  }
+</style>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     OPTION A — Bouton doré autonome (page d'accueil, section hero)
+     Remplacer l'ancien lien Resalib par celui-ci.
+     ══════════════════════════════════════════════════════════════ -->
+<a href="https://lms-formation.onrender.com/rendez-vous" class="bouton-rdv">
+  Prendre rendez-vous
+</a>
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     OPTION B — Lien dans le menu principal (en haut à droite)
+     Décommenter et utiliser à la place de l'option A si le bouton
+     doit s'intégrer dans la barre de navigation.
+     ══════════════════════════════════════════════════════════════
+
+<a href="https://lms-formation.onrender.com/rendez-vous" class="lien-rdv-menu">
+  Prendre rendez-vous
+</a>
+
+-->
+
+
+<!-- ══════════════════════════════════════════════════════════════
+     NOTE TECHNIQUE
+     ══════════════════════════════════════════════════════════════
+     Un simple lien <a href="..."> vers un autre domaine ne nécessite
+     aucune configuration CORS, aucun iframe, aucun code JavaScript.
+     La page de rendez-vous s'ouvre dans le même onglet ; ajouter
+     target="_blank" si vous préférez qu'elle s'ouvre dans un nouvel onglet.
+     ══════════════════════════════════════════════════════════════ -->

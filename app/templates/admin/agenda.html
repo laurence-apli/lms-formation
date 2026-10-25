@@ -772,6 +772,23 @@ function ouvrirModalType(id = null) {
       <small style="color:var(--grey);font-size:11px;">Cette couleur sera utilisée dans le calendrier et sur la page de réservation.</small>
       <label>Description (optionnel)</label>
       <textarea name="description">${type?.description||''}</textarea>
+      <hr style="border:none;border-top:1px solid var(--border,#e8e0d0);margin:16px 0;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--text);">💳 Tarification (optionnel)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <label>Prix (€)</label>
+          <input name="prix" type="number" min="0" step="0.01" value="${type?.prix!=null?type.prix:''}" placeholder="ex : 70" style="width:100%;">
+          <small style="color:var(--grey);font-size:11px;">Laisser vide si gratuit</small>
+        </div>
+        <div>
+          <label>Mode de paiement</label>
+          <select name="mode_paiement" style="width:100%;">
+            <option value="sans_paiement" ${(type?.mode_paiement||'sans_paiement')==='sans_paiement'?'selected':''}>Sans paiement</option>
+            <option value="optionnel" ${type?.mode_paiement==='optionnel'?'selected':''}>Optionnel (peut payer plus tard)</option>
+            <option value="obligatoire" ${type?.mode_paiement==='obligatoire'?'selected':''}>Obligatoire (paiement à la réservation)</option>
+          </select>
+        </div>
+      </div>
       <label><input type="checkbox" name="actif" ${type?.actif!==false?'checked':''}> Actif (proposé à la réservation)</label>
       <div class="modal-actions">
         <button type="button" class="btn" onclick="fermerModal()">Annuler</button>
@@ -785,6 +802,7 @@ function ouvrirModalType(id = null) {
 async function sauvegarderType(evt, id) {
   evt.preventDefault();
   const fd = new FormData(evt.target);
+  const prixVal = parseFloat(fd.get('prix'));
   const data = {
     nom: fd.get('nom'),
     duree_minutes: parseInt(fd.get('duree_minutes')),
@@ -792,6 +810,8 @@ async function sauvegarderType(evt, id) {
     modalite: 'cabinet',   // champ supprimé du formulaire, valeur neutre conservée en base
     couleur_hex: fd.get('couleur_hex'),
     description: fd.get('description') || '',
+    prix: isNaN(prixVal) ? null : prixVal,
+    mode_paiement: fd.get('mode_paiement') || 'sans_paiement',
     actif: fd.get('actif') === 'on',
   };
   try {

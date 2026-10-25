@@ -130,8 +130,10 @@ from .routes.agenda import (
     public_router as agenda_public_router,
     api_router as agenda_api_router,
     cron_router as agenda_cron_router,
+    webhook_router as agenda_webhook_router,
 )
 app.include_router(agenda_admin_router)
 app.include_router(agenda_public_router)
 app.include_router(agenda_api_router)
 app.include_router(agenda_cron_router)
+app.include_router(agenda_webhook_router)
