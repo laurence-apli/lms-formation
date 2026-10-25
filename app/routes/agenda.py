@@ -1077,6 +1077,38 @@ def creneaux_du_jour(
     return {"creneaux": creneaux_libres, "lieux": lieux}
 
 
+@api_router.post("/connexion-rdv")
+async def connexion_rdv(request: Request, session: Session = Depends(obtenir_session)):
+    """Connexion légère depuis la page de réservation.
+    Body JSON : { email, mot_de_passe }
+    Retourne les infos pré-remplissage si succès (pas de session cookie, juste les données).
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Corps JSON invalide.")
+
+    email_norm = (data.get("email") or "").strip().lower()
+    mdp = data.get("mot_de_passe") or ""
+    if not email_norm or not mdp:
+        raise HTTPException(status_code=400, detail="Email et mot de passe requis.")
+
+    eleve = session.query(Eleve).filter_by(email=email_norm).first()
+    if not eleve or not eleve.mot_de_passe_hash:
+        raise HTTPException(status_code=401, detail="Identifiants incorrects.")
+    if not eleve.verifier_mot_de_passe(mdp):
+        raise HTTPException(status_code=401, detail="Identifiants incorrects.")
+
+    return {
+        "ok": True,
+        "prenom": eleve.prenom or "",
+        "nom": eleve.nom or "",
+        "email": eleve.email,
+        "telephone": eleve.telephone or "",
+        "eleve_id": eleve.id,
+    }
+
+
 @api_router.post("/reserver")
 async def reserver(request: Request, session: Session = Depends(obtenir_session)):
     """Crée une réservation depuis le formulaire public et envoie l'email de confirmation.
@@ -1169,18 +1201,49 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
     if lieu.type_lieu == "visio" and lieu.lien_visio:
         lien_visio = lieu.lien_visio
 
-    # Chercher un élève existant
+    # Chercher ou créer un élève
     email_norm = data["email"].strip().lower()
+    prenom_str = data["prenom"].strip()
+    nom_str = data["nom"].strip()
+    tel_str = data.get("telephone", "").strip() or None
     eleve = session.query(Eleve).filter_by(email=email_norm).first()
+
+    compte_cree = False
+    lien_mdp = None
+    if not eleve and data.get("creer_compte"):
+        # Créer un compte élève sans mot de passe ; la cliente le définira via email
+        from ..models import generer_token_reinitialisation, TokenAuthentification
+        from ..config import URL_PLATEFORME
+        eleve = Eleve(
+            prenom=prenom_str,
+            nom=nom_str,
+            email=email_norm,
+            telephone=tel_str,
+            actif=True,
+        )
+        session.add(eleve)
+        session.flush()
+        # Générer un token de définition de mot de passe (valable 7 jours)
+        token_str = generer_token_reinitialisation()
+        token_obj = TokenAuthentification(
+            eleve_id=eleve.id,
+            token=token_str,
+            type_token="reinitialisation",
+            expire_le=datetime.now() + timedelta(days=7),
+        )
+        session.add(token_obj)
+        session.flush()
+        lien_mdp = f"{URL_PLATEFORME}/eleve/reinitialiser-mot-de-passe?token={token_str}"
+        compte_cree = True
 
     resa = Reservation(
         type_seance_id=ts.id,
         lieu_id=lieu.id,
         eleve_id=eleve.id if eleve else None,
-        prenom=data["prenom"].strip(),
-        nom=data["nom"].strip(),
+        prenom=prenom_str,
+        nom=nom_str,
         email=email_norm,
-        telephone=data.get("telephone", "").strip() or None,
+        telephone=tel_str,
         message=data.get("message", "").strip() or None,
         date_debut=dt_debut,
         date_fin=dt_fin,
@@ -1192,6 +1255,14 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
     session.flush()  # pour avoir resa.id
 
     session.commit()
+
+    # Envoyer email de définition de mot de passe si compte créé
+    if compte_cree and lien_mdp:
+        try:
+            from ..emails import email_definition_mot_de_passe
+            email_definition_mot_de_passe(email_norm, prenom_str, lien_mdp)
+        except Exception:
+            pass  # best-effort
 
     # Envoyer l'email de confirmation avec .ics
     try:

@@ -1050,9 +1050,36 @@ body {
         <textarea class="mobile-form-input mobile-form-textarea" id="mMessage" placeholder="Précisez vos symptômes ou questions éventuelles…"></textarea>
       </div>
 
-      <div class="mobile-form-note">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <div class="mobile-form-note-text">Un compte sera automatiquement créé avec votre e-mail. Vous pourrez y accéder via « Mot de passe oublié ».</div>
+      <!-- Widget connexion mobile -->
+      <div id="mWidgetCompte" style="margin-top:16px;">
+        <div id="mBtnConnexion" onclick="mToggleConnexion()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--gold,#c9a96e);border-radius:8px;font-size:13px;color:var(--gold,#c9a96e);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Vous avez déjà un compte ? Me connecter
+        </div>
+        <div id="mPanelConnexion" style="display:none;margin-top:10px;padding:14px;border:1px solid #e5e7eb;border-radius:8px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:#6b7280;">Connexion à votre espace</div>
+          <div class="mobile-form-group" style="margin-bottom:8px;">
+            <label class="mobile-form-label">E-mail</label>
+            <input class="mobile-form-input" id="mLoginEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
+          </div>
+          <div class="mobile-form-group" style="margin-bottom:10px;">
+            <label class="mobile-form-label">Mot de passe</label>
+            <input class="mobile-form-input" id="mLoginMdp" type="password" autocomplete="current-password" placeholder="••••••••">
+          </div>
+          <div id="mLoginErreur" style="display:none;font-size:12px;color:#b91c1c;margin-bottom:8px;"></div>
+          <button onclick="mConnexionCompte()" style="width:100%;padding:10px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
+        </div>
+        <div id="mBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="mBandeauConnecteeTexte">Connectée</span>
+          <span onclick="mDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Changer</span>
+        </div>
+      </div>
+
+      <!-- Option créer compte mobile -->
+      <div id="mOptionCreerCompte" style="margin-top:14px;display:flex;align-items:flex-start;gap:8px;">
+        <input type="checkbox" id="mCreerCompte" style="margin-top:3px;accent-color:var(--gold,#c9a96e);cursor:pointer;">
+        <label for="mCreerCompte" style="font-size:12px;color:#6b7280;cursor:pointer;line-height:1.5;">Créer un espace personnel pour suivre mes réservations<br><span style="color:#9ca3af;">Vous recevrez un e-mail pour choisir votre mot de passe.</span></label>
       </div>
     </div>
     <button class="mobile-btn-suivant" id="mBtnStep3" onclick="mobileValiderForm()">
@@ -1211,6 +1238,34 @@ body {
 
         <!-- Formulaire -->
         <div class="form-body" id="dFormBody">
+
+          <!-- Widget connexion compte existant -->
+          <div id="dWidgetCompte" style="margin-bottom:16px;">
+            <div id="dBtnConnexion" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--gold,#c9a96e);border-radius:8px;background:transparent;font-size:13px;color:var(--gold,#c9a96e);transition:background .15s;" onclick="dToggleConnexion()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Vous avez déjà un compte ? Me connecter
+            </div>
+            <div id="dPanelConnexion" style="display:none;margin-top:10px;padding:14px;border:1px solid #e5e7eb;border-radius:8px;background:var(--surface,#fafafa);">
+              <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text-secondary,#6b7280);">Connexion à votre espace</div>
+              <div class="form-group" style="margin-bottom:8px;">
+                <label class="form-label">E-mail</label>
+                <input class="form-input" id="dLoginEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
+              </div>
+              <div class="form-group" style="margin-bottom:10px;">
+                <label class="form-label">Mot de passe</label>
+                <input class="form-input" id="dLoginMdp" type="password" autocomplete="current-password" placeholder="••••••••">
+              </div>
+              <div id="dLoginErreur" style="display:none;font-size:12px;color:#b91c1c;margin-bottom:8px;"></div>
+              <button onclick="dConnexionCompte()" style="width:100%;padding:9px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
+            </div>
+            <!-- Bandeau "connectée" -->
+            <div id="dBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span id="dBandeauConnecteeTexte">Connectée</span>
+              <span onclick="dDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Changer</span>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Prénom *</label>
@@ -1233,12 +1288,14 @@ body {
             <label class="form-label">Message <span style="font-weight:400;">(optionnel)</span></label>
             <textarea class="form-input form-textarea" id="dMessage" placeholder="Précisez vos symptômes ou questions…"></textarea>
           </div>
-          <div class="form-note">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <div class="form-note-text">Un compte sera créé avec votre e-mail. Accédez-y via « Mot de passe oublié ».</div>
+
+          <!-- Option créer compte (visible si pas connectée) -->
+          <div id="dOptionCreerCompte" style="margin-top:12px;display:flex;align-items:flex-start;gap:8px;">
+            <input type="checkbox" id="dCreerCompte" style="margin-top:2px;accent-color:var(--gold,#c9a96e);cursor:pointer;">
+            <label for="dCreerCompte" style="font-size:12px;color:var(--text-secondary,#6b7280);cursor:pointer;line-height:1.5;">Créer un espace personnel pour suivre mes réservations<br><span style="color:var(--text-tertiary,#9ca3af);">Vous recevrez un e-mail pour choisir votre mot de passe.</span></label>
           </div>
 
-          <div id="dFormErreur" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;"></div>
+          <div id="dFormErreur" style="display:none;margin-top:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#b91c1c;"></div>
         </div>
 
         <!-- Bouton paiement -->
@@ -1281,6 +1338,7 @@ const ETAT = {
   creneauChoisi: null, // {debut, fin}
   tokenResa: null,     // token retourné par POST /reserver
   mobileEtape: 1,
+  eleveConnecteId: null, // id si cliente connectée via "J'ai déjà un compte"
 };
 ETAT.moisCal.setDate(1);
 
@@ -1853,6 +1911,10 @@ async function effectuerReservation(isMobile) {
         email: fd.email,
         telephone: fd.telephone,
         message: fd.message,
+        creer_compte: !ETAT.eleveConnecteId && !!(isMobile
+          ? document.getElementById('mCreerCompte')?.checked
+          : document.getElementById('dCreerCompte')?.checked),
+        eleve_id: ETAT.eleveConnecteId || undefined,
       }),
     });
     const data = await r.json();
@@ -1922,6 +1984,89 @@ async function mobilePayer() {
     if (!token) return;
   }
   await demanderPaiement(ETAT.tokenResa);
+}
+
+// ═══════════════════════════════════════════════════════
+// CONNEXION COMPTE (desktop + mobile)
+// ═══════════════════════════════════════════════════════
+function dToggleConnexion() {
+  const panel = document.getElementById('dPanelConnexion');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+async function dConnexionCompte() {
+  const email = document.getElementById('dLoginEmail').value.trim();
+  const mdp = document.getElementById('dLoginMdp').value;
+  const errEl = document.getElementById('dLoginErreur');
+  errEl.style.display = 'none';
+  if (!email || !mdp) { errEl.textContent = 'Veuillez saisir votre e-mail et mot de passe.'; errEl.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/agenda/connexion-rdv', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, mot_de_passe: mdp }),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.detail || 'E-mail ou mot de passe incorrect.'; errEl.style.display = 'block'; return; }
+    // Pré-remplir les champs
+    document.getElementById('dPrenom').value = data.prenom || '';
+    document.getElementById('dNom').value = data.nom || '';
+    document.getElementById('dEmail').value = data.email || '';
+    document.getElementById('dTel').value = data.telephone || '';
+    ETAT.eleveConnecteId = data.eleve_id;
+    // Masquer le widget connexion, afficher bandeau "connectée"
+    document.getElementById('dBtnConnexion').style.display = 'none';
+    document.getElementById('dPanelConnexion').style.display = 'none';
+    document.getElementById('dBandeauConnectee').style.display = 'flex';
+    document.getElementById('dBandeauConnecteeTexte').textContent = `Connectée : ${data.prenom} ${data.nom}`;
+    document.getElementById('dOptionCreerCompte').style.display = 'none';
+  } catch(e) { errEl.textContent = 'Erreur réseau, veuillez réessayer.'; errEl.style.display = 'block'; }
+}
+function dDeconnexionCompte() {
+  ETAT.eleveConnecteId = null;
+  document.getElementById('dBandeauConnectee').style.display = 'none';
+  document.getElementById('dBtnConnexion').style.display = 'flex';
+  document.getElementById('dLoginEmail').value = '';
+  document.getElementById('dLoginMdp').value = '';
+  document.getElementById('dLoginErreur').style.display = 'none';
+  document.getElementById('dOptionCreerCompte').style.display = 'flex';
+}
+
+function mToggleConnexion() {
+  const panel = document.getElementById('mPanelConnexion');
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+async function mConnexionCompte() {
+  const email = document.getElementById('mLoginEmail').value.trim();
+  const mdp = document.getElementById('mLoginMdp').value;
+  const errEl = document.getElementById('mLoginErreur');
+  errEl.style.display = 'none';
+  if (!email || !mdp) { errEl.textContent = 'Veuillez saisir votre e-mail et mot de passe.'; errEl.style.display = 'block'; return; }
+  try {
+    const r = await fetch('/api/agenda/connexion-rdv', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, mot_de_passe: mdp }),
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.detail || 'E-mail ou mot de passe incorrect.'; errEl.style.display = 'block'; return; }
+    document.getElementById('mPrenom').value = data.prenom || '';
+    document.getElementById('mNom').value = data.nom || '';
+    document.getElementById('mEmail').value = data.email || '';
+    document.getElementById('mTel').value = data.telephone || '';
+    ETAT.eleveConnecteId = data.eleve_id;
+    document.getElementById('mBtnConnexion').style.display = 'none';
+    document.getElementById('mPanelConnexion').style.display = 'none';
+    document.getElementById('mBandeauConnectee').style.display = 'flex';
+    document.getElementById('mBandeauConnecteeTexte').textContent = `Connectée : ${data.prenom} ${data.nom}`;
+    document.getElementById('mOptionCreerCompte').style.display = 'none';
+  } catch(e) { errEl.textContent = 'Erreur réseau, veuillez réessayer.'; errEl.style.display = 'block'; }
+}
+function mDeconnexionCompte() {
+  ETAT.eleveConnecteId = null;
+  document.getElementById('mBandeauConnectee').style.display = 'none';
+  document.getElementById('mBtnConnexion').style.display = 'flex';
+  document.getElementById('mLoginEmail').value = '';
+  document.getElementById('mLoginMdp').value = '';
+  document.getElementById('mLoginErreur').style.display = 'none';
+  document.getElementById('mOptionCreerCompte').style.display = 'flex';
 }
 
 // ═══════════════════════════════════════════════════════
