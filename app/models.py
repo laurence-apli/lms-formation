@@ -48,6 +48,10 @@ class Formation(Base):
     description_courte = Column(Text, nullable=True)
     lien_visio = Column(String(500), nullable=True)
     acces_auto = Column(Boolean, default=False, nullable=False)
+    # Code d'accès RDV : pointe vers le TypeSeance.code_acces correspondant.
+    # Ex: "eclore" → /rendez-vous?acces=eclore → affiche uniquement le type séance Éclore.
+    # Null = pas de bouton RDV natif (Resalib ou rien).
+    code_acces_rdv = Column(String(100), nullable=True)
 
     modules = relationship("Module", back_populates="formation", order_by="Module.ordre",
                            cascade="all, delete-orphan")

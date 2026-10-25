@@ -126,10 +126,15 @@ def detail_formation(
         } if jours_visio_total > 0 else None,
         'lien_resalib': eleve.lien_resalib,
         'lien_resalib_visio': eleve.lien_resalib_visio,
-        # Séances de suivi comprises : réservation directe dans Resalib (seul agenda utilisé)
-        # Les formations acces_auto sont des formations de bienvenue/démo : le bouton s'affiche
-        # mais n'ouvre pas Resalib (pas de vraie réservation possible).
-        'rdv_suivi': (None if formation.acces_auto else RESALIB_SUIVI) if (jours_cabinet_total > 0 or jours_visio_total > 0) else None,
+        # Lien RDV : si la formation a un code_acces_rdv → agenda natif (/rendez-vous?acces=CODE)
+        # sinon → Resalib (ancien système). Les formations acces_auto n'ont pas de vrai RDV.
+        'rdv_suivi': (
+            f"/rendez-vous?acces={formation.code_acces_rdv}"
+            if (formation.code_acces_rdv and not formation.acces_auto)
+            else (None if formation.acces_auto else RESALIB_SUIVI)
+        ) if (jours_cabinet_total > 0 or jours_visio_total > 0) else None,
+        # Indique si le lien RDV est interne (agenda natif) ou externe (Resalib)
+        'rdv_interne': bool(formation.code_acces_rdv and not formation.acces_auto),
     'medias': [
         media_json('formation', m)
         for m in formation.medias

@@ -365,8 +365,11 @@ function ouvrirModalEditerFormation() {
         <span>Donner automatiquement l'accès à toutes les nouvelles inscrites</span>
       </label>
       <div style="font-size:12px;color:var(--grey);margin:-4px 0 12px 24px;">Si coché, chaque nouvelle élève (inscription publique ou création par l'admin) reçoit automatiquement l'accès niveau 1 à cette formation.</div>
+      <label>Code RDV <small style="font-weight:400;color:var(--grey);">— agenda natif (optionnel)</small></label>
+      <input type="text" id="input-code-acces-rdv" value="${f.code_acces_rdv||''}" placeholder="ex : eclore, accomp-menopause" style="width:100%;box-sizing:border-box;">
+      <div style="font-size:12px;color:var(--grey);margin:-4px 0 12px;">Si renseigné, le bouton « Prendre un RDV » dans l'espace élève ouvrira <strong>/rendez-vous?acces=<em>code</em></strong> — affichant uniquement le type de séance correspondant. Doit correspondre au <em>code d'accès</em> configuré sur le type de séance.</div>
       <label>Séances de suivi comprises, par niveau (Cabinet &amp; Visio)</label>
-      <div style="font-size:12px;color:var(--grey);margin:-2px 0 8px;">Si au moins une séance est indiquée, l'élève voit un bouton « Réserver une séance de suivi » qui ouvre Resalib (prestation « Séance de suivi – accompagnement en cours »).</div>
+      <div style="font-size:12px;color:var(--grey);margin:-2px 0 8px;">Si au moins une séance est indiquée, l'élève voit un bouton « Prendre un RDV ».</div>
       <div id="bloc-jours">${joursHtml}</div>
       <div class="modal-actions">
         <button class="btn" onclick="fermerModal()">Annuler</button>
@@ -397,8 +400,9 @@ async function enregistrerFormation() {
   data.append('couleur', document.getElementById('input-couleur').value);
   data.append('ordre_affichage', document.getElementById('input-ordre-affichage').value || '0');
   data.append('nb_niveaux', nbNiveaux);
-  data.append('lien_visio', '');  // Cal.com abandonné : tout passe par Resalib
+  data.append('lien_visio', '');  // Cal.com abandonné : tout passe par Resalib/agenda natif
   data.append('acces_auto', document.getElementById('input-acces-auto').checked ? 'true' : 'false');
+  data.append('code_acces_rdv', document.getElementById('input-code-acces-rdv').value.trim().toLowerCase());
   try {
     await appelApi(`/admin/formations/${FORMATION_ID}`, { method: 'PUT', body: data });
     const dataJours = new URLSearchParams();

@@ -634,10 +634,17 @@ function afficherSommaire() {
     const nbCab = f.accompagnement_cabinet ? f.accompagnement_cabinet.total : 0;
     const nbVis = f.accompagnement_visio ? f.accompagnement_visio.total : 0;
     const detail = [nbCab ? nbCab + ' en cabinet' : '', nbVis ? nbVis + ' en visio' : ''].filter(Boolean).join(' et ');
-    const btnHtml = f.rdv_suivi
-      ? '<a href="' + f.rdv_suivi + '" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">Réserver une séance de suivi ↗</a>'
-      : '<button disabled style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:#999;background:#f0ede6;border:1px solid #d9c9a0;cursor:default;">Réserver une séance de suivi</button>'
+    let btnHtml;
+    if (f.rdv_suivi && f.rdv_interne) {
+      // Lien interne → agenda natif, même onglet
+      btnHtml = '<a href="' + f.rdv_suivi + '" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">📅 Prendre un rendez-vous</a>';
+    } else if (f.rdv_suivi) {
+      // Lien externe Resalib
+      btnHtml = '<a href="' + f.rdv_suivi + '" target="_blank" rel="noopener" style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:white;background:var(--gold);text-decoration:none;">Réserver une séance de suivi ↗</a>';
+    } else {
+      btnHtml = '<button disabled style="display:inline-block;padding:8px 16px;border-radius:6px;font-size:13px;color:#999;background:#f0ede6;border:1px solid #d9c9a0;cursor:default;">Réserver une séance de suivi</button>'
         + '<div style="font-size:12px;color:var(--grey);margin-top:6px;">Non disponible dans ce menu de démonstration.</div>';
+    }
     zoneAccomp.innerHTML = '<div class="bloc-accompagnement-eleve" style="text-align:left;max-width:520px;">'
       + '<div style="font-weight:600;margin-bottom:4px;">Tes séances de suivi avec Laurence</div>'
       + '<div style="font-size:13px;color:var(--grey);margin-bottom:10px;">'

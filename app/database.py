@@ -61,6 +61,8 @@ _MIGRATIONS_COLONNES = [
     # Visibilité des types de séances (ajouté oct. 2026)
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS visibilite VARCHAR(20) DEFAULT 'public'",
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS code_acces VARCHAR(100)",
+    # Code RDV sur la formation — pointe vers TypeSeance.code_acces (ajouté oct. 2026)
+    "ALTER TABLE formations ADD COLUMN IF NOT EXISTS code_acces_rdv VARCHAR(100)",
 ]
 
 
