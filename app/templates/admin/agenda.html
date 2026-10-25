@@ -1780,5 +1780,13 @@ async function supprimerIndispo(id) {
 // Init
 // ============================================================
 chargerSemaine();
+// Si l'URL contient ?onglet=reservations, basculer directement sur cet onglet
+(function() {
+  const onglet = new URLSearchParams(window.location.search).get('onglet');
+  if (onglet === 'reservations' || onglet === 'parametres') {
+    const btn = document.querySelector(`.onglet-btn[data-tab="${onglet}"]`);
+    if (btn) changerOnglet(onglet, btn);
+  }
+})();
 </script>
 {% endblock %}
