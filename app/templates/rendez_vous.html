@@ -1510,14 +1510,11 @@ function renderCalDesk() {
   }
   for (let j = 1; j <= dernierJour; j++) {
     const isoDate = `${ETAT.moisCal.getFullYear()}-${String(ETAT.moisCal.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
-    const dow = new Date(isoDate + 'T00:00:00').getDay(); // 0=dim
-    const ferme = (dow === 0); // seul le dimanche est systématiquement fermé
-    const dispo = !ferme && !!ETAT.joursDispo[isoDate];
+    const dispo = !!ETAT.joursDispo[isoDate];
     const sel = ETAT.dateChoisie === isoDate;
     let cls = 'cal-day';
     if (sel) cls += ' selected';
     else if (dispo) cls += ' dispo';
-    else if (ferme) cls += ' ferme';
     const div = document.createElement('div');
     div.className = cls;
     div.innerHTML = `<div class="cal-day-num">${j}</div><div class="cal-dot"></div>`;
@@ -1563,14 +1560,11 @@ function renderCalMobile() {
   }
   for (let j = 1; j <= dernierJour; j++) {
     const isoDate = `${ETAT.moisCal.getFullYear()}-${String(ETAT.moisCal.getMonth()+1).padStart(2,'0')}-${String(j).padStart(2,'0')}`;
-    const dow = new Date(isoDate + 'T00:00:00').getDay();
-    const ferme = (dow === 0); // seul le dimanche est systématiquement fermé
-    const dispo = !ferme && !!ETAT.joursDispo[isoDate];
+    const dispo = !!ETAT.joursDispo[isoDate];
     const sel = ETAT.dateChoisie === isoDate;
     let cls = 'mobile-cal-day';
     if (sel) cls += ' selected';
     else if (dispo) cls += ' dispo';
-    else if (ferme) cls += ' ferme';
     const div = document.createElement('div');
     div.className = cls;
     div.innerHTML = `<div class="mobile-cal-day-num">${j}</div><div class="mobile-cal-dot"></div>`;
