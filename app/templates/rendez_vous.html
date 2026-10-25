@@ -1847,7 +1847,7 @@ async function effectuerReservation(isMobile) {
       body: JSON.stringify({
         type_seance_id: ETAT.typeChoisi.id,
         date: ETAT.dateChoisie,                    // "YYYY-MM-DD"
-        heure_debut: ETAT.creneauChoisi.heure_debut, // "HH:MM"
+        heure_debut: ETAT.creneauChoisi.debut.length === 5 ? ETAT.creneauChoisi.debut : ETAT.creneauChoisi.debut.substring(11, 16), // "HH:MM"
         prenom: fd.prenom,
         nom: fd.nom,
         email: fd.email,
