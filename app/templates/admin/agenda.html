@@ -635,7 +635,7 @@ function carteReservation(rdv) {
       <div style="font-size:13px;color:var(--grey);">
         ${dateLabel} à ${heureLabel}
         ${rdv.type_seance ? ' · ' + rdv.type_seance : ''}
-        ${rdv.lieu ? ' · ' + rdv.lieu : ''}
+        ${rdv.lieu_nom ? ' · ' + rdv.lieu_nom : ''}
       </div>
       <div style="font-size:12px;color:var(--grey);margin-top:2px;">${rdv.email} ${rdv.telephone ? '· ' + rdv.telephone : ''}</div>
     </div>
@@ -1067,7 +1067,7 @@ async function ouvrirDetailReservation(id) {
       <table style="width:100%;font-size:13px;border-collapse:collapse;">
         <tr><td style="padding:5px 0;color:var(--grey);width:120px;">Date</td><td style="padding:5px 0;font-weight:600;">${dateLabel} à ${heureLabel}</td></tr>
         <tr><td style="padding:5px 0;color:var(--grey);">Séance</td><td style="padding:5px 0;">${rdv.type_seance || '—'}</td></tr>
-        <tr><td style="padding:5px 0;color:var(--grey);">Lieu</td><td style="padding:5px 0;">${rdv.lieu || '—'}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--grey);">Lieu</td><td style="padding:5px 0;">${rdv.lieu_nom ? `${rdv.lieu_nom} <span class="tag-${rdv.modalite === 'visio' ? 'visio' : 'cabinet'}" style="font-size:11px;padding:1px 7px;border-radius:10px;">${rdv.modalite === 'visio' ? 'Visio' : 'Cabinet'}</span>` : '—'}</td></tr>
         <tr><td style="padding:5px 0;color:var(--grey);">Email</td><td style="padding:5px 0;"><a href="mailto:${rdv.email}">${rdv.email}</a></td></tr>
         <tr><td style="padding:5px 0;color:var(--grey);">Téléphone</td><td style="padding:5px 0;">${rdv.telephone || '—'}</td></tr>
         ${rdv.message ? `<tr><td style="padding:5px 0;color:var(--grey);vertical-align:top;">Message</td><td style="padding:5px 0;">${rdv.message}</td></tr>` : ''}
