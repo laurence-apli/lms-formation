@@ -1006,7 +1006,7 @@ def disponibilites(
             if not creneaux:
                 continue
 
-            # Filtrer les créneaux déjà réservés
+            # Filtrer les créneaux déjà réservés (overlap réel, toutes séances confondues)
             debut_jour = datetime.combine(d, time(0, 0))
             fin_jour = datetime.combine(d, time(23, 59))
             reservations_jour = (
@@ -1014,12 +1014,18 @@ def disponibilites(
                 .filter(
                     Reservation.date_debut >= debut_jour,
                     Reservation.date_debut <= fin_jour,
-                    Reservation.type_seance_id == type_seance_id,
-                    Reservation.statut == "en_attente",
+                    Reservation.statut.in_(["en_attente", "confirmee"]),
                 )
                 .all()
             )
-            heures_prises = {r.date_debut.strftime("%H:%M") for r in reservations_jour}
+
+            def _creneau_chevauche_resa(h_debut: str, h_fin: str) -> bool:
+                dt_c_debut = datetime.combine(d, time(int(h_debut[:2]), int(h_debut[3:])))
+                dt_c_fin = datetime.combine(d, time(int(h_fin[:2]), int(h_fin[3:])))
+                return any(
+                    r.date_debut < dt_c_fin and r.date_fin > dt_c_debut
+                    for r in reservations_jour
+                )
 
             # Filtrer les créneaux bloqués par une indisponibilité
             def _heure_en_indispo(h: str) -> bool:
@@ -1028,7 +1034,7 @@ def disponibilites(
 
             creneaux_libres = [
                 c for c in creneaux
-                if c[0] not in heures_prises and not _heure_en_indispo(c[0])
+                if not _creneau_chevauche_resa(c[0], c[1]) and not _heure_en_indispo(c[0])
             ]
 
             if creneaux_libres:
@@ -1077,7 +1083,7 @@ def creneaux_du_jour(
     # Dédoublonner et trier
     tous_creneaux = sorted(set(tous_creneaux), key=lambda c: c[0])
 
-    # Filtrer les créneaux réservés
+    # Filtrer les créneaux réservés (overlap réel, toutes séances confondues)
     debut_jour = datetime.combine(d, time(0, 0))
     fin_jour = datetime.combine(d, time(23, 59))
     reservations_jour = (
@@ -1085,12 +1091,18 @@ def creneaux_du_jour(
         .filter(
             Reservation.date_debut >= debut_jour,
             Reservation.date_debut <= fin_jour,
-            Reservation.type_seance_id == type_seance_id,
-            Reservation.statut == "en_attente",
+            Reservation.statut.in_(["en_attente", "confirmee"]),
         )
         .all()
     )
-    heures_prises = {r.date_debut.strftime("%H:%M") for r in reservations_jour}
+
+    def _creneau_chevauche_resa(h_debut: str, h_fin: str) -> bool:
+        dt_c_debut = datetime.combine(d, time(int(h_debut[:2]), int(h_debut[3:])))
+        dt_c_fin = datetime.combine(d, time(int(h_fin[:2]), int(h_fin[3:])))
+        return any(
+            r.date_debut < dt_c_fin and r.date_fin > dt_c_debut
+            for r in reservations_jour
+        )
 
     # Filtrer les créneaux bloqués par une indisponibilité
     indispos_jour = _indispos_du_jour(d, session)
@@ -1101,7 +1113,7 @@ def creneaux_du_jour(
     creneaux_libres = [
         {"debut": c[0], "fin": c[1]}
         for c in tous_creneaux
-        if c[0] not in heures_prises and not _heure_en_indispo_creneaux(c[0])
+        if not _creneau_chevauche_resa(c[0], c[1]) and not _heure_en_indispo_creneaux(c[0])
     ]
 
     # Trouver le lieu associé à ces plages
