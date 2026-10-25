@@ -1440,20 +1440,27 @@ def page_rendez_vous(
         if len(lien_types) == 1:
             type_preselect_id = lien_types[0].id
 
-    # Infos élève connectée (pour pré-remplir le formulaire) — sérialisées en JSON côté Python
+    # Infos élève connectée (pour pré-remplir le formulaire)
     import json as _json
-    eleve_info_json = "null"
+    eleve_info = None
     eleve_id_session = request.session.get("eleve_id")
     if eleve_id_session:
         eleve = session.get(Eleve, eleve_id_session)
         if eleve and eleve.actif:
-            eleve_info_json = _json.dumps({
+            eleve_info = {
                 "id": eleve.id,
                 "prenom": eleve.prenom or "",
                 "nom": eleve.nom or "",
                 "email": eleve.email or "",
                 "telephone": eleve.telephone or "",
-            })
+            }
+
+    # Tout sérialiser en un seul bloc JSON pour le template (évite les pb Jinja2)
+    js_vars = _json.dumps({
+        "CODE_ACCES": code or None,
+        "TYPE_PRESELECT_ID": type_preselect_id,
+        "ELEVE_INFO": eleve_info,
+    })
 
     return templates.TemplateResponse(
         request,
@@ -1461,8 +1468,7 @@ def page_rendez_vous(
         {
             "types_seances": types_seances,
             "code_acces": code,
-            "type_preselect_id": type_preselect_id if type_preselect_id else "null",
-            "eleve_info_json": eleve_info_json,
+            "js_vars": js_vars,
         },
     )
 
