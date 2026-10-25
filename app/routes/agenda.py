@@ -1417,6 +1417,7 @@ def page_rendez_vous(
 ):
     """Page publique de réservation en ligne.
     ?acces=CODE débloque les types de séance 'lien' ayant ce code.
+    Si une élève est connectée, ses infos sont passées pour pré-remplissage.
     """
     all_ts = (
         session.query(TypeSeance)
@@ -1430,12 +1431,37 @@ def page_rendez_vous(
                          and ((t.visibilite or "public") == "public" or (t.code_acces or "").lower() == code)]
     else:
         types_seances = [t for t in all_ts if (t.visibilite or "public") == "public"]
+
+    # Pré-sélection : si un seul type correspond au code, on le pré-sélectionne
+    type_preselect_id = None
+    if code:
+        lien_types = [t for t in types_seances if (t.visibilite or "public") == "lien"
+                      and (t.code_acces or "").lower() == code]
+        if len(lien_types) == 1:
+            type_preselect_id = lien_types[0].id
+
+    # Infos élève connectée (pour pré-remplir le formulaire)
+    eleve_info = None
+    eleve_id_session = request.session.get("eleve_id")
+    if eleve_id_session:
+        eleve = session.get(Eleve, eleve_id_session)
+        if eleve and eleve.actif:
+            eleve_info = {
+                "id": eleve.id,
+                "prenom": eleve.prenom or "",
+                "nom": eleve.nom or "",
+                "email": eleve.email or "",
+                "telephone": eleve.telephone or "",
+            }
+
     return templates.TemplateResponse(
         request,
         "rendez_vous.html",
         {
             "types_seances": types_seances,
             "code_acces": code,  # passé au JS pour que l'API /api/agenda/types-seances soit appelée avec ?acces=
+            "type_preselect_id": type_preselect_id,  # id du type à pré-sélectionner (ou None)
+            "eleve_info": eleve_info,  # infos élève connectée (ou None)
         },
     )
 

@@ -1163,7 +1163,7 @@ body {
     <div class="rdv-win-body">
 
       <!-- COLONNE 1 : Séances -->
-      <div class="col-seances">
+      <div class="col-seances" id="dSeancesCol">
         <div class="col-header">
           <div class="col-header-step">Étape 1</div>
           <div class="col-header-title">Type de séance</div>
@@ -1383,6 +1383,11 @@ function lundi(date) {
 // ═══════════════════════════════════════════════════════
 // CHARGEMENT INITIAL
 // ═══════════════════════════════════════════════════════
+// Données serveur injectées par Jinja2
+const CODE_ACCES = {{ ('"' ~ code_acces ~ '"') if code_acces else 'null' }};
+const TYPE_PRESELECT_ID = {{ type_preselect_id if type_preselect_id is not none else 'null' }};
+const ELEVE_INFO = {{ eleve_info | tojson if eleve_info else 'null' }};
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Vérifier paramètre ?annule=1
   const params = new URLSearchParams(location.search);
@@ -1392,12 +1397,74 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   loading(true);
   try {
-    const r = await fetch('/api/agenda/types-seances?actif=1');
+    // Passer le code_acces à l'API pour déverrouiller les types "lien"
+    const url = CODE_ACCES
+      ? `/api/agenda/types-seances?actif=1&acces=${encodeURIComponent(CODE_ACCES)}`
+      : '/api/agenda/types-seances?actif=1';
+    const r = await fetch(url);
     ETAT.types = await r.json();
   } catch(e) {
     ETAT.types = [];
   }
   loading(false);
+
+  // Pré-sélection automatique du type de séance si un seul correspond au code
+  if (TYPE_PRESELECT_ID) {
+    const t = ETAT.types.find(t => t.id === TYPE_PRESELECT_ID);
+    if (t) {
+      ETAT.typeChoisi = t;
+      // Si on a un seul type, masquer la liste et afficher directement le calendrier
+      const nbTypes = ETAT.types.length;
+      if (nbTypes === 1) {
+        // Masquer la colonne de choix du type et agrandir le calendrier
+        const dSeancesCol = document.getElementById('dSeancesCol');
+        if (dSeancesCol) dSeancesCol.style.display = 'none';
+      }
+    }
+  }
+
+  // Pré-remplir les infos élève si connectée
+  if (ELEVE_INFO) {
+    // Desktop
+    const fields = [
+      ['dPrenom', ELEVE_INFO.prenom],
+      ['dNom', ELEVE_INFO.nom],
+      ['dEmail', ELEVE_INFO.email],
+      ['dTel', ELEVE_INFO.telephone],
+    ];
+    fields.forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
+    // Mobile
+    const mFields = [
+      ['mPrenom', ELEVE_INFO.prenom],
+      ['mNom', ELEVE_INFO.nom],
+      ['mEmail', ELEVE_INFO.email],
+      ['mTel', ELEVE_INFO.telephone],
+    ];
+    mFields.forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    });
+    // Marquer comme connectée (évite la création de compte)
+    ETAT.eleveConnecteId = ELEVE_INFO.id;
+    // Masquer les widgets "J'ai déjà un compte"
+    const mWidget = document.getElementById('mWidgetCompte');
+    if (mWidget) mWidget.style.display = 'none';
+    const dWidget = document.getElementById('dWidgetCompte');
+    if (dWidget) dWidget.style.display = 'none';
+    const dOptionCreer = document.getElementById('dOptionCreerCompte');
+    if (dOptionCreer) dOptionCreer.style.display = 'none';
+    const mOptionCreer = document.querySelector('#mobileEtape3 [id*="Creer"]')?.closest('div[style*="margin-top"]');
+    // Afficher un badge "connectée"
+    const badgeHtml = `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;color:#15803d;margin-top:10px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      Connectée en tant que <strong>${ELEVE_INFO.prenom} ${ELEVE_INFO.nom}</strong>
+    </div>`;
+    if (mWidget) mWidget.insertAdjacentHTML('beforebegin', badgeHtml);
+    if (dWidget) dWidget.insertAdjacentHTML('beforebegin', badgeHtml.replace('margin-top:10px', 'margin-top:12px'));
+  }
 
   renderSeancesDesk();
   renderSeancesMobile();
