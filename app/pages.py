@@ -116,6 +116,19 @@ def page_definir_mot_de_passe(request: Request, token: str, session: Session = D
          "eleve_prenom": eleve_prenom, "eleve_email": eleve_email},
     )
 
+@router.get("/eleve/accueil", response_class=HTMLResponse)
+def page_accueil(
+    request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
+):
+    return templates.TemplateResponse(
+        request, "eleve/accueil.html",
+        {
+            "eleve": eleve,
+            "profil": _profil_pour_affichage(session),
+            "url_site_vitrine": URL_SITE_VITRINE,
+        },
+    )
+
 @router.get("/eleve/tableau-de-bord", response_class=HTMLResponse)
 def page_tableau_de_bord(
     request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),

@@ -74,7 +74,7 @@ def connexion_eleve(request: Request, email: str = Form(...), mot_de_passe: str 
         email_nouveau_utilisateur(eleve.prenom, eleve.nom, eleve.email)
 
     request.session["eleve_id"] = eleve.id
-    return RedirectResponse(url="/eleve/tableau-de-bord", status_code=303)
+    return RedirectResponse(url="/eleve/accueil", status_code=303)
 
 
 @router.post("/eleve/definir-mot-de-passe/{token}")

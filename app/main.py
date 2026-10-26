@@ -10,6 +10,7 @@ from .config import SECRET_KEY
 from .database import initialiser_base
 from .routes import auth, formations, import_word, eleves, espace_eleve, profil, medias_fichiers, rapport_hebdo
 from .routes import offres_admin, offres_publiques
+from .routes import live as live_routes
 from . import pages
 from . import pages_admin
 from . import setup_temporaire
@@ -38,6 +39,7 @@ app.include_router(pages.router)
 app.include_router(pages_admin.router)
 app.include_router(setup_temporaire.router)
 app.include_router(migration_web_temporaire.router)
+app.include_router(live_routes.router)
 
 
 

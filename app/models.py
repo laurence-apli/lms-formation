@@ -738,6 +738,9 @@ class Reservation(Base):
     source = Column(String(20), nullable=False, default="publique")
     # Lien visio unique généré à la réservation (pour séances visio)
     lien_visio_unique = Column(String(500), nullable=True)
+    # LiveKit : nom de salle et token formateur (générés à la confirmation)
+    livekit_room_name = Column(String(200), nullable=True)
+    livekit_token_formateur = Column(Text, nullable=True)
     # Vrai si le .ics a bien été envoyé à la cliente
     ics_envoye = Column(Boolean, default=False)
     cree_le = Column(DateTime, default=datetime.utcnow)

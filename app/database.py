@@ -63,6 +63,9 @@ _MIGRATIONS_COLONNES = [
     "ALTER TABLE agenda_types_seances ADD COLUMN IF NOT EXISTS code_acces VARCHAR(100)",
     # Code RDV sur la formation — pointe vers TypeSeance.code_acces (ajouté oct. 2026)
     "ALTER TABLE formations ADD COLUMN IF NOT EXISTS code_acces_rdv VARCHAR(100)",
+    # LiveKit visioconférence (ajouté oct. 2026)
+    "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS livekit_room_name VARCHAR(200)",
+    "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS livekit_token_formateur TEXT",
 ]
 
 

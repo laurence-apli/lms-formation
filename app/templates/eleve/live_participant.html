@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Séance Live — Rejoindre</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500&display=swap');
+  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --grey:#9B968A; --border:#E5DCC3; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+
+  /* Salle d'attente */
+  .attente {
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:40px 20px;
+    text-align:center;
+  }
+  .attente-logo { font-size:56px; margin-bottom:20px; }
+  .attente-titre { font-family:'EB Garamond',serif; font-size:28px; font-weight:600; margin:0 0 8px; }
+  .attente-sous-titre { font-family:'EB Garamond',serif; font-size:17px; font-style:italic; color:var(--grey); margin:0 0 32px; }
+
+  .infos-seance {
+    background:#fff; border:1.5px solid var(--border); border-radius:14px;
+    padding:20px 28px; margin-bottom:32px; max-width:440px; width:100%;
+  }
+  .infos-seance .label { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--gold); margin-bottom:4px; }
+  .infos-seance .valeur { font-family:'EB Garamond',serif; font-size:17px; color:var(--ink); }
+  .infos-seance .divider { height:1px; background:var(--border); margin:12px 0; }
+
+  .btn-rejoindre-salle {
+    background:linear-gradient(135deg, #B8922A 0%, #8B6D1F 100%);
+    color:#fff; border:none; border-radius:12px;
+    padding:16px 40px; font-family:'League Spartan',sans-serif;
+    font-size:15px; font-weight:700; letter-spacing:.04em;
+    cursor:pointer; transition:transform .12s, box-shadow .12s;
+    box-shadow:0 4px 18px rgba(184,146,42,0.4);
+  }
+  .btn-rejoindre-salle:hover { transform:translateY(-1px); box-shadow:0 6px 24px rgba(184,146,42,0.5); }
+  .btn-rejoindre-salle:disabled { background:#ccc; box-shadow:none; cursor:not-allowed; transform:none; }
+
+  .instructions {
+    font-size:13px; color:var(--grey); margin-top:16px; max-width:400px; line-height:1.6;
+  }
+
+  /* Indicateur de chargement */
+  .chargement { display:none; align-items:center; gap:10px; color:var(--grey); font-size:14px; margin-top:16px; }
+  .chargement.visible { display:flex; }
+  .spinner { width:20px; height:20px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:tourner .7s linear infinite; }
+  @keyframes tourner { to { transform:rotate(360deg); } }
+
+  .erreur { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:14px 18px; margin-top:16px; max-width:440px; font-size:14px; color:#72243E; display:none; }
+  .erreur.visible { display:block; }
+
+  /* Zone de la salle (affichée après connexion) */
+  #zone-salle { display:none; height:100vh; flex-direction:column; }
+  #zone-salle.visible { display:flex; }
+  #livekit-room { flex:1; }
+
+  .barre-salle {
+    background:var(--ink); color:#F5EDD6; padding:10px 20px;
+    display:flex; align-items:center; gap:12px; font-size:13px;
+    flex-shrink:0;
+  }
+  .barre-salle .nom-seance { font-family:'EB Garamond',serif; font-size:15px; flex:1; }
+
+  @media(max-width:500px) {
+    .attente-titre { font-size:22px; }
+    .infos-seance { padding:16px 18px; }
+  }
+</style>
+<!-- SDK LiveKit Elements (webcomponents, ne nécessite pas d'installation) -->
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.1/dist/livekit-client.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ======================= SALLE D'ATTENTE ======================= -->
+<div class="attente" id="zone-attente">
+  <div class="attente-logo">🎥</div>
+  <h1 class="attente-titre">Bienvenue, {{ reservation.prenom }}</h1>
+  <p class="attente-sous-titre">Vous êtes sur le point de rejoindre votre séance avec Laurence</p>
+
+  <div class="infos-seance">
+    <div class="label">Séance</div>
+    <div class="valeur">{% if reservation.type_seance %}{{ reservation.type_seance.nom }}{% else %}Séance visio{% endif %}</div>
+    <div class="divider"></div>
+    <div class="label">Date et heure</div>
+    <div class="valeur">
+      {{ reservation.date_debut.strftime('%A %d/%m/%Y') | capitalize }} à {{ reservation.date_debut.strftime('%H:%M') }}
+    </div>
+  </div>
+
+  {% if livekit_actif %}
+  <button class="btn-rejoindre-salle" id="btn-rejoindre" onclick="rejoindre()">
+    ▶ &nbsp; Rejoindre la séance
+  </button>
+  <div class="chargement" id="chargement">
+    <div class="spinner"></div>
+    <span>Connexion en cours…</span>
+  </div>
+  <div class="erreur" id="erreur"></div>
+  <p class="instructions">
+    Assurez-vous d'autoriser l'accès à votre caméra et à votre microphone
+    lorsque votre navigateur vous le demande.
+  </p>
+  {% else %}
+  <p style="color:var(--grey); font-size:14px; max-width:400px;">
+    La salle est en cours de configuration. Si vous avez reçu un lien dans votre
+    e-mail de confirmation, utilisez-le directement.
+  </p>
+  {% endif %}
+</div>
+
+<!-- ======================= SALLE LIVE ======================= -->
+<div id="zone-salle">
+  <div class="barre-salle">
+    <span class="nom-seance">🎥 Séance avec Laurence</span>
+    <button onclick="quitter()" style="background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
+      Quitter ✕
+    </button>
+  </div>
+  <div id="livekit-room"></div>
+</div>
+
+<script>
+const TOKEN_ANNULATION = "{{ token_annulation }}";
+const LIVEKIT_URL = "{{ livekit_url }}";
+
+let room = null;
+
+async function rejoindre() {
+  const btn = document.getElementById('btn-rejoindre');
+  const chargement = document.getElementById('chargement');
+  const erreur = document.getElementById('erreur');
+
+  btn.disabled = true;
+  chargement.classList.add('visible');
+  erreur.classList.remove('visible');
+
+  try {
+    // Récupérer le token JWT depuis le serveur
+    const rep = await fetch(`/api/live/token/${TOKEN_ANNULATION}`);
+    if (!rep.ok) {
+      const data = await rep.json().catch(() => ({}));
+      throw new Error(data.detail || `Erreur ${rep.status}`);
+    }
+    const data = await rep.json();
+
+    // Connecter à LiveKit
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution },
+    });
+
+    await room.connect(data.livekit_url || LIVEKIT_URL, data.token);
+
+    // Activer caméra + micro
+    await room.localParticipant.setCameraEnabled(true);
+    await room.localParticipant.setMicrophoneEnabled(true);
+
+    // Afficher la salle
+    afficherSalle(room);
+
+  } catch (e) {
+    console.error('Erreur connexion LiveKit:', e);
+    erreur.textContent = `Impossible de rejoindre la séance : ${e.message}. Vérifiez votre connexion et réessayez.`;
+    erreur.classList.add('visible');
+    btn.disabled = false;
+    chargement.classList.remove('visible');
+  }
+}
+
+function afficherSalle(room) {
+  document.getElementById('zone-attente').style.display = 'none';
+  document.getElementById('zone-salle').classList.add('visible');
+
+  const container = document.getElementById('livekit-room');
+  container.innerHTML = '';
+
+  // Créer l'interface vidéo pour chaque participant
+  function creerElementVideo(participant, videoTrack) {
+    const wrap = document.createElement('div');
+    wrap.id = `participant-${participant.identity}`;
+    wrap.style.cssText = `
+      position:relative; background:#111; border-radius:8px; overflow:hidden;
+      display:flex; align-items:center; justify-content:center;
+    `;
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+    video.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+    videoTrack.attach(video);
+    const nom = document.createElement('div');
+    nom.textContent = participant.name || participant.identity;
+    nom.style.cssText = `
+      position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,.55);
+      color:#fff; font-size:12px; padding:3px 8px; border-radius:4px;
+    `;
+    wrap.appendChild(video);
+    wrap.appendChild(nom);
+    return wrap;
+  }
+
+  function miseEnPageParticipants() {
+    const n = container.children.length;
+    if (n === 0) return;
+    const cols = n === 1 ? 1 : 2;
+    container.style.cssText = `
+      display:grid; grid-template-columns:repeat(${cols}, 1fr);
+      gap:8px; padding:8px; height:100%; background:#1A1508;
+    `;
+  }
+
+  // Participant local (nous-mêmes)
+  room.localParticipant.videoTrackPublications.forEach(pub => {
+    if (pub.track && pub.kind === 'video') {
+      container.appendChild(creerElementVideo(room.localParticipant, pub.track));
+      miseEnPageParticipants();
+    }
+  });
+
+  // Participants distants existants
+  room.remoteParticipants.forEach(participant => {
+    participant.videoTrackPublications.forEach(pub => {
+      if (pub.track) {
+        container.appendChild(creerElementVideo(participant, pub.track));
+        miseEnPageParticipants();
+      }
+    });
+  });
+
+  // Écouter les nouveaux participants
+  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+    if (track.kind === 'video') {
+      const existant = document.getElementById(`participant-${participant.identity}`);
+      if (!existant) {
+        container.appendChild(creerElementVideo(participant, track));
+        miseEnPageParticipants();
+      }
+    }
+    if (track.kind === 'audio') {
+      const audio = document.createElement('audio');
+      audio.autoplay = true;
+      track.attach(audio);
+      document.body.appendChild(audio);
+    }
+  });
+
+  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+    const el = document.getElementById(`participant-${participant.identity}`);
+    if (el) { el.remove(); miseEnPageParticipants(); }
+  });
+
+  room.on(LivekitClient.RoomEvent.ParticipantDisconnected, participant => {
+    const el = document.getElementById(`participant-${participant.identity}`);
+    if (el) { el.remove(); miseEnPageParticipants(); }
+  });
+
+  room.on(LivekitClient.RoomEvent.Disconnected, () => {
+    alert('Vous avez été déconnecté de la séance.');
+    window.location.href = '/eleve/live';
+  });
+}
+
+async function quitter() {
+  if (room) {
+    await room.disconnect();
+    room = null;
+  }
+  window.location.href = '/eleve/live';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live — Interface formateur</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500&display=swap');
+  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --grey:#9B968A; --border:#E5DCC3; --green:#3B8C5A; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+
+  /* Barre du haut */
+  .barre-formateur {
+    background:var(--ink); color:#F5EDD6; padding:12px 24px;
+    display:flex; align-items:center; gap:16px;
+  }
+  .barre-formateur .seance-info { flex:1; }
+  .barre-formateur .seance-nom { font-family:'EB Garamond',serif; font-size:17px; }
+  .barre-formateur .seance-date { font-size:12px; color:#C8B99A; margin-top:2px; }
+  .btn-demarrer {
+    background:linear-gradient(135deg, #B8922A 0%, #8B6D1F 100%);
+    color:#fff; border:none; border-radius:10px;
+    padding:12px 24px; font-family:'League Spartan',sans-serif;
+    font-size:13px; font-weight:700; letter-spacing:.04em; cursor:pointer;
+    box-shadow:0 4px 14px rgba(184,146,42,0.4);
+    transition:transform .12s;
+  }
+  .btn-demarrer:hover { transform:translateY(-1px); }
+  .btn-demarrer:disabled { background:#ccc; box-shadow:none; cursor:not-allowed; transform:none; }
+
+  /* Corps avant connexion */
+  .pre-lancement {
+    max-width:700px; margin:0 auto; padding:40px 20px;
+  }
+  .pre-lancement h1 { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; }
+  .pre-lancement .sous-titre { font-family:'EB Garamond',serif; font-size:16px; font-style:italic; color:var(--grey); margin:0 0 28px; }
+
+  .infos-bloc {
+    background:#fff; border:1.5px solid var(--border); border-radius:12px;
+    padding:18px 22px; margin-bottom:16px;
+  }
+  .infos-bloc .label { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--gold); margin-bottom:6px; }
+  .infos-bloc .valeur { font-size:14px; color:var(--ink); }
+  .infos-bloc code { background:var(--cream); padding:2px 7px; border-radius:5px; font-size:13px; }
+
+  /* Indicateurs */
+  .indicateurs { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
+  .indicateur {
+    background:#fff; border:1px solid var(--border); border-radius:10px;
+    padding:10px 16px; display:flex; align-items:center; gap:10px;
+  }
+  .indicateur .point { width:10px; height:10px; border-radius:50%; background:var(--grey); }
+  .indicateur.ok .point { background:var(--green); }
+  .indicateur.ko .point { background:#C47B6E; }
+  .indicateur span { font-size:13px; }
+
+  /* Salle en cours */
+  #zone-salle { display:none; height:100vh; flex-direction:column; }
+  #zone-salle.visible { display:flex; }
+
+  .layout-salle {
+    flex:1; display:grid; grid-template-columns:1fr 280px;
+    gap:0; overflow:hidden;
+  }
+
+  /* Vidéo principale */
+  #conteneur-videos {
+    background:#1A1508; display:grid; gap:6px; padding:6px; overflow:auto;
+  }
+
+  /* Panneau latéral : salle d'attente + participants */
+  .panneau-lateral {
+    background:#fff; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  .panneau-section-titre {
+    font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700;
+    letter-spacing:.06em; color:var(--gold); padding:12px 14px 6px;
+    border-bottom:1px solid var(--border); text-transform:uppercase;
+  }
+
+  .liste-attente { flex:1; overflow-y:auto; padding:8px 0; }
+  .personne-attente {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 14px;
+  }
+  .personne-attente .avatar { width:36px; height:36px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-family:'EB Garamond',serif; font-size:15px; color:var(--gold); flex-shrink:0; }
+  .personne-attente .nom { flex:1; font-size:13px; font-weight:500; }
+  .personne-attente .statut { font-size:11px; color:var(--grey); }
+
+  .btn-admettre {
+    background:var(--green); color:#fff; border:none; border-radius:6px;
+    padding:5px 10px; font-size:11px; font-weight:600; cursor:pointer;
+  }
+  .btn-admettre:hover { background:#2A6B44; }
+
+  .btn-admettre-tous {
+    width:calc(100% - 28px); margin:6px 14px; background:var(--green); color:#fff;
+    border:none; border-radius:8px; padding:9px; font-family:'League Spartan',sans-serif;
+    font-size:12px; font-weight:700; cursor:pointer;
+  }
+  .btn-admettre-tous:hover { background:#2A6B44; }
+
+  .vide-attente { padding:16px 14px; font-size:13px; color:var(--grey); text-align:center; }
+
+  .btn-quitter {
+    width:100%; background:#C47B6E; color:#fff; border:none;
+    padding:12px; font-family:'League Spartan',sans-serif;
+    font-size:13px; font-weight:700; cursor:pointer; margin-top:auto;
+  }
+
+  /* Indicateur chargement */
+  .chargement { display:none; align-items:center; gap:10px; color:var(--grey); font-size:13px; margin-top:12px; }
+  .chargement.visible { display:flex; }
+  .spinner { width:18px; height:18px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:tourner .7s linear infinite; }
+  @keyframes tourner { to { transform:rotate(360deg); } }
+
+  .erreur { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:12px 16px; margin-top:12px; font-size:13px; color:#72243E; display:none; }
+  .erreur.visible { display:block; }
+
+  @media(max-width:700px) {
+    .layout-salle { grid-template-columns:1fr; }
+    .panneau-lateral { max-height:220px; border-left:none; border-top:1px solid var(--border); }
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.1/dist/livekit-client.umd.min.js"></script>
+</head>
+<body>
+
+<div class="barre-formateur">
+  <div class="seance-info">
+    <div class="seance-nom">🎥 Séance Live — Interface formateur</div>
+    <div class="seance-date">
+      {% if reservation.type_seance %}{{ reservation.type_seance.nom }} — {% endif %}
+      {{ reservation.prenom }} {{ reservation.nom }} —
+      {{ reservation.date_debut.strftime('%d/%m/%Y à %H:%M') }}
+    </div>
+  </div>
+  <button class="btn-demarrer" id="btn-demarrer" onclick="demarrerSalle()">
+    ▶ &nbsp;Démarrer la séance
+  </button>
+</div>
+
+<!-- ===================== PRÉ-LANCEMENT ===================== -->
+<div class="pre-lancement" id="zone-pre-lancement">
+  <h1>Prêt pour la séance ?</h1>
+  <p class="sous-titre">Vérifiez les informations ci-dessous avant de démarrer.</p>
+
+  <div class="infos-bloc">
+    <div class="label">Participante</div>
+    <div class="valeur">{{ reservation.prenom }} {{ reservation.nom }} — {{ reservation.email }}</div>
+  </div>
+
+  <div class="infos-bloc">
+    <div class="label">Lien à partager avec la participante</div>
+    <div class="valeur">
+      <code id="lien-participant">{{ request.base_url }}live/rejoindre/{{ reservation.token_annulation }}</code>
+      <button onclick="copierLien()" style="margin-left:8px; background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">
+        Copier
+      </button>
+    </div>
+  </div>
+
+  {% if livekit_actif %}
+  <div class="infos-bloc">
+    <div class="label">Salle LiveKit</div>
+    <div class="valeur"><code>{{ reservation.livekit_room_name }}</code></div>
+  </div>
+
+  <div class="indicateurs">
+    <div class="indicateur ok" id="ind-livekit">
+      <div class="point"></div>
+      <span>LiveKit configuré</span>
+    </div>
+    <div class="indicateur" id="ind-camera">
+      <div class="point"></div>
+      <span>Caméra / micro</span>
+    </div>
+  </div>
+
+  <div class="chargement" id="chargement">
+    <div class="spinner"></div>
+    <span>Connexion à la salle…</span>
+  </div>
+  <div class="erreur" id="erreur"></div>
+
+  {% else %}
+  <div style="background:#FEF3CD; border:1px solid #F5C518; border-radius:10px; padding:14px 18px; margin-top:16px; font-size:14px; color:#6B5300;">
+    ⚠️ LiveKit n'est pas encore configuré sur ce déploiement.
+    Ajoutez les variables <code>LIVEKIT_URL</code>, <code>LIVEKIT_API_KEY</code> et
+    <code>LIVEKIT_API_SECRET</code> dans les variables d'environnement Render.
+  </div>
+  {% endif %}
+</div>
+
+<!-- ===================== SALLE ACTIVE ===================== -->
+<div id="zone-salle">
+  <div class="layout-salle">
+    <!-- Vidéos -->
+    <div id="conteneur-videos"></div>
+
+    <!-- Panneau latéral -->
+    <div class="panneau-lateral">
+      <div class="panneau-section-titre">Salle d'attente</div>
+      <div id="liste-attente" class="liste-attente">
+        <div class="vide-attente" id="vide-attente">Personne en attente</div>
+      </div>
+      <button class="btn-admettre-tous" id="btn-admettre-tous" onclick="admettreToutes()" style="display:none;">
+        ✓ Admettre tout le monde
+      </button>
+
+      <div class="panneau-section-titre" style="margin-top:8px;">Participants</div>
+      <div id="liste-participants" style="padding:8px 0; flex-shrink:0;">
+        <div style="padding:8px 14px; font-size:13px; color:var(--grey);">En attente de connexion…</div>
+      </div>
+
+      <button class="btn-quitter" onclick="quitterSalle()">✕ Terminer la séance</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TOKEN_FORMATEUR = "{{ token_formateur or '' }}";
+const LIVEKIT_URL_WS = "{{ livekit_url }}";
+const LIVEKIT_ACTIF = {{ "true" if livekit_actif else "false" }};
+
+let room = null;
+const participantsEnAttente = new Map(); // identity → {prenom, ...}
+
+async function demarrerSalle() {
+  if (!LIVEKIT_ACTIF) { alert("LiveKit non configuré."); return; }
+
+  const btn = document.getElementById('btn-demarrer');
+  const chargement = document.getElementById('chargement');
+  const erreur = document.getElementById('erreur');
+  const indCamera = document.getElementById('ind-camera');
+
+  btn.disabled = true;
+  chargement.classList.add('visible');
+  erreur.classList.remove('visible');
+
+  try {
+    // Vérifier accès caméra / micro
+    await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    indCamera.classList.add('ok');
+    indCamera.querySelector('.point').style.background = '#3B8C5A';
+
+    // Créer la salle LiveKit
+    room = new LivekitClient.Room({
+      adaptiveStream: true,
+      dynacast: true,
+      videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution },
+    });
+
+    // Salle d'attente LiveKit — écouter les participants qui demandent à entrer
+    // LiveKit ne gère pas de "waiting room" native côté WebRTC ; on simule :
+    // les participants rejoignent mais leur caméra/micro est bloquée jusqu'à admission.
+    // Dans cette implémentation simplifiée, ils rejoignent directement.
+    // (Une vraie waiting room nécessite LiveKit Agents ou une couche serveur dédiée.)
+
+    room.on(LivekitClient.RoomEvent.ParticipantConnected, participant => {
+      ajouterParticipant(participant);
+    });
+
+    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, participant => {
+      supprimerParticipant(participant.identity);
+    });
+
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
+      if (track.kind === 'video') ajouterVideo(participant, track);
+      if (track.kind === 'audio') {
+        const a = document.createElement('audio');
+        a.autoplay = true;
+        track.attach(a);
+        document.body.appendChild(a);
+      }
+    });
+
+    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+      if (track.kind === 'video') supprimerVideo(participant.identity);
+    });
+
+    room.on(LivekitClient.RoomEvent.Disconnected, () => {
+      alert('Déconnecté de la salle.');
+      window.location.reload();
+    });
+
+    await room.connect(LIVEKIT_URL_WS, TOKEN_FORMATEUR);
+    await room.localParticipant.setCameraEnabled(true);
+    await room.localParticipant.setMicrophoneEnabled(true);
+
+    // Afficher l'interface salle
+    document.getElementById('zone-pre-lancement').style.display = 'none';
+    document.getElementById('zone-salle').classList.add('visible');
+
+    // Ajouter la vidéo locale
+    room.localParticipant.videoTrackPublications.forEach(pub => {
+      if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
+    });
+
+    // Participants déjà présents
+    room.remoteParticipants.forEach(p => {
+      ajouterParticipant(p);
+      p.videoTrackPublications.forEach(pub => { if(pub.track) ajouterVideo(p, pub.track); });
+    });
+
+  } catch (e) {
+    console.error('Erreur LiveKit formateur:', e);
+    erreur.textContent = `Erreur de connexion : ${e.message}`;
+    erreur.classList.add('visible');
+    btn.disabled = false;
+    chargement.classList.remove('visible');
+  }
+}
+
+function ajouterVideo(participant, track, local=false) {
+  const conteneur = document.getElementById('conteneur-videos');
+  const id = `video-${participant.identity}`;
+  if (document.getElementById(id)) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = id;
+  wrap.style.cssText = `position:relative; background:#111; border-radius:6px; overflow:hidden; min-height:180px;`;
+
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.playsInline = true;
+  if (local) video.muted = true;
+  video.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+  track.attach(video);
+
+  const label = document.createElement('div');
+  label.textContent = (local ? '🎙 Vous (Laurence)' : (participant.name || participant.identity));
+  label.style.cssText = `position:absolute; bottom:6px; left:8px; background:rgba(0,0,0,.55); color:#fff; font-size:11px; padding:2px 8px; border-radius:4px;`;
+
+  wrap.appendChild(video);
+  wrap.appendChild(label);
+  conteneur.appendChild(wrap);
+  miseEnPage();
+}
+
+function supprimerVideo(identity) {
+  const el = document.getElementById(`video-${identity}`);
+  if (el) { el.remove(); miseEnPage(); }
+}
+
+function miseEnPage() {
+  const conteneur = document.getElementById('conteneur-videos');
+  const n = conteneur.children.length;
+  const cols = n <= 1 ? 1 : 2;
+  conteneur.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+}
+
+function ajouterParticipant(participant) {
+  const liste = document.getElementById('liste-participants');
+  const vide = liste.querySelector('div');
+  if (vide && vide.style.color === 'var(--grey)') vide.remove();
+
+  const el = document.createElement('div');
+  el.id = `participant-panel-${participant.identity}`;
+  el.className = 'personne-attente';
+  el.innerHTML = `
+    <div class="avatar">${(participant.name || '?')[0].toUpperCase()}</div>
+    <div>
+      <div class="nom">${participant.name || participant.identity}</div>
+      <div class="statut">Connecté</div>
+    </div>
+  `;
+  liste.appendChild(el);
+}
+
+function supprimerParticipant(identity) {
+  const el = document.getElementById(`participant-panel-${identity}`);
+  if (el) el.remove();
+}
+
+function admettreToutes() {
+  // Dans cette implémentation, les participants rejoignent directement.
+  // Cette fonction est un point d'extension futur pour la salle d'attente avancée.
+  document.getElementById('btn-admettre-tous').style.display = 'none';
+}
+
+async function quitterSalle() {
+  if (confirm('Voulez-vous vraiment terminer la séance pour tout le monde ?')) {
+    if (room) await room.disconnect();
+    window.location.href = '/admin/page/agenda';
+  }
+}
+
+function copierLien() {
+  const lien = document.getElementById('lien-participant').textContent.trim();
+  navigator.clipboard.writeText(lien).then(() => {
+    alert('Lien copié dans le presse-papier !');
+  }).catch(() => {
+    prompt('Copiez ce lien :', lien);
+  });
+}
+</script>
+</body>
+</html>

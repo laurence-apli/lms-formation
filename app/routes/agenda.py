@@ -648,6 +648,23 @@ def creer_reservation_admin(
         note_admin=note_admin.strip() or None,
     )
     session.add(resa)
+    session.flush()
+
+    # LiveKit : créer une salle dédiée pour les séances visio
+    if lieu and lieu.type_lieu == "visio":
+        try:
+            from ..livekit_utils import generer_nom_salle, creer_salle, generer_token_formateur, livekit_actif
+            from ..config import URL_PLATEFORME as _URL_PLATEFORME
+            if livekit_actif():
+                room_name = generer_nom_salle(resa.id)
+                creer_salle(room_name)
+                resa.livekit_room_name = room_name
+                resa.livekit_token_formateur = generer_token_formateur(room_name)
+                resa.lien_visio_unique = f"{_URL_PLATEFORME}/live/rejoindre/{resa.token_annulation}"
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).warning("LiveKit admin : impossible de créer la salle : %s", _e)
+
     session.commit()
     return {"id": resa.id, "ok": True}
 
@@ -1338,6 +1355,22 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
     )
     session.add(resa)
     session.flush()  # pour avoir resa.id
+
+    # LiveKit : créer une salle dédiée pour les séances visio
+    if lieu.type_lieu == "visio":
+        try:
+            from ..livekit_utils import generer_nom_salle, creer_salle, generer_token_formateur, generer_token_participant, livekit_actif
+            from ..config import URL_PLATEFORME as _URL_PLATEFORME
+            if livekit_actif():
+                room_name = generer_nom_salle(resa.id)
+                creer_salle(room_name)
+                resa.livekit_room_name = room_name
+                resa.livekit_token_formateur = generer_token_formateur(room_name)
+                # Le lien participant pointe vers notre page /live/rejoindre/<token_annulation>
+                resa.lien_visio_unique = f"{_URL_PLATEFORME}/live/rejoindre/{resa.token_annulation}"
+        except Exception as _e:
+            import logging
+            logging.getLogger(__name__).warning("LiveKit : impossible de créer la salle : %s", _e)
 
     session.commit()
 

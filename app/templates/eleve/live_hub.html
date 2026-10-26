@@ -1,0 +1,194 @@
+{% extends "eleve/base.html" %}
+{% block titre %}Ma plateforme Live{% endblock %}
+{% block contenu %}
+<style>
+.topbar-eleve { background:var(--ink); color:#F5EDD6; padding:14px 32px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; }
+.topbar-eleve .brand { font-family:'EB Garamond',serif; font-size:16px; font-weight:600; cursor:pointer; justify-self:start; display:flex; align-items:center; gap:10px; text-decoration:none; color:#F5EDD6; }
+.topbar-eleve .topbar-bienvenue { font-family:'EB Garamond',serif; font-size:15px; font-style:italic; color:#E8DCC0; text-align:center; justify-self:center; }
+.topbar-eleve .user-zone { font-size:13px; display:flex; align-items:center; gap:14px; justify-self:end; }
+.topbar-eleve .user-zone button { background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer; }
+
+.live-corps { max-width: 720px; margin: 0 auto; padding: 40px 20px 60px; }
+.live-titre { font-family:'EB Garamond',serif; font-size:26px; font-weight:600; margin:0 0 6px; }
+.live-sous-titre { font-family:'EB Garamond',serif; font-size:16px; font-style:italic; color:var(--grey); margin:0 0 32px; }
+
+.carte-seance-live {
+  background: var(--panel);
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.carte-seance-live .seance-icone {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.carte-seance-live .seance-infos { flex: 1; }
+
+.seance-date {
+  font-family:'League Spartan',sans-serif;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:.03em;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.seance-nom {
+  font-family:'EB Garamond',serif;
+  font-size:18px;
+  font-weight:500;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.seance-heure {
+  font-size: 13px;
+  color: var(--grey);
+}
+
+.btn-rejoindre {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  color: #F5EDD6;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-family:'League Spartan',sans-serif;
+  font-size:13px;
+  font-weight:600;
+  letter-spacing:.04em;
+  text-decoration: none;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.btn-rejoindre:hover { background: #1A1508; }
+
+/* Séance imminente (dans moins d'1h) */
+.carte-seance-live.imminente {
+  border-color: var(--gold);
+  background: linear-gradient(140deg, #FFFBF0 0%, #FBF4E6 100%);
+}
+
+.carte-seance-live.imminente .btn-rejoindre {
+  background: linear-gradient(135deg, #B8922A 0%, #8B6D1F 100%);
+  box-shadow: 0 4px 14px rgba(184,146,42,0.35);
+}
+
+.badge-imminente {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
+  font-family:'League Spartan',sans-serif;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.06em;
+  border-radius:20px;
+  padding:2px 9px;
+  margin-left:8px;
+  vertical-align:middle;
+}
+
+/* Pas de séance */
+.vide-live {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--grey);
+}
+.vide-live .vide-icone { font-size: 48px; margin-bottom: 16px; }
+.vide-live p { font-family:'EB Garamond',serif; font-size:18px; color:var(--ink); margin:0 0 8px; }
+.vide-live .vide-detail { font-size:14px; color:var(--grey); margin:0 0 24px; }
+
+/* LiveKit non configuré */
+.alerte-config {
+  background: #FEF3CD;
+  border: 1px solid #F5C518;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+  font-size: 14px;
+  color: #6B5300;
+}
+
+@media(max-width:600px) {
+  .carte-seance-live { flex-direction:column; align-items:flex-start; gap:14px; }
+  .btn-rejoindre { width:100%; justify-content:center; }
+  .topbar-eleve { grid-template-columns:1fr auto; padding:12px 16px; }
+  .topbar-eleve .topbar-bienvenue { display:none; }
+}
+</style>
+
+<div class="topbar-eleve">
+  <a class="brand" href="/eleve/accueil">
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🌸</span>{% endif %}
+    <span>{{ profil.prenom }} {{ profil.nom }}</span>
+  </a>
+  <div class="topbar-bienvenue">Ma plateforme Live</div>
+  <div class="user-zone">
+    <span>{{ eleve.prenom }} {{ eleve.nom }}</span>
+    <form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
+  </div>
+</div>
+
+<div class="live-corps">
+  <h1 class="live-titre">🎥 Ma plateforme Live</h1>
+  <p class="live-sous-titre">Vos prochaines séances en visioconférence avec Laurence</p>
+
+  {% if not livekit_actif %}
+  <div class="alerte-config">
+    ⚠️ La plateforme visio est en cours de configuration. Vos séances Live seront bientôt disponibles ici.
+  </div>
+  {% endif %}
+
+  {% if reservations_live %}
+    {% for resa in reservations_live %}
+      {% set diff_minutes = ((resa.date_debut - maintenant).total_seconds() / 60) | int %}
+      {% set imminente = diff_minutes <= 60 %}
+      <div class="carte-seance-live {% if imminente %}imminente{% endif %}">
+        <div class="seance-icone">🎥</div>
+        <div class="seance-infos">
+          <div class="seance-date">
+            {{ resa.date_debut.strftime('%A %d %B %Y') | capitalize }}
+            {% if imminente and diff_minutes > 0 %}
+              <span class="badge-imminente">Dans {{ diff_minutes }} min</span>
+            {% elif imminente and diff_minutes <= 0 %}
+              <span class="badge-imminente">En cours</span>
+            {% endif %}
+          </div>
+          <div class="seance-nom">
+            {% if resa.type_seance %}{{ resa.type_seance.nom }}{% else %}Séance visio{% endif %}
+          </div>
+          <div class="seance-heure">
+            {{ resa.date_debut.strftime('%H:%M') }} — {{ resa.date_fin.strftime('%H:%M') }}
+          </div>
+        </div>
+        {% if resa.lien_visio_unique %}
+        <a href="{{ resa.lien_visio_unique }}" class="btn-rejoindre" target="_blank" rel="noopener">
+          <span>▶</span> Rejoindre
+        </a>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="vide-live">
+      <div class="vide-icone">📅</div>
+      <p>Aucune séance Live à venir</p>
+      <p class="vide-detail">Réservez une séance visio avec Laurence pour la voir apparaître ici.</p>
+      <a href="/rendez-vous" style="display:inline-block; background:var(--gold); color:#fff; border-radius:10px; padding:12px 24px; text-decoration:none; font-family:'League Spartan',sans-serif; font-size:13px; font-weight:600;">
+        Réserver une séance
+      </a>
+    </div>
+  {% endif %}
+
+  <div style="margin-top:32px; text-align:center;">
+    <a href="/eleve/accueil" style="font-size:13px; color:var(--grey); text-decoration:none;">← Retour à l'accueil</a>
+  </div>
+</div>
+{% endblock %}
