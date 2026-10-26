@@ -488,3 +488,80 @@ def email_reponses_chapitre(prenom: str, nom: str, email_eleve: str, formation: 
         '</div>'
     ) % (esc(prenom), esc(nom), esc(email_eleve), esc(formation), esc(chapitre), _maintenant_paris(), "".join(lignes))
     return _envoyer_email(EMAIL_ADMIN, sujet, corps, repondre_a=email_eleve)
+
+
+# ---------------------------------------------------------------------------
+# Agenda — annulation de réservation
+# ---------------------------------------------------------------------------
+
+def email_annulation_rdv_client(
+    prenom: str,
+    email_client: str,
+    date_rdv: str,
+    type_seance: str,
+) -> bool:
+    """Email envoyé au client quand son RDV est annulé par l'admin."""
+    sujet = f"Votre rendez-vous du {date_rdv} a été annulé"
+    corps = (
+        '<div style="font-family: Georgia, Arial, sans-serif; background: #F5EDD6; padding: 0; margin: 0;">'
+        '<div style="background: #2E2210; padding: 28px 36px;">'
+        '<h1 style="color: #B8922A; font-size: 22px; margin: 0;">Annulation de rendez-vous</h1>'
+        f'<p style="color: #e8d8b0; font-size: 13px; margin: 6px 0 0;">{type_seance}</p>'
+        '</div>'
+        '<div style="padding: 32px 36px;">'
+        f'<p style="color: #2E2210; font-size: 16px;">Bonjour {prenom},</p>'
+        '<p style="color: #444; font-size: 15px; line-height: 1.7;">'
+        f'Votre rendez-vous prévu le <strong>{date_rdv}</strong> a été annulé.'
+        '</p>'
+        '<p style="color: #444; font-size: 15px; line-height: 1.7;">'
+        'Si vous souhaitez reprendre rendez-vous, n\'hésitez pas à nous contacter '
+        'ou à réserver directement sur la plateforme.'
+        '</p>'
+        '<hr style="border: none; border-top: 1px solid #ddd; margin: 28px 0;">'
+        '<p style="color: #aaa; font-size: 12px;">'
+        'Laurence Mermet-Bijon — Accompagnement féminin</p>'
+        '</div></div>'
+    )
+    return _envoyer_email(email_client, sujet, corps)
+
+
+def email_annulation_rdv_admin(
+    prenom_client: str,
+    nom_client: str,
+    email_client: str,
+    date_rdv: str,
+    type_seance: str,
+) -> bool:
+    """Notification envoyée à Laurence quand un RDV est annulé."""
+    sujet = f"RDV annulé — {prenom_client} {nom_client} ({date_rdv})"
+    corps = (
+        '<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;'
+        'background:#FDFAF5;border-radius:12px;border:1px solid #e8dfc8;">'
+        '<h2 style="color:#B8922A;margin-top:0;font-size:22px;">Rendez-vous annulé</h2>'
+        f'<p style="color:#2E2210;margin-bottom:20px;">'
+        f'Le RDV de <strong>{prenom_client} {nom_client}</strong> a été annulé.</p>'
+        '<table style="width:100%;border-collapse:collapse;background:#fff;'
+        'border-radius:8px;overflow:hidden;border:1px solid #e8dfc8;">'
+        '<tr style="background:#faf5e8;">'
+        '<td style="padding:10px 14px;color:#888;font-size:14px;width:140px;">Client·e</td>'
+        f'<td style="padding:10px 14px;font-weight:600;color:#2E2210;">{prenom_client} {nom_client}</td>'
+        '</tr>'
+        '<tr>'
+        '<td style="padding:10px 14px;color:#888;font-size:14px;">Email</td>'
+        f'<td style="padding:10px 14px;color:#2E2210;">{email_client}</td>'
+        '</tr>'
+        '<tr style="background:#faf5e8;">'
+        '<td style="padding:10px 14px;color:#888;font-size:14px;">Date</td>'
+        f'<td style="padding:10px 14px;color:#2E2210;">{date_rdv}</td>'
+        '</tr>'
+        '<tr>'
+        '<td style="padding:10px 14px;color:#888;font-size:14px;">Type</td>'
+        f'<td style="padding:10px 14px;color:#2E2210;">{type_seance}</td>'
+        '</tr>'
+        '</table>'
+        '<p style="font-size:12px;color:#aaa;margin-top:24px;border-top:1px solid #e8dfc8;'
+        'padding-top:16px;">'
+        'Notification automatique — Plateforme de formation laurence-mermet-bijon.fr</p>'
+        '</div>'
+    )
+    return _envoyer_email(EMAIL_ADMIN, sujet, corps)

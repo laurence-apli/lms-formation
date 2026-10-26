@@ -7,10 +7,13 @@ Couvre :
   - Cron : envoi des rappels J-7, J-1 et suivi post-séance
 """
 import json
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta, date, time
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
@@ -537,6 +540,30 @@ def changer_statut_reservation(
                 session.add(seance)
 
     session.commit()
+
+    # --- Emails lors d'une annulation ---
+    if data.statut == "annulee":
+        from ..emails import email_annulation_rdv_client, email_annulation_rdv_admin
+        try:
+            date_rdv = resa.date_debut.strftime("%d/%m/%Y à %H:%M") if resa.date_debut else "—"
+            type_seance = resa.type_seance.nom if resa.type_seance else "Rendez-vous"
+            if resa.email:
+                email_annulation_rdv_client(
+                    prenom=resa.prenom or "",
+                    email_client=resa.email,
+                    date_rdv=date_rdv,
+                    type_seance=type_seance,
+                )
+            email_annulation_rdv_admin(
+                prenom_client=resa.prenom or "",
+                nom_client=resa.nom or "",
+                email_client=resa.email or "",
+                date_rdv=date_rdv,
+                type_seance=type_seance,
+            )
+        except Exception as exc:
+            logger.warning("Email annulation RDV %s : %s", resa_id, exc)
+
     return {"ok": True}
 
 
