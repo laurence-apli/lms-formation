@@ -43,7 +43,7 @@
 </style>
 <div class="lien-outil" style="background:#F5EDD6; border-radius:8px; padding:10px 12px; border-bottom:none; margin-bottom:6px;">
 <div class="lien-outil-titre">🔑 Quel identifiant pour quel outil ? (vérifié le 18/10/2026)</div>
-<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Cloudflare (R2), Stripe, Resalib<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify, Google Search Console, Bing Webmaster Tools — toujours via « Se connecter avec Google »<br>• Non vérifiés (aucune session ouverte) : Resend, OVH, Cal.com, cron-job.org</div>
+<div class="lien-outil-compte" style="margin-bottom:0;">• <strong>laurencemb@orange.fr</strong> → GitHub, Render, Neon, Cloudflare (R2), Stripe<br>• <strong>maresonance42@gmail.com</strong> (compte Google) → YouTube, Netlify, Google Search Console, Bing Webmaster Tools — toujours via « Se connecter avec Google »<br>• Non vérifiés (aucune session ouverte) : Resend, OVH, cron-job.org, UptimeRobot</div>
 </div>
 
 <div class="groupe-outils">🖥️ La plateforme</div>
@@ -72,6 +72,11 @@
 <div class="lien-outil-compte">Sert à : visiter <code>/ping</code> toutes les 5 minutes pour empêcher Render de s'endormir. Route native intégrée à la plateforme (aucun outil externe nécessaire pour la route elle-même).<br>Service de ping gratuit : <strong>cron-job.org</strong> — créer un compte, puis ajouter une tâche : URL <code>https://lms-formation.onrender.com/ping</code>, intervalle toutes les 5 minutes.<br>Connexion : <strong>laurencemb@orange.fr</strong></div>
 <div class="lien-outil-btns"><a class="btn btn-sm" href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org ↗</a><a class="btn btn-sm" href="https://lms-formation.onrender.com/ping" target="_blank" rel="noopener">Tester /ping ↗</a></div>
 </div>
+<div class="lien-outil">
+<div class="lien-outil-titre">Surveillance de la plateforme (UptimeRobot)</div>
+<div class="lien-outil-compte">Sert à : alerter par e-mail si la plateforme tombe. Deux moniteurs actifs :<br>• <code>lms-formation.onrender.com</code> — ping toutes les 5 min (disponibilité générale)<br>• <code>/cron/agenda-rappels</code> — ping toutes les heures (rappels RDV J-7, J-1, post-séance)<br>Connexion : voir le tableau de bord (compte à vérifier — pas laurencemb@orange.fr)</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="https://dashboard.uptimerobot.com/monitors" target="_blank" rel="noopener">Tableau de bord ↗</a></div>
+</div>
 
 <div class="groupe-outils">💳 Ventes et e-mails</div>
 <div class="lien-outil">
@@ -88,7 +93,6 @@
 • <em>Mot de passe oublié</em> — lien de réinitialisation élève et admin<br>
 • <em>Compte-rendu du lundi</em> — récap hebdomadaire des inscriptions et activité<br>
 • <em>Nouvel élève connecté</em> — notification à Laurence à la 1ère connexion<br>
-• <em>Coaching / accompagnement</em> — lien Resalib envoyé à l'élève pour réserver sa séance<br>
 • <em>Questionnaire élève</em> — réponses transmises à Laurence avec « Répondre à »<br>
 • <em>Messagerie plateforme</em> — notifications de nouveaux messages (élève → Laurence et inversement)<br>
 • <em>Agenda — annulation RDV</em> — email au client + notification à Laurence quand un RDV est annulé depuis l'admin
@@ -130,14 +134,9 @@
 
 <div class="groupe-outils">📅 Rendez-vous</div>
 <div class="lien-outil">
-<div class="lien-outil-titre">Agenda principal (Resalib)</div>
-<div class="lien-outil-compte">Sert à : les réservations de séances (cabinet et distance). C'est le seul agenda : les élèves réservent leurs séances de suivi d'accompagnement via la prestation « Séance de suivi – accompagnement en cours » (liens dans app/resalib.py — à mettre à jour si une prestation est renommée).<br>Connexion : <strong>laurencemb@orange.fr</strong></div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://www.resalib.fr/bo/home" target="_blank" rel="noopener">Mon compte praticien ↗</a><a class="btn btn-sm" href="https://www.resalib.fr/praticien/66795-laurence-mermet-bijon-energeticien-pelussin" target="_blank" rel="noopener">Page publique ↗</a></div>
-</div>
-<div class="lien-outil">
-<div class="lien-outil-titre">Séances visio (Cal.com) — abandonné le 19/10/2026</div>
-<div class="lien-outil-compte">Plus utilisé par la plateforme : toutes les réservations (cabinet et visio) passent par Resalib. Compte à résilier si un abonnement est en cours.<br>Connexion : inconnue — essayer « Se connecter avec Google » (maresonance42@gmail.com), puis laurencemb@orange.fr.</div>
-<div class="lien-outil-btns"><a class="btn btn-sm" href="https://cal.com/laurence-mermet-bijon-energeticienne/seance-visio" target="_blank" rel="noopener">Page publique ↗</a><a class="btn btn-sm" href="https://app.cal.com" target="_blank" rel="noopener">Dashboard ↗</a></div>
+<div class="lien-outil-titre">Agenda et réservations</div>
+<div class="lien-outil-compte">Les réservations de séances (cabinet et distance) sont gérées directement dans la plateforme via l'onglet <strong>Agenda</strong>. Les rappels automatiques J-7, J-1 et suivi post-séance sont envoyés par Resend.</div>
+<div class="lien-outil-btns"><a class="btn btn-sm" href="/admin/agenda" target="_blank" rel="noopener">Ouvrir l'agenda ↗</a></div>
 </div>
 
 </div>
