@@ -1612,10 +1612,10 @@ def page_confirmation_rdv_query(
 ):
     """Page de confirmation via query param ?token= (envoi depuis le JS public)."""
     if not token:
-        raise HTTPException(status_code=400, detail="Token manquant.")
+        return RedirectResponse(url="/rendez-vous", status_code=303)
     resa = session.query(Reservation).filter_by(token_annulation=token).first()
     if not resa:
-        raise HTTPException(status_code=404, detail="Réservation introuvable.")
+        return RedirectResponse(url="/rendez-vous", status_code=303)
     return templates.TemplateResponse(
         request,
         "rendez_vous_confirmation.html",
