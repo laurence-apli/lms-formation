@@ -6,129 +6,205 @@
 <title>Live — Interface formateur</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=League+Spartan:wght@500;600;700&family=Inter:wght@400;500&display=swap');
-  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --grey:#9B968A; --border:#E5DCC3; --green:#3B8C5A; }
+  :root { --gold:#B8922A; --cream:#F5EDD6; --ink:#2E2210; --bg:#FAF7F0; --grey:#9B968A; --border:#E5DCC3; --green:#3B8C5A; --red:#C47B6E; }
   * { box-sizing:border-box; }
-  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; }
+  body { margin:0; font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; overflow:hidden; }
 
-  /* Barre du haut */
+  /* ====== BARRE DU HAUT ====== */
   .barre-formateur {
-    background:var(--ink); color:#F5EDD6; padding:12px 24px;
-    display:flex; align-items:center; gap:16px;
+    background:var(--ink); color:#F5EDD6; padding:10px 20px;
+    display:flex; align-items:center; gap:14px; z-index:10; position:relative;
   }
-  .barre-formateur .seance-info { flex:1; }
-  .barre-formateur .seance-nom { font-family:'EB Garamond',serif; font-size:17px; }
-  .barre-formateur .seance-date { font-size:12px; color:#C8B99A; margin-top:2px; }
+  .barre-formateur .seance-info { flex:1; min-width:0; }
+  .barre-formateur .seance-nom { font-family:'EB Garamond',serif; font-size:16px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .barre-formateur .seance-date { font-size:11px; color:#C8B99A; margin-top:1px; }
+
   .btn-demarrer {
-    background:linear-gradient(135deg, #B8922A 0%, #8B6D1F 100%);
-    color:#fff; border:none; border-radius:10px;
-    padding:12px 24px; font-family:'League Spartan',sans-serif;
+    background:linear-gradient(135deg,#B8922A 0%,#8B6D1F 100%);
+    color:#fff; border:none; border-radius:8px;
+    padding:10px 20px; font-family:'League Spartan',sans-serif;
     font-size:13px; font-weight:700; letter-spacing:.04em; cursor:pointer;
-    box-shadow:0 4px 14px rgba(184,146,42,0.4);
-    transition:transform .12s;
+    box-shadow:0 3px 12px rgba(184,146,42,.4); transition:transform .12s; white-space:nowrap;
   }
   .btn-demarrer:hover { transform:translateY(-1px); }
-  .btn-demarrer:disabled { background:#ccc; box-shadow:none; cursor:not-allowed; transform:none; }
+  .btn-demarrer:disabled { background:#666; box-shadow:none; cursor:not-allowed; transform:none; }
 
-  /* Corps avant connexion */
-  .pre-lancement {
-    max-width:700px; margin:0 auto; padding:40px 20px;
-  }
-  .pre-lancement h1 { font-family:'EB Garamond',serif; font-size:24px; font-weight:600; margin:0 0 6px; }
-  .pre-lancement .sous-titre { font-family:'EB Garamond',serif; font-size:16px; font-style:italic; color:var(--grey); margin:0 0 28px; }
+  /* ====== PRÉ-LANCEMENT ====== */
+  .pre-lancement { max-width:680px; margin:0 auto; padding:32px 20px; overflow-y:auto; height:calc(100vh - 52px); }
+  .pre-lancement h1 { font-family:'EB Garamond',serif; font-size:22px; font-weight:600; margin:0 0 4px; }
+  .pre-lancement .sous-titre { font-family:'EB Garamond',serif; font-size:15px; font-style:italic; color:var(--grey); margin:0 0 22px; }
 
-  .infos-bloc {
-    background:#fff; border:1.5px solid var(--border); border-radius:12px;
-    padding:18px 22px; margin-bottom:16px;
-  }
-  .infos-bloc .label { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--gold); margin-bottom:6px; }
-  .infos-bloc .valeur { font-size:14px; color:var(--ink); }
-  .infos-bloc code { background:var(--cream); padding:2px 7px; border-radius:5px; font-size:13px; }
+  .infos-bloc { background:#fff; border:1.5px solid var(--border); border-radius:10px; padding:14px 18px; margin-bottom:12px; }
+  .infos-bloc .label { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700; letter-spacing:.06em; color:var(--gold); margin-bottom:4px; }
+  .infos-bloc .valeur { font-size:13px; color:var(--ink); display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .infos-bloc code { background:var(--cream); padding:2px 7px; border-radius:4px; font-size:12px; word-break:break-all; }
 
-  /* Indicateurs */
-  .indicateurs { display:flex; gap:10px; flex-wrap:wrap; margin-top:20px; }
-  .indicateur {
-    background:#fff; border:1px solid var(--border); border-radius:10px;
-    padding:10px 16px; display:flex; align-items:center; gap:10px;
-  }
-  .indicateur .point { width:10px; height:10px; border-radius:50%; background:var(--grey); }
+  .indicateurs { display:flex; gap:8px; flex-wrap:wrap; margin-top:16px; }
+  .indicateur { background:#fff; border:1px solid var(--border); border-radius:8px; padding:8px 14px; display:flex; align-items:center; gap:8px; }
+  .indicateur .point { width:9px; height:9px; border-radius:50%; background:var(--grey); flex-shrink:0; }
   .indicateur.ok .point { background:var(--green); }
-  .indicateur.ko .point { background:#C47B6E; }
-  .indicateur span { font-size:13px; }
+  .indicateur.ko .point { background:var(--red); }
+  .indicateur span { font-size:12px; }
 
-  /* Salle en cours */
-  #zone-salle { display:none; height:100vh; flex-direction:column; }
+  .chargement { display:none; align-items:center; gap:10px; color:var(--grey); font-size:13px; margin-top:14px; }
+  .chargement.visible { display:flex; }
+  .spinner { width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:tourner .7s linear infinite; }
+  @keyframes tourner { to { transform:rotate(360deg); } }
+  .erreur { background:#FBEAF0; border:1px solid #ED93B1; border-radius:8px; padding:10px 14px; margin-top:10px; font-size:13px; color:#72243E; display:none; }
+  .erreur.visible { display:block; }
+
+  /* ====== SALLE ACTIVE ====== */
+  #zone-salle { display:none; height:calc(100vh - 52px); flex-direction:column; }
   #zone-salle.visible { display:flex; }
 
+  /* Layout 3 colonnes : vidéo | participants | chat */
   .layout-salle {
-    flex:1; display:grid; grid-template-columns:1fr 280px;
-    gap:0; overflow:hidden;
+    flex:1; display:grid;
+    grid-template-columns:1fr 240px 280px;
+    overflow:hidden;
   }
 
-  /* Vidéo principale */
+  /* ----- Zone vidéo ----- */
   #conteneur-videos {
-    background:#1A1508; display:grid; gap:6px; padding:6px; overflow:auto;
+    background:#1A1508; display:grid; gap:4px; padding:4px; overflow:auto; position:relative;
   }
 
-  /* Panneau latéral : salle d'attente + participants */
-  .panneau-lateral {
+  /* ----- Barre de contrôle (au-dessus des colonnes droites, en bas de vidéo) ----- */
+  .barre-controle {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    display:flex; gap:8px; background:rgba(0,0,0,.72); border-radius:40px;
+    padding:8px 14px; z-index:5; white-space:nowrap;
+  }
+  .btn-ctrl {
+    background:rgba(255,255,255,.12); border:none; border-radius:24px;
+    color:#fff; font-size:12px; font-family:'League Spartan',sans-serif; font-weight:600;
+    padding:8px 14px; cursor:pointer; display:flex; align-items:center; gap:5px;
+    transition:background .15s; white-space:nowrap;
+  }
+  .btn-ctrl:hover { background:rgba(255,255,255,.22); }
+  .btn-ctrl.actif { background:var(--gold); }
+  .btn-ctrl.danger { background:var(--red); }
+  .btn-ctrl.danger:hover { background:#a5615a; }
+  .btn-ctrl .icone { font-size:16px; }
+  .btn-ctrl.muet { background:rgba(196,123,110,.5); }
+
+  /* ----- Panneau participants ----- */
+  .panneau-participants {
     background:#fff; border-left:1px solid var(--border);
     display:flex; flex-direction:column; overflow:hidden;
   }
 
-  .panneau-section-titre {
-    font-family:'League Spartan',sans-serif; font-size:11px; font-weight:700;
-    letter-spacing:.06em; color:var(--gold); padding:12px 14px 6px;
-    border-bottom:1px solid var(--border); text-transform:uppercase;
+  .panneau-titre {
+    font-family:'League Spartan',sans-serif; font-size:10px; font-weight:700;
+    letter-spacing:.08em; color:var(--gold); padding:10px 12px 6px;
+    border-bottom:1px solid var(--border); text-transform:uppercase; flex-shrink:0;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .panneau-titre .compteur {
+    background:var(--cream); color:var(--ink); border-radius:10px;
+    padding:2px 7px; font-size:10px; font-weight:700;
   }
 
-  .liste-attente { flex:1; overflow-y:auto; padding:8px 0; }
-  .personne-attente {
-    display:flex; align-items:center; gap:10px;
-    padding:8px 14px;
+  .liste-scroll { flex:1; overflow-y:auto; padding:4px 0; }
+
+  /* Carte participant */
+  .carte-participant {
+    display:flex; align-items:center; gap:9px; padding:7px 12px;
+    border-radius:6px; margin:2px 6px; transition:background .1s;
   }
-  .personne-attente .avatar { width:36px; height:36px; border-radius:50%; background:var(--cream); display:flex; align-items:center; justify-content:center; font-family:'EB Garamond',serif; font-size:15px; color:var(--gold); flex-shrink:0; }
-  .personne-attente .nom { flex:1; font-size:13px; font-weight:500; }
-  .personne-attente .statut { font-size:11px; color:var(--grey); }
-
-  .btn-admettre {
-    background:var(--green); color:#fff; border:none; border-radius:6px;
-    padding:5px 10px; font-size:11px; font-weight:600; cursor:pointer;
+  .carte-participant:hover { background:var(--bg); }
+  .avatar-p {
+    width:34px; height:34px; border-radius:50%; background:var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'EB Garamond',serif; font-size:14px; color:var(--gold);
+    flex-shrink:0; position:relative;
   }
-  .btn-admettre:hover { background:#2A6B44; }
-
-  .btn-admettre-tous {
-    width:calc(100% - 28px); margin:6px 14px; background:var(--green); color:#fff;
-    border:none; border-radius:8px; padding:9px; font-family:'League Spartan',sans-serif;
-    font-size:12px; font-weight:700; cursor:pointer;
+  .avatar-p.parle::after {
+    content:''; position:absolute; inset:-3px; border-radius:50%;
+    border:2px solid var(--green); animation:pulse-vert .8s ease-in-out infinite;
   }
-  .btn-admettre-tous:hover { background:#2A6B44; }
+  @keyframes pulse-vert { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  .nom-p { flex:1; font-size:12px; font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .statuts-p { display:flex; gap:4px; align-items:center; }
+  .icone-p { font-size:13px; opacity:.5; }
+  .icone-p.actif { opacity:1; }
+  .icone-p.coupe { opacity:.35; filter:grayscale(1); }
+  .btn-mute-p {
+    background:none; border:1px solid var(--border); border-radius:5px;
+    padding:3px 7px; font-size:10px; cursor:pointer; color:var(--grey);
+    font-family:'League Spartan',sans-serif; font-weight:600; white-space:nowrap;
+  }
+  .btn-mute-p:hover { background:var(--cream); color:var(--ink); }
+  .btn-mute-p.muet { border-color:var(--red); color:var(--red); }
 
-  .vide-attente { padding:16px 14px; font-size:13px; color:var(--grey); text-align:center; }
+  .vide-liste { padding:14px 12px; font-size:12px; color:var(--grey); text-align:center; }
 
-  .btn-quitter {
-    width:100%; background:#C47B6E; color:#fff; border:none;
-    padding:12px; font-family:'League Spartan',sans-serif;
-    font-size:13px; font-weight:700; cursor:pointer; margin-top:auto;
+  /* Séparateur attente / présents */
+  .sep-liste { font-family:'League Spartan',sans-serif; font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); padding:6px 12px 3px; }
+
+  /* ----- Panneau chat ----- */
+  .panneau-chat {
+    background:#FDFBF7; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
   }
 
-  /* Indicateur chargement */
-  .chargement { display:none; align-items:center; gap:10px; color:var(--grey); font-size:13px; margin-top:12px; }
-  .chargement.visible { display:flex; }
-  .spinner { width:18px; height:18px; border:2.5px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:tourner .7s linear infinite; }
-  @keyframes tourner { to { transform:rotate(360deg); } }
+  .fil-chat { flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:8px; }
 
-  .erreur { background:#FBEAF0; border:1px solid #ED93B1; border-radius:10px; padding:12px 16px; margin-top:12px; font-size:13px; color:#72243E; display:none; }
-  .erreur.visible { display:block; }
+  .bulle-chat { max-width:88%; }
+  .bulle-chat.moi { align-self:flex-end; }
+  .bulle-chat.eux { align-self:flex-start; }
+  .bulle-chat .auteur { font-size:10px; color:var(--grey); margin-bottom:2px; font-weight:500; }
+  .bulle-chat.moi .auteur { text-align:right; }
+  .bulle-chat .texte { font-size:13px; line-height:1.45; border-radius:10px; padding:7px 11px; }
+  .bulle-chat.moi .texte { background:var(--ink); color:#F5EDD6; border-radius:10px 10px 3px 10px; }
+  .bulle-chat.eux .texte { background:#fff; border:1px solid var(--border); border-radius:10px 10px 10px 3px; }
+  .bulle-chat .heure { font-size:10px; color:var(--grey); margin-top:2px; }
+  .bulle-chat.moi .heure { text-align:right; }
 
-  @media(max-width:700px) {
-    .layout-salle { grid-template-columns:1fr; }
-    .panneau-lateral { max-height:220px; border-left:none; border-top:1px solid var(--border); }
+  .vide-chat { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; color:var(--grey); font-size:13px; padding:20px; text-align:center; }
+  .vide-chat span { font-size:24px; }
+
+  .zone-saisie-chat {
+    border-top:1px solid var(--border); padding:8px 10px;
+    display:flex; gap:7px; align-items:flex-end; background:#fff;
   }
+  .zone-saisie-chat textarea {
+    flex:1; border:1px solid var(--border); border-radius:8px; padding:8px 10px;
+    font-size:13px; font-family:'Inter',sans-serif; resize:none; min-height:36px; max-height:100px;
+    background:var(--bg); color:var(--ink); line-height:1.4;
+  }
+  .zone-saisie-chat textarea:focus { outline:none; border-color:var(--gold); }
+  .btn-envoyer-chat {
+    background:var(--ink); color:#F5EDD6; border:none; border-radius:8px;
+    padding:8px 13px; cursor:pointer; font-size:14px; flex-shrink:0; height:36px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-envoyer-chat:hover { background:#3E2E18; }
+  .btn-envoyer-chat:disabled { opacity:.5; cursor:not-allowed; }
+
+  /* ====== Responsive ====== */
+  @media(max-width:900px) {
+    .layout-salle { grid-template-columns:1fr 220px; }
+    .panneau-chat { display:none; }
+  }
+  @media(max-width:620px) {
+    .layout-salle { grid-template-columns:1fr; grid-template-rows:1fr auto; }
+    .panneau-participants { max-height:160px; border-left:none; border-top:1px solid var(--border); }
+  }
+
+  /* ====== Notification toast ====== */
+  #toast {
+    position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:rgba(0,0,0,.8); color:#fff; border-radius:8px; padding:8px 16px;
+    font-size:12px; z-index:99; opacity:0; transition:all .25s; pointer-events:none;
+  }
+  #toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.1/dist/livekit-client.umd.min.js"></script>
 </head>
 <body>
 
+<!-- BARRE TITRE -->
 <div class="barre-formateur">
   <div class="seance-info">
     <div class="seance-nom">🎥 Séance Live — Interface formateur</div>
@@ -157,7 +233,7 @@
     <div class="label">Lien à partager avec la participante</div>
     <div class="valeur">
       <code id="lien-participant">{{ request.base_url }}live/rejoindre/{{ reservation.token_annulation }}</code>
-      <button onclick="copierLien()" style="margin-left:8px; background:none; border:1px solid var(--border); border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer;">
+      <button onclick="copierLien()" style="background:none;border:1px solid var(--border);border-radius:5px;padding:3px 9px;font-size:11px;cursor:pointer;">
         Copier
       </button>
     </div>
@@ -171,26 +247,19 @@
 
   <div class="indicateurs">
     <div class="indicateur ok" id="ind-livekit">
-      <div class="point"></div>
-      <span>LiveKit configuré</span>
+      <div class="point"></div><span>LiveKit configuré</span>
     </div>
     <div class="indicateur" id="ind-camera">
-      <div class="point"></div>
-      <span>Caméra / micro</span>
+      <div class="point"></div><span>Caméra / micro</span>
     </div>
   </div>
 
-  <div class="chargement" id="chargement">
-    <div class="spinner"></div>
-    <span>Connexion à la salle…</span>
-  </div>
+  <div class="chargement" id="chargement"><div class="spinner"></div><span>Connexion à la salle…</span></div>
   <div class="erreur" id="erreur"></div>
 
   {% else %}
-  <div style="background:#FEF3CD; border:1px solid #F5C518; border-radius:10px; padding:14px 18px; margin-top:16px; font-size:14px; color:#6B5300;">
-    ⚠️ LiveKit n'est pas encore configuré sur ce déploiement.
-    Ajoutez les variables <code>LIVEKIT_URL</code>, <code>LIVEKIT_API_KEY</code> et
-    <code>LIVEKIT_API_SECRET</code> dans les variables d'environnement Render.
+  <div style="background:#FEF3CD;border:1px solid #F5C518;border-radius:8px;padding:12px 16px;margin-top:14px;font-size:13px;color:#6B5300;">
+    ⚠️ LiveKit n'est pas encore configuré. Ajoutez <code>LIVEKIT_URL</code>, <code>LIVEKIT_API_KEY</code> et <code>LIVEKIT_API_SECRET</code> dans les variables Render.
   </div>
   {% endif %}
 </div>
@@ -198,39 +267,87 @@
 <!-- ===================== SALLE ACTIVE ===================== -->
 <div id="zone-salle">
   <div class="layout-salle">
-    <!-- Vidéos -->
-    <div id="conteneur-videos"></div>
 
-    <!-- Panneau latéral -->
-    <div class="panneau-lateral">
-      <div class="panneau-section-titre">Salle d'attente</div>
-      <div id="liste-attente" class="liste-attente">
-        <div class="vide-attente" id="vide-attente">Personne en attente</div>
+    <!-- Vidéos + barre de contrôle -->
+    <div style="position:relative; display:flex; flex-direction:column; background:#1A1508; overflow:hidden;">
+      <div id="conteneur-videos" style="flex:1; display:grid; gap:4px; padding:4px; overflow:auto;"></div>
+
+      <!-- Barre de contrôle flottante -->
+      <div class="barre-controle">
+        <button class="btn-ctrl actif" id="btn-micro" onclick="toggleMicro()" title="Micro">
+          <span class="icone" id="icone-micro">🎙</span><span id="label-micro">Micro</span>
+        </button>
+        <button class="btn-ctrl actif" id="btn-camera" onclick="toggleCamera()" title="Caméra">
+          <span class="icone" id="icone-camera">📷</span><span id="label-camera">Caméra</span>
+        </button>
+        <button class="btn-ctrl" id="btn-ecran" onclick="togglePartageEcran()" title="Partager écran">
+          <span class="icone">🖥</span><span>Partager</span>
+        </button>
+        <button class="btn-ctrl" id="btn-mute-tous" onclick="muterTous()" title="Couper tous les micros">
+          <span class="icone">🔇</span><span>Couper tous</span>
+        </button>
+        <button class="btn-ctrl danger" onclick="quitterSalle()" title="Terminer">
+          <span class="icone">✕</span><span>Terminer</span>
+        </button>
       </div>
-      <button class="btn-admettre-tous" id="btn-admettre-tous" onclick="admettreToutes()" style="display:none;">
-        ✓ Admettre tout le monde
-      </button>
-
-      <div class="panneau-section-titre" style="margin-top:8px;">Participants</div>
-      <div id="liste-participants" style="padding:8px 0; flex-shrink:0;">
-        <div style="padding:8px 14px; font-size:13px; color:var(--grey);">En attente de connexion…</div>
-      </div>
-
-      <button class="btn-quitter" onclick="quitterSalle()">✕ Terminer la séance</button>
     </div>
+
+    <!-- Panneau participants -->
+    <div class="panneau-participants">
+      <div class="panneau-titre">
+        Participants
+        <span class="compteur" id="compteur-participants">0</span>
+      </div>
+      <div class="liste-scroll" id="liste-participants">
+        <div class="vide-liste" id="vide-participants">En attente de connexion…</div>
+      </div>
+    </div>
+
+    <!-- Panneau chat -->
+    <div class="panneau-chat">
+      <div class="panneau-titre">
+        Chat en direct
+      </div>
+      <div class="fil-chat" id="fil-chat">
+        <div class="vide-chat">
+          <span>💬</span>
+          <div>Les messages apparaissent ici</div>
+          <div style="font-size:11px;margin-top:4px;">Visible uniquement pendant la séance</div>
+        </div>
+      </div>
+      <div class="zone-saisie-chat">
+        <textarea id="saisie-chat" placeholder="Message…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMessage();}"></textarea>
+        <button class="btn-envoyer-chat" onclick="envoyerMessage()" id="btn-envoyer-chat" title="Envoyer">➤</button>
+      </div>
+    </div>
+
   </div>
 </div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
 
 <script>
 const TOKEN_FORMATEUR = "{{ token_formateur or '' }}";
 const LIVEKIT_URL_WS = "{{ livekit_url }}";
 const LIVEKIT_ACTIF = {{ "true" if livekit_actif else "false" }};
+const MON_NOM = "Laurence";
 
 let room = null;
-const participantsEnAttente = new Map(); // identity → {prenom, ...}
+let microActif = true;
+let cameraActive = true;
+let partageEcranActif = false;
+let ecranTrack = null;
+let tousMutes = false; // état "couper tous" (local uniquement — on ne peut pas muter à distance via WebRTC)
 
+// Éléments DOM fréquemment accédés
+const elFilChat = () => document.getElementById('fil-chat');
+const elListeParticipants = () => document.getElementById('liste-participants');
+
+// ========================= DÉMARRAGE =========================
 async function demarrerSalle() {
-  if (!LIVEKIT_ACTIF) { alert("LiveKit non configuré."); return; }
+  if (!LIVEKIT_ACTIF) { afficherToast("LiveKit non configuré."); return; }
 
   const btn = document.getElementById('btn-demarrer');
   const chargement = document.getElementById('chargement');
@@ -242,34 +359,30 @@ async function demarrerSalle() {
   erreur.classList.remove('visible');
 
   try {
-    // Vérifier accès caméra / micro
     await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
     indCamera.classList.add('ok');
-    indCamera.querySelector('.point').style.background = '#3B8C5A';
 
-    // Créer la salle LiveKit
     room = new LivekitClient.Room({
       adaptiveStream: true,
       dynacast: true,
       videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution },
     });
 
-    // Salle d'attente LiveKit — écouter les participants qui demandent à entrer
-    // LiveKit ne gère pas de "waiting room" native côté WebRTC ; on simule :
-    // les participants rejoignent mais leur caméra/micro est bloquée jusqu'à admission.
-    // Dans cette implémentation simplifiée, ils rejoignent directement.
-    // (Une vraie waiting room nécessite LiveKit Agents ou une couche serveur dédiée.)
-
-    room.on(LivekitClient.RoomEvent.ParticipantConnected, participant => {
-      ajouterParticipant(participant);
+    // ---- Événements participants ----
+    room.on(LivekitClient.RoomEvent.ParticipantConnected, p => {
+      afficherToast(`${p.name || p.identity} a rejoint la séance`);
+      mettreAJourListeParticipants();
+      p.videoTrackPublications.forEach(pub => { if(pub.track) ajouterVideo(p, pub.track); });
     });
 
-    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, participant => {
-      supprimerParticipant(participant.identity);
+    room.on(LivekitClient.RoomEvent.ParticipantDisconnected, p => {
+      afficherToast(`${p.name || p.identity} a quitté la séance`);
+      supprimerVideo(p.identity);
+      mettreAJourListeParticipants();
     });
 
-    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
-      if (track.kind === 'video') ajouterVideo(participant, track);
+    room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, p) => {
+      if (track.kind === 'video') ajouterVideo(p, track);
       if (track.kind === 'audio') {
         const a = document.createElement('audio');
         a.autoplay = true;
@@ -278,65 +391,230 @@ async function demarrerSalle() {
       }
     });
 
-    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
-      if (track.kind === 'video') supprimerVideo(participant.identity);
+    room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, p) => {
+      if (track.kind === 'video') supprimerVideo(p.identity);
+    });
+
+    room.on(LivekitClient.RoomEvent.TrackMuted, (pub, p) => mettreAJourListeParticipants());
+    room.on(LivekitClient.RoomEvent.TrackUnmuted, (pub, p) => mettreAJourListeParticipants());
+
+    // ---- Speaking (indicateur vocal) ----
+    room.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, speakers => {
+      // Retirer indicateur sur tous
+      document.querySelectorAll('.avatar-p').forEach(a => a.classList.remove('parle'));
+      speakers.forEach(p => {
+        const av = document.getElementById(`avatar-${p.identity}`);
+        if (av) av.classList.add('parle');
+      });
+    });
+
+    // ---- Chat via DataChannel ----
+    room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+      try {
+        const msg = JSON.parse(new TextDecoder().decode(payload));
+        if (msg.type === 'chat') {
+          ajouterBulleChat(participant ? (participant.name || participant.identity) : '?', msg.texte, false);
+        }
+      } catch(e) { /* ignore */ }
     });
 
     room.on(LivekitClient.RoomEvent.Disconnected, () => {
-      alert('Déconnecté de la salle.');
-      window.location.reload();
+      afficherToast("Déconnecté de la salle.");
+      setTimeout(() => window.location.reload(), 1500);
     });
 
     await room.connect(LIVEKIT_URL_WS, TOKEN_FORMATEUR);
     await room.localParticipant.setCameraEnabled(true);
     await room.localParticipant.setMicrophoneEnabled(true);
 
-    // Afficher l'interface salle
+    // Basculer vers l'interface salle
     document.getElementById('zone-pre-lancement').style.display = 'none';
     document.getElementById('zone-salle').classList.add('visible');
 
-    // Ajouter la vidéo locale
+    // Vidéo locale
     room.localParticipant.videoTrackPublications.forEach(pub => {
       if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
     });
 
     // Participants déjà présents
     room.remoteParticipants.forEach(p => {
-      ajouterParticipant(p);
       p.videoTrackPublications.forEach(pub => { if(pub.track) ajouterVideo(p, pub.track); });
     });
 
+    mettreAJourListeParticipants();
+
   } catch (e) {
     console.error('Erreur LiveKit formateur:', e);
-    erreur.textContent = `Erreur de connexion : ${e.message}`;
+    erreur.textContent = `Erreur : ${e.message}`;
     erreur.classList.add('visible');
     btn.disabled = false;
     chargement.classList.remove('visible');
   }
 }
 
+// ========================= CONTRÔLE MICRO / CAMÉRA =========================
+async function toggleMicro() {
+  if (!room) return;
+  microActif = !microActif;
+  await room.localParticipant.setMicrophoneEnabled(microActif);
+  const btn = document.getElementById('btn-micro');
+  const icone = document.getElementById('icone-micro');
+  const label = document.getElementById('label-micro');
+  if (microActif) {
+    btn.classList.add('actif'); btn.classList.remove('muet');
+    icone.textContent = '🎙'; label.textContent = 'Micro';
+  } else {
+    btn.classList.remove('actif'); btn.classList.add('muet');
+    icone.textContent = '🔕'; label.textContent = 'Coupé';
+  }
+}
+
+async function toggleCamera() {
+  if (!room) return;
+  cameraActive = !cameraActive;
+  await room.localParticipant.setCameraEnabled(cameraActive);
+  const btn = document.getElementById('btn-camera');
+  const icone = document.getElementById('icone-camera');
+  const label = document.getElementById('label-camera');
+  if (cameraActive) {
+    btn.classList.add('actif'); btn.classList.remove('muet');
+    icone.textContent = '📷'; label.textContent = 'Caméra';
+    // Remettre la vidéo locale
+    room.localParticipant.videoTrackPublications.forEach(pub => {
+      if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
+    });
+  } else {
+    btn.classList.remove('actif'); btn.classList.add('muet');
+    icone.textContent = '📵'; label.textContent = 'Arrêtée';
+    supprimerVideo(room.localParticipant.identity);
+  }
+}
+
+// ========================= PARTAGE D'ÉCRAN =========================
+async function togglePartageEcran() {
+  if (!room) return;
+
+  const btn = document.getElementById('btn-ecran');
+
+  if (partageEcranActif) {
+    // Arrêter le partage
+    if (ecranTrack) {
+      await room.localParticipant.unpublishTrack(ecranTrack);
+      ecranTrack.stop();
+      ecranTrack = null;
+    }
+    partageEcranActif = false;
+    btn.classList.remove('actif');
+    btn.querySelector('span:last-child').textContent = 'Partager';
+    supprimerVideo('local-screen');
+    afficherToast("Partage d'écran arrêté");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { cursor: 'always' },
+      audio: false,
+    });
+    const screenVideoTrack = stream.getVideoTracks()[0];
+
+    // Arrêter si l'utilisateur ferme le partage nativement
+    screenVideoTrack.onended = () => {
+      if (partageEcranActif) togglePartageEcran();
+    };
+
+    ecranTrack = new LivekitClient.LocalVideoTrack(screenVideoTrack, {}, false);
+    await room.localParticipant.publishTrack(ecranTrack, {
+      name: 'screen',
+      source: LivekitClient.Track.Source.ScreenShare,
+    });
+
+    // Afficher localement
+    const wrap = creerWrapVideo('local-screen', '🖥 Votre écran (partage)');
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true; video.muted = true;
+    video.style.cssText = 'width:100%;height:100%;object-fit:contain;background:#000;';
+    ecranTrack.attach(video);
+    wrap.insertBefore(video, wrap.firstChild);
+    document.getElementById('conteneur-videos').appendChild(wrap);
+    miseEnPage();
+
+    partageEcranActif = true;
+    btn.classList.add('actif');
+    btn.querySelector('span:last-child').textContent = 'Arrêter';
+    afficherToast("Partage d'écran démarré");
+  } catch(e) {
+    if (e.name !== 'NotAllowedError') {
+      afficherToast(`Impossible de partager l'écran : ${e.message}`);
+    }
+  }
+}
+
+// ========================= MUTE TOUS (local) =========================
+// Note: WebRTC ne permet pas de muter à distance un autre participant.
+// On peut uniquement envoyer un message via DataChannel pour demander
+// aux participants de se muter eux-mêmes.
+function muterTous() {
+  if (!room) return;
+  tousMutes = !tousMutes;
+  const btn = document.getElementById('btn-mute-tous');
+
+  // Envoyer demande de mute à tous via DataChannel
+  const msg = JSON.stringify({ type: tousMutes ? 'mute_request' : 'unmute_request' });
+  const data = new TextEncoder().encode(msg);
+  try { room.localParticipant.publishData(data, { reliable: true }); } catch(e) {}
+
+  if (tousMutes) {
+    btn.classList.add('actif');
+    btn.querySelector('span:last-child').textContent = 'Réautoriser';
+    afficherToast("Demande de coupure micro envoyée à tous");
+  } else {
+    btn.classList.remove('actif');
+    btn.querySelector('span:last-child').textContent = 'Couper tous';
+    afficherToast("Micros réautorisés");
+  }
+}
+
+// Muter un participant individuel (via message DataChannel)
+function muterParticipant(identity) {
+  if (!room) return;
+  const p = room.remoteParticipants.get(identity);
+  if (!p) return;
+
+  const msg = JSON.stringify({ type: 'mute_request', target: identity });
+  const data = new TextEncoder().encode(msg);
+  try { room.localParticipant.publishData(data, { reliable: true, destinationIdentities: [identity] }); } catch(e) {}
+  afficherToast(`Demande de coupure micro envoyée à ${p.name || identity}`);
+}
+
+// ========================= VIDÉO =========================
+function creerWrapVideo(id, labelTexte) {
+  const wrap = document.createElement('div');
+  wrap.id = `video-${id}`;
+  wrap.style.cssText = 'position:relative;background:#111;border-radius:6px;overflow:hidden;min-height:160px;';
+  const label = document.createElement('div');
+  label.textContent = labelTexte;
+  label.style.cssText = 'position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;z-index:1;';
+  wrap.appendChild(label);
+  return wrap;
+}
+
 function ajouterVideo(participant, track, local=false) {
   const conteneur = document.getElementById('conteneur-videos');
-  const id = `video-${participant.identity}`;
-  if (document.getElementById(id)) return;
+  const identity = local ? participant.identity : participant.identity;
+  const vid_id = `video-${identity}`;
+  if (document.getElementById(vid_id)) return;
 
-  const wrap = document.createElement('div');
-  wrap.id = id;
-  wrap.style.cssText = `position:relative; background:#111; border-radius:6px; overflow:hidden; min-height:180px;`;
+  const nom = local ? `🎙 Vous (${MON_NOM})` : (participant.name || participant.identity);
+  const wrap = creerWrapVideo(identity, nom);
 
   const video = document.createElement('video');
-  video.autoplay = true;
-  video.playsInline = true;
+  video.autoplay = true; video.playsInline = true;
   if (local) video.muted = true;
-  video.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+  video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
   track.attach(video);
+  wrap.insertBefore(video, wrap.firstChild);
 
-  const label = document.createElement('div');
-  label.textContent = (local ? '🎙 Vous (Laurence)' : (participant.name || participant.identity));
-  label.style.cssText = `position:absolute; bottom:6px; left:8px; background:rgba(0,0,0,.55); color:#fff; font-size:11px; padding:2px 8px; border-radius:4px;`;
-
-  wrap.appendChild(video);
-  wrap.appendChild(label);
   conteneur.appendChild(wrap);
   miseEnPage();
 }
@@ -349,54 +627,142 @@ function supprimerVideo(identity) {
 function miseEnPage() {
   const conteneur = document.getElementById('conteneur-videos');
   const n = conteneur.children.length;
-  const cols = n <= 1 ? 1 : 2;
-  conteneur.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+  conteneur.style.gridTemplateColumns = `repeat(${cols},1fr)`;
 }
 
-function ajouterParticipant(participant) {
-  const liste = document.getElementById('liste-participants');
-  const vide = liste.querySelector('div');
-  if (vide && vide.style.color === 'var(--grey)') vide.remove();
+// ========================= LISTE PARTICIPANTS =========================
+function mettreAJourListeParticipants() {
+  if (!room) return;
+  const liste = elListeParticipants();
+  const vide = document.getElementById('vide-participants');
+  const total = room.remoteParticipants.size;
 
-  const el = document.createElement('div');
-  el.id = `participant-panel-${participant.identity}`;
-  el.className = 'personne-attente';
-  el.innerHTML = `
-    <div class="avatar">${(participant.name || '?')[0].toUpperCase()}</div>
-    <div>
-      <div class="nom">${participant.name || participant.identity}</div>
-      <div class="statut">Connecté</div>
-    </div>
-  `;
-  liste.appendChild(el);
-}
+  document.getElementById('compteur-participants').textContent = total;
 
-function supprimerParticipant(identity) {
-  const el = document.getElementById(`participant-panel-${identity}`);
-  if (el) el.remove();
-}
+  // Supprimer les cartes existantes (pas le vide)
+  liste.querySelectorAll('.carte-participant').forEach(e => e.remove());
+  liste.querySelectorAll('.sep-liste').forEach(e => e.remove());
 
-function admettreToutes() {
-  // Dans cette implémentation, les participants rejoignent directement.
-  // Cette fonction est un point d'extension futur pour la salle d'attente avancée.
-  document.getElementById('btn-admettre-tous').style.display = 'none';
-}
-
-async function quitterSalle() {
-  if (confirm('Voulez-vous vraiment terminer la séance pour tout le monde ?')) {
-    if (room) await room.disconnect();
-    window.location.href = '/admin/page/agenda';
+  if (total === 0) {
+    if (vide) vide.style.display = '';
+    return;
   }
+  if (vide) vide.style.display = 'none';
+
+  // Ajouter une carte par participant distant
+  room.remoteParticipants.forEach(p => {
+    const micPub = p.audioTrackPublications.values().next().value;
+    const camPub = p.videoTrackPublications.values().next().value;
+    const micMute = micPub ? micPub.isMuted : true;
+    const camMute = camPub ? camPub.isMuted : true;
+
+    const carte = document.createElement('div');
+    carte.className = 'carte-participant';
+    carte.id = `carte-${p.identity}`;
+    carte.innerHTML = `
+      <div class="avatar-p" id="avatar-${p.identity}">${(p.name || '?')[0].toUpperCase()}</div>
+      <div class="nom-p" title="${p.name || p.identity}">${p.name || p.identity}</div>
+      <div class="statuts-p">
+        <span class="icone-p ${micMute ? 'coupe' : 'actif'}" title="${micMute ? 'Micro coupé' : 'Micro actif'}">${micMute ? '🔕' : '🎙'}</span>
+        <span class="icone-p ${camMute ? 'coupe' : 'actif'}" title="${camMute ? 'Caméra coupée' : 'Caméra active'}">${camMute ? '📵' : '📷'}</span>
+        <button class="btn-mute-p ${micMute ? 'muet' : ''}"
+          onclick="muterParticipant('${p.identity}')"
+          title="Demander de couper le micro">
+          ${micMute ? '✓ Muet' : '🔇 Muter'}
+        </button>
+      </div>`;
+    liste.appendChild(carte);
+  });
 }
 
+// ========================= CHAT =========================
+function ajouterBulleChat(auteur, texte, moi=false) {
+  const fil = elFilChat();
+
+  // Retirer le message vide si présent
+  const vide = fil.querySelector('.vide-chat');
+  if (vide) vide.remove();
+
+  const now = new Date();
+  const heure = now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+
+  const bulle = document.createElement('div');
+  bulle.className = `bulle-chat ${moi ? 'moi' : 'eux'}`;
+  bulle.innerHTML = `
+    <div class="auteur">${auteur}</div>
+    <div class="texte">${escapeHTML(texte)}</div>
+    <div class="heure">${heure}</div>`;
+  fil.appendChild(bulle);
+  fil.scrollTop = fil.scrollHeight;
+}
+
+function escapeHTML(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function envoyerMessage() {
+  const input = document.getElementById('saisie-chat');
+  const texte = input.value.trim();
+  if (!texte || !room) return;
+
+  // Afficher localement
+  ajouterBulleChat(MON_NOM, texte, true);
+
+  // Envoyer via DataChannel
+  const msg = JSON.stringify({ type: 'chat', texte });
+  const data = new TextEncoder().encode(msg);
+  try {
+    room.localParticipant.publishData(data, { reliable: true });
+  } catch(e) {
+    console.error('Erreur envoi chat:', e);
+  }
+
+  input.value = '';
+  input.style.height = 'auto';
+}
+
+// ========================= QUITTER =========================
+async function quitterSalle() {
+  if (!confirm('Voulez-vous vraiment terminer la séance pour tout le monde ?')) return;
+  if (room) {
+    // Notifier les participants
+    try {
+      const msg = JSON.stringify({ type: 'session_ended' });
+      room.localParticipant.publishData(new TextEncoder().encode(msg), { reliable: true });
+    } catch(e){}
+    await room.disconnect();
+  }
+  window.location.href = '/admin/page/agenda';
+}
+
+// ========================= UTILITAIRES =========================
 function copierLien() {
   const lien = document.getElementById('lien-participant').textContent.trim();
   navigator.clipboard.writeText(lien).then(() => {
-    alert('Lien copié dans le presse-papier !');
+    afficherToast('Lien copié !');
   }).catch(() => {
     prompt('Copiez ce lien :', lien);
   });
 }
+
+let toastTimer = null;
+function afficherToast(msg, duree=3000) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('visible');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('visible'), duree);
+}
+
+// Auto-resize textarea chat
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('saisie-chat');
+  if (ta) ta.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+  });
+});
 </script>
 </body>
 </html>
