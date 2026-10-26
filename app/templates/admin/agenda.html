@@ -1071,7 +1071,7 @@ async function ouvrirDetailReservation(id) {
         <tr><td style="padding:5px 0;color:var(--grey);">Email</td><td style="padding:5px 0;"><a href="mailto:${rdv.email}">${rdv.email}</a></td></tr>
         <tr><td style="padding:5px 0;color:var(--grey);">Téléphone</td><td style="padding:5px 0;">${rdv.telephone || '—'}</td></tr>
         ${rdv.message ? `<tr><td style="padding:5px 0;color:var(--grey);vertical-align:top;">Message</td><td style="padding:5px 0;">${rdv.message}</td></tr>` : ''}
-        ${rdv.lien_visio_unique ? `<tr><td style="padding:5px 0;color:var(--grey);">Visio</td><td style="padding:5px 0;"><a href="${rdv.lien_visio_unique}" target="_blank">Rejoindre</a></td></tr>` : ''}
+        ${rdv.lien_visio_formateur ? `<tr><td style="padding:5px 0;color:var(--grey);">Visio</td><td style="padding:5px 0;display:flex;gap:10px;flex-wrap:wrap;"><a href="${rdv.lien_visio_formateur}" target="_blank" style="font-weight:600;color:#2E7D32;">▶ Rejoindre (Laurence)</a>${rdv.lien_visio_unique ? `<a href="${rdv.lien_visio_unique}" target="_blank" style="color:var(--grey);font-size:12px;">lien élève</a>` : ''}</td></tr>` : (rdv.lien_visio_unique ? `<tr><td style="padding:5px 0;color:var(--grey);">Visio</td><td style="padding:5px 0;"><a href="${rdv.lien_visio_unique}" target="_blank">Rejoindre</a></td></tr>` : '')}
       </table>
 
       <div style="margin-top:16px;">

@@ -1811,6 +1811,7 @@ def _serialiser_reservation(r: Reservation) -> dict:
         "modalite": r.type_seance.modalite if r.type_seance else "cabinet",
         "lieu_nom": r.lieu.nom if r.lieu else None,
         "lien_visio_unique": r.lien_visio_unique,
+        "lien_visio_formateur": f"/admin/live/{r.id}" if r.livekit_room_name else None,
         "ics_envoye": r.ics_envoye,
         "note_admin": r.note_admin,
         "token_annulation": r.token_annulation,
