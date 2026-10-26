@@ -1767,9 +1767,9 @@ def cron_rappels(session: Session = Depends(obtenir_session)):
         session.add(RappelEnvoye(reservation_id=resa.id, type_rappel="rappel_j1", succes=ok))
         resultats["j1" if ok else "erreurs"] += 1
 
-    # Suivi post-séance (24h à 26h après la séance)
-    post_min = maintenant - timedelta(hours=26)
-    post_max = maintenant - timedelta(hours=24)
+    # Suivi post-séance (2h à 4h après la séance — si non annulée)
+    post_min = maintenant - timedelta(hours=4)
+    post_max = maintenant - timedelta(hours=2)
     resa_post = (
         session.query(Reservation)
         .filter(

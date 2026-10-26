@@ -24,7 +24,7 @@ EMAIL_EXPEDITEUR = os.environ.get("EMAIL_EXPEDITEUR", "onboarding@resend.dev")
 NOM_EXPEDITEUR = os.environ.get("NOM_EXPEDITEUR", "Laurence Mermet-Bijon")
 EMAIL_ADMIN = os.environ.get("EMAIL_ADMIN", "laurencemb42@gmail.com")
 URL_PLATEFORME = os.environ.get("URL_PLATEFORME", "https://lms-formation.onrender.com")
-LIEN_AVIS_GOOGLE = os.environ.get("LIEN_AVIS_GOOGLE", "https://g.page/r/")
+LIEN_AVIS_GOOGLE = os.environ.get("LIEN_AVIS_GOOGLE", "https://g.page/r/CdfIBNwE-7F2EBM/review")
 
 
 # ---------------------------------------------------------------------------
