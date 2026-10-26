@@ -1031,9 +1031,14 @@ def disponibilites(
     _, nb_jours = calendar.monthrange(annee, mois_num)
     jours_disponibles = []
 
+    # Délai minimum de réservation : 2 jours avant la séance
+    # (aujourd'hui et demain ne sont plus disponibles pour les clients)
+    # En mode admin, pas de délai minimum (l'admin peut réserver librement)
+    date_minimum = date.today() if admin else date.today() + timedelta(days=2)
+
     for jour in range(1, nb_jours + 1):
         d = date(annee, mois_num, jour)
-        if d < date.today():
+        if d < date_minimum:
             continue
 
         # Si tout le jour est en indisponibilité, pas besoin de vérifier les plages
@@ -1109,7 +1114,8 @@ def creneaux_du_jour(
     except ValueError:
         raise HTTPException(status_code=400, detail="Format de date invalide (YYYY-MM-DD attendu).")
 
-    if d < date.today():
+    # Délai minimum de réservation : 2 jours avant la séance
+    if d < date.today() + timedelta(days=2):
         return {"creneaux": []}
 
     ts = session.get(TypeSeance, type_seance_id)
