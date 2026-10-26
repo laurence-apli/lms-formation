@@ -87,7 +87,8 @@
     <div class="divider"></div>
     <div class="label">Date et heure</div>
     <div class="valeur">
-      {{ reservation.date_debut.strftime('%A %d/%m/%Y') | capitalize }} à {{ reservation.date_debut.strftime('%H:%M') }}
+      {% set jours = ['Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi','Dimanche'] %}
+      {{ jours[reservation.date_debut.weekday()] }} {{ reservation.date_debut.strftime('%d/%m/%Y') }} à {{ reservation.date_debut.strftime('%H:%M') }}
     </div>
   </div>
 
