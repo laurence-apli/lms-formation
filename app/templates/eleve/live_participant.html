@@ -54,17 +54,124 @@
   .erreur.visible { display:block; }
 
   /* Zone de la salle (affichée après connexion) */
-  #zone-salle { display:none; height:100vh; flex-direction:column; }
+  #zone-salle { display:none; height:100vh; flex-direction:column; overflow:hidden; }
   #zone-salle.visible { display:flex; }
-  #livekit-room { flex:1; }
 
+  /* Barre du haut en salle */
   .barre-salle {
-    background:var(--ink); color:#F5EDD6; padding:10px 20px;
-    display:flex; align-items:center; gap:12px; font-size:13px;
-    flex-shrink:0;
+    background:var(--ink); color:#F5EDD6; padding:9px 16px;
+    display:flex; align-items:center; gap:10px; font-size:13px; flex-shrink:0;
   }
-  .barre-salle .nom-seance { font-family:'EB Garamond',serif; font-size:15px; flex:1; }
+  .barre-salle .nom-seance { font-family:'EB Garamond',serif; font-size:15px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+  /* Layout salle : vidéo | chat */
+  .layout-salle { flex:1; display:grid; grid-template-columns:1fr 270px; overflow:hidden; }
+
+  /* Zone vidéo */
+  #zone-videos {
+    background:#1A1508; display:grid; gap:4px; padding:4px;
+    overflow:auto; position:relative;
+  }
+
+  /* Barre de contrôle flottante */
+  .barre-ctrl-eleve {
+    position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
+    display:flex; gap:7px; background:rgba(0,0,0,.72); border-radius:36px;
+    padding:7px 12px; z-index:5; white-space:nowrap;
+  }
+  .btn-ctrl-e {
+    background:rgba(255,255,255,.12); border:none; border-radius:20px;
+    color:#fff; font-size:12px; font-family:'League Spartan',sans-serif; font-weight:600;
+    padding:7px 13px; cursor:pointer; display:flex; align-items:center; gap:5px;
+    transition:background .15s;
+  }
+  .btn-ctrl-e:hover { background:rgba(255,255,255,.22); }
+  .btn-ctrl-e.actif { background:rgba(184,146,42,.8); }
+  .btn-ctrl-e.muet  { background:rgba(196,123,110,.55); }
+  .btn-ctrl-e.quitter { background:rgba(196,123,110,.8); }
+  .btn-ctrl-e.quitter:hover { background:rgba(164,97,90,.9); }
+
+  /* Bannière mute forcé */
+  #banniere-mute {
+    display:none; position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:rgba(196,123,110,.92); color:#fff; border-radius:8px;
+    padding:7px 16px; font-size:12px; font-family:'League Spartan',sans-serif; font-weight:600;
+    z-index:6; white-space:nowrap;
+  }
+  #banniere-mute.visible { display:block; }
+
+  /* Zone chat */
+  .panneau-chat-eleve {
+    background:#FDFBF7; border-left:1px solid var(--border);
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+  .chat-titre {
+    font-family:'League Spartan',sans-serif; font-size:10px; font-weight:700;
+    letter-spacing:.08em; color:var(--gold); padding:9px 12px 6px;
+    border-bottom:1px solid var(--border); text-transform:uppercase; flex-shrink:0;
+  }
+  .fil-chat { flex:1; overflow-y:auto; padding:8px 10px; display:flex; flex-direction:column; gap:7px; }
+  .bulle { max-width:88%; }
+  .bulle.moi { align-self:flex-end; }
+  .bulle.eux { align-self:flex-start; }
+  .bulle .auteur { font-size:10px; color:var(--grey); margin-bottom:2px; font-weight:500; }
+  .bulle.moi .auteur { text-align:right; }
+  .bulle .txt { font-size:13px; line-height:1.45; border-radius:10px; padding:7px 11px; }
+  .bulle.moi .txt { background:var(--ink); color:#F5EDD6; border-radius:10px 10px 3px 10px; }
+  .bulle.eux .txt { background:#fff; border:1px solid var(--border); border-radius:10px 10px 10px 3px; }
+  .bulle .heure { font-size:10px; color:var(--grey); margin-top:2px; }
+  .bulle.moi .heure { text-align:right; }
+  .vide-chat { flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:5px; color:var(--grey); font-size:12px; text-align:center; padding:16px; }
+  .vide-chat span { font-size:22px; }
+  .zone-saisie {
+    border-top:1px solid var(--border); padding:7px 9px;
+    display:flex; gap:6px; align-items:flex-end; background:#fff;
+  }
+  .zone-saisie textarea {
+    flex:1; border:1px solid var(--border); border-radius:7px; padding:7px 9px;
+    font-size:13px; font-family:'Inter',sans-serif; resize:none; min-height:34px; max-height:90px;
+    background:var(--bg); color:var(--ink); line-height:1.4;
+  }
+  .zone-saisie textarea:focus { outline:none; border-color:var(--gold); }
+  .btn-send {
+    background:var(--ink); color:#F5EDD6; border:none; border-radius:7px;
+    padding:7px 12px; cursor:pointer; font-size:14px; height:34px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .btn-send:hover { background:#3E2E18; }
+
+  /* Toast */
+  #toast {
+    position:fixed; bottom:72px; left:50%; transform:translateX(-50%) translateY(10px);
+    background:rgba(0,0,0,.78); color:#fff; border-radius:7px; padding:7px 14px;
+    font-size:12px; z-index:99; opacity:0; transition:all .22s; pointer-events:none;
+  }
+  #toast.v { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* Avatars participants (quand pas de vidéo) */
+  .avatar-video {
+    width:72px; height:72px; border-radius:50%; background:var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'EB Garamond',serif; font-size:28px; color:var(--gold);
+    position:relative;
+  }
+  .avatar-video.parle::after {
+    content:''; position:absolute; inset:-4px; border-radius:50%;
+    border:2px solid #3B8C5A; animation:pulse-v .8s ease-in-out infinite;
+  }
+  @keyframes pulse-v { 0%,100%{opacity:1}50%{opacity:.35} }
+
+  /* Séance terminée */
+  #zone-fin {
+    display:none; min-height:100vh; flex-direction:column;
+    align-items:center; justify-content:center; padding:40px 20px; text-align:center;
+  }
+  #zone-fin.visible { display:flex; }
+
+  @media(max-width:700px) {
+    .layout-salle { grid-template-columns:1fr; }
+    .panneau-chat-eleve { max-height:200px; border-left:none; border-top:1px solid var(--border); }
+  }
   @media(max-width:500px) {
     .attente-titre { font-size:22px; }
     .infos-seance { padding:16px 18px; }
@@ -117,19 +224,65 @@
 <div id="zone-salle">
   <div class="barre-salle">
     <span class="nom-seance">🎥 Séance avec Laurence</span>
-    <button onclick="quitter()" style="background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; cursor:pointer;">
-      Quitter ✕
-    </button>
   </div>
-  <div id="livekit-room"></div>
+  <div class="layout-salle">
+
+    <!-- Vidéos + barre de contrôle -->
+    <div style="position:relative;display:flex;flex-direction:column;background:#1A1508;overflow:hidden;">
+      <div id="zone-videos" style="flex:1;display:grid;gap:4px;padding:4px;overflow:auto;"></div>
+      <div id="banniere-mute">🔇 Votre micro a été coupé par Laurence</div>
+      <div class="barre-ctrl-eleve">
+        <button class="btn-ctrl-e actif" id="btn-micro-e" onclick="toggleMicroEleve()" title="Micro">
+          <span id="icone-micro-e">🎙</span><span id="label-micro-e">Micro</span>
+        </button>
+        <button class="btn-ctrl-e actif" id="btn-cam-e" onclick="toggleCamEleve()" title="Caméra">
+          <span id="icone-cam-e">📷</span><span id="label-cam-e">Caméra</span>
+        </button>
+        <button class="btn-ctrl-e quitter" onclick="quitter()" title="Quitter">
+          <span>✕</span><span>Quitter</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div class="panneau-chat-eleve">
+      <div class="chat-titre">Chat</div>
+      <div class="fil-chat" id="fil-chat-e">
+        <div class="vide-chat"><span>💬</span><div>Les messages de Laurence apparaîtront ici</div></div>
+      </div>
+      <div class="zone-saisie">
+        <textarea id="saisie-e" placeholder="Votre message…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMsgEleve();}"></textarea>
+        <button class="btn-send" onclick="envoyerMsgEleve()" title="Envoyer">➤</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ======================= SÉANCE TERMINÉE ======================= -->
+<div id="zone-fin">
+  <div style="font-size:56px;margin-bottom:20px;">🌸</div>
+  <h1 style="font-family:'EB Garamond',serif;font-size:26px;font-weight:600;margin:0 0 8px;">Séance terminée</h1>
+  <p style="font-family:'EB Garamond',serif;font-size:16px;font-style:italic;color:var(--grey);margin:0 0 28px;">Merci pour votre présence.</p>
+  <a href="/eleve/accueil" style="background:linear-gradient(135deg,#B8922A,#8B6D1F);color:#fff;border:none;border-radius:10px;padding:13px 30px;font-family:'League Spartan',sans-serif;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.04em;">
+    Retour à l'accueil
+  </a>
 </div>
 
 <script>
 const TOKEN_ANNULATION = "{{ token_annulation }}";
 const LIVEKIT_URL = "{{ livekit_url }}";
+const MON_PRENOM = "{{ reservation.prenom }}";
 
 let room = null;
+let microActif = true;
+let camActive = true;
 
+// ========================= REJOINDRE =========================
 async function rejoindre() {
   const btn = document.getElementById('btn-rejoindre');
   const chargement = document.getElementById('chargement');
@@ -140,138 +293,285 @@ async function rejoindre() {
   erreur.classList.remove('visible');
 
   try {
-    // Récupérer le token JWT depuis le serveur
     const rep = await fetch(`/api/live/token/${TOKEN_ANNULATION}`);
     if (!rep.ok) {
-      const data = await rep.json().catch(() => ({}));
-      throw new Error(data.detail || `Erreur ${rep.status}`);
+      const d = await rep.json().catch(() => ({}));
+      throw new Error(d.detail || `Erreur ${rep.status}`);
     }
     const data = await rep.json();
 
-    // Connecter à LiveKit
     room = new LivekitClient.Room({
       adaptiveStream: true,
       dynacast: true,
       videoCaptureDefaults: { resolution: LivekitClient.VideoPresets.h720.resolution },
     });
 
-    await room.connect(data.livekit_url || LIVEKIT_URL, data.token);
+    brancherEvenements();
 
-    // Activer caméra + micro
+    await room.connect(data.livekit_url || LIVEKIT_URL, data.token);
     await room.localParticipant.setCameraEnabled(true);
     await room.localParticipant.setMicrophoneEnabled(true);
 
-    // Afficher la salle
-    afficherSalle(room);
+    afficherSalle();
 
   } catch (e) {
-    console.error('Erreur connexion LiveKit:', e);
-    erreur.textContent = `Impossible de rejoindre la séance : ${e.message}. Vérifiez votre connexion et réessayez.`;
+    console.error('Erreur LiveKit élève:', e);
+    erreur.textContent = `Impossible de rejoindre : ${e.message}. Vérifiez votre connexion et réessayez.`;
     erreur.classList.add('visible');
     btn.disabled = false;
     chargement.classList.remove('visible');
   }
 }
 
-function afficherSalle(room) {
-  document.getElementById('zone-attente').style.display = 'none';
-  document.getElementById('zone-salle').classList.add('visible');
+// ========================= ÉVÉNEMENTS LIVEKIT =========================
+function brancherEvenements() {
+  const container = document.getElementById('zone-videos');
 
-  const container = document.getElementById('livekit-room');
-  container.innerHTML = '';
-
-  // Créer l'interface vidéo pour chaque participant
-  function creerElementVideo(participant, videoTrack) {
-    const wrap = document.createElement('div');
-    wrap.id = `participant-${participant.identity}`;
-    wrap.style.cssText = `
-      position:relative; background:#111; border-radius:8px; overflow:hidden;
-      display:flex; align-items:center; justify-content:center;
-    `;
-    const video = document.createElement('video');
-    video.autoplay = true;
-    video.playsInline = true;
-    video.style.cssText = 'width:100%; height:100%; object-fit:cover;';
-    videoTrack.attach(video);
-    const nom = document.createElement('div');
-    nom.textContent = participant.name || participant.identity;
-    nom.style.cssText = `
-      position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,.55);
-      color:#fff; font-size:12px; padding:3px 8px; border-radius:4px;
-    `;
-    wrap.appendChild(video);
-    wrap.appendChild(nom);
-    return wrap;
-  }
-
-  function miseEnPageParticipants() {
-    const n = container.children.length;
-    if (n === 0) return;
-    const cols = n === 1 ? 1 : 2;
-    container.style.cssText = `
-      display:grid; grid-template-columns:repeat(${cols}, 1fr);
-      gap:8px; padding:8px; height:100%; background:#1A1508;
-    `;
-  }
-
-  // Participant local (nous-mêmes)
-  room.localParticipant.videoTrackPublications.forEach(pub => {
-    if (pub.track && pub.kind === 'video') {
-      container.appendChild(creerElementVideo(room.localParticipant, pub.track));
-      miseEnPageParticipants();
-    }
-  });
-
-  // Participants distants existants
-  room.remoteParticipants.forEach(participant => {
-    participant.videoTrackPublications.forEach(pub => {
-      if (pub.track) {
-        container.appendChild(creerElementVideo(participant, pub.track));
-        miseEnPageParticipants();
-      }
-    });
-  });
-
-  // Écouter les nouveaux participants
-  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-    if (track.kind === 'video') {
-      const existant = document.getElementById(`participant-${participant.identity}`);
-      if (!existant) {
-        container.appendChild(creerElementVideo(participant, track));
-        miseEnPageParticipants();
-      }
-    }
+  room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, pub, participant) => {
+    if (track.kind === 'video') ajouterVideo(participant, track);
     if (track.kind === 'audio') {
-      const audio = document.createElement('audio');
-      audio.autoplay = true;
-      track.attach(audio);
-      document.body.appendChild(audio);
+      const a = document.createElement('audio');
+      a.autoplay = true;
+      track.attach(a);
+      document.body.appendChild(a);
     }
   });
 
-  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
-    const el = document.getElementById(`participant-${participant.identity}`);
-    if (el) { el.remove(); miseEnPageParticipants(); }
+  room.on(LivekitClient.RoomEvent.TrackUnsubscribed, (track, pub, participant) => {
+    if (track.kind === 'video') supprimerVideo(participant.identity);
   });
 
   room.on(LivekitClient.RoomEvent.ParticipantDisconnected, participant => {
-    const el = document.getElementById(`participant-${participant.identity}`);
-    if (el) { el.remove(); miseEnPageParticipants(); }
+    supprimerVideo(participant.identity);
   });
 
-  room.on(LivekitClient.RoomEvent.Disconnected, () => {
-    alert('Vous avez été déconnecté de la séance.');
-    window.location.href = '/eleve/live';
+  // Indicateur de prise de parole
+  room.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, speakers => {
+    document.querySelectorAll('.avatar-video').forEach(a => a.classList.remove('parle'));
+    speakers.forEach(p => {
+      const av = document.getElementById(`av-${p.identity}`);
+      if (av) av.classList.add('parle');
+    });
   });
+
+  // ---- DataChannel : mute / chat / fin de séance ----
+  room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+    try {
+      const msg = JSON.parse(new TextDecoder().decode(payload));
+      gererMessageDataChannel(msg, participant);
+    } catch(e) { /* ignore messages non-JSON */ }
+  });
+
+  // Déconnexion
+  room.on(LivekitClient.RoomEvent.Disconnected, () => {
+    afficherFin("Vous avez été déconnecté de la séance.");
+  });
+}
+
+// ========================= DATACHANNEL =========================
+function gererMessageDataChannel(msg, emetteur) {
+  switch (msg.type) {
+
+    case 'mute_request':
+      // Si c'est global (pas de target) ou ciblé sur nous
+      if (!msg.target || msg.target === room.localParticipant.identity) {
+        if (microActif) {
+          couperMicro(true); // coupe et marque "forcé"
+          afficherBanniereMute(true);
+          afficherToast("🔇 Votre micro a été coupé par Laurence");
+        }
+      }
+      break;
+
+    case 'unmute_request':
+      // Réautorisation — on lève la bannière mais on ne réactive pas
+      // automatiquement le micro (vie privée : c'est à l'élève de décider)
+      afficherBanniereMute(false);
+      afficherToast("🎙 Vous pouvez réactiver votre micro");
+      break;
+
+    case 'chat':
+      ajouterBulle(emetteur ? (emetteur.name || emetteur.identity) : 'Laurence', msg.texte, false);
+      break;
+
+    case 'session_ended':
+      if (room) room.disconnect();
+      afficherFin();
+      break;
+  }
+}
+
+// ========================= AFFICHAGE SALLE =========================
+function afficherSalle() {
+  document.getElementById('zone-attente').style.display = 'none';
+  document.getElementById('zone-salle').classList.add('visible');
+
+  // Vidéo locale
+  room.localParticipant.videoTrackPublications.forEach(pub => {
+    if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
+  });
+
+  // Participants déjà présents
+  room.remoteParticipants.forEach(p => {
+    p.videoTrackPublications.forEach(pub => { if(pub.track) ajouterVideo(p, pub.track); });
+  });
+}
+
+function ajouterVideo(participant, track, local=false) {
+  const container = document.getElementById('zone-videos');
+  const vid_id = `vid-${participant.identity}`;
+  if (document.getElementById(vid_id)) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = vid_id;
+  wrap.style.cssText = 'position:relative;background:#111;border-radius:6px;overflow:hidden;min-height:160px;display:flex;align-items:center;justify-content:center;';
+
+  const video = document.createElement('video');
+  video.autoplay = true; video.playsInline = true;
+  if (local) video.muted = true;
+  video.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+  track.attach(video);
+
+  const label = document.createElement('div');
+  label.textContent = local ? `Vous (${MON_PRENOM})` : (participant.name || participant.identity);
+  label.style.cssText = 'position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;z-index:1;';
+
+  // Avatar animé (prise de parole)
+  const av = document.createElement('div');
+  av.className = 'avatar-video'; av.id = `av-${participant.identity}`;
+  av.textContent = (participant.name || '?')[0].toUpperCase();
+  av.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:none;';
+
+  wrap.appendChild(video);
+  wrap.appendChild(label);
+  wrap.appendChild(av);
+  container.appendChild(wrap);
+  miseEnPage();
+}
+
+function supprimerVideo(identity) {
+  const el = document.getElementById(`vid-${identity}`);
+  if (el) { el.remove(); miseEnPage(); }
+}
+
+function miseEnPage() {
+  const c = document.getElementById('zone-videos');
+  const n = c.children.length;
+  c.style.gridTemplateColumns = `repeat(${n <= 1 ? 1 : n <= 4 ? 2 : 3}, 1fr)`;
+}
+
+// ========================= CONTRÔLES ÉLÈVE =========================
+async function toggleMicroEleve() {
+  if (!room) return;
+  microActif = !microActif;
+  couperMicro(!microActif);
+  if (microActif) afficherBanniereMute(false);
+}
+
+async function couperMicro(couper) {
+  microActif = !couper;
+  await room.localParticipant.setMicrophoneEnabled(!couper);
+  const btn = document.getElementById('btn-micro-e');
+  const ic  = document.getElementById('icone-micro-e');
+  const lb  = document.getElementById('label-micro-e');
+  if (couper) {
+    btn.classList.remove('actif'); btn.classList.add('muet');
+    ic.textContent = '🔕'; lb.textContent = 'Coupé';
+  } else {
+    btn.classList.add('actif'); btn.classList.remove('muet');
+    ic.textContent = '🎙'; lb.textContent = 'Micro';
+  }
+}
+
+async function toggleCamEleve() {
+  if (!room) return;
+  camActive = !camActive;
+  await room.localParticipant.setCameraEnabled(camActive);
+  const btn = document.getElementById('btn-cam-e');
+  const ic  = document.getElementById('icone-cam-e');
+  const lb  = document.getElementById('label-cam-e');
+  if (camActive) {
+    btn.classList.add('actif'); btn.classList.remove('muet');
+    ic.textContent = '📷'; lb.textContent = 'Caméra';
+    room.localParticipant.videoTrackPublications.forEach(pub => {
+      if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
+    });
+  } else {
+    btn.classList.remove('actif'); btn.classList.add('muet');
+    ic.textContent = '📵'; lb.textContent = 'Arrêtée';
+    supprimerVideo(room.localParticipant.identity);
+  }
+}
+
+function afficherBanniereMute(visible) {
+  document.getElementById('banniere-mute').classList.toggle('visible', visible);
 }
 
 async function quitter() {
-  if (room) {
-    await room.disconnect();
-    room = null;
-  }
-  window.location.href = '/eleve/live';
+  if (room) { await room.disconnect(); room = null; }
+  window.location.href = '/eleve/accueil';
 }
+
+// ========================= FIN DE SÉANCE =========================
+function afficherFin(msg) {
+  document.getElementById('zone-salle').classList.remove('visible');
+  document.getElementById('zone-attente').style.display = 'none';
+  document.getElementById('zone-fin').classList.add('visible');
+}
+
+// ========================= CHAT =========================
+function ajouterBulle(auteur, texte, moi=false) {
+  const fil = document.getElementById('fil-chat-e');
+  const vide = fil.querySelector('.vide-chat');
+  if (vide) vide.remove();
+
+  const heure = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+  const b = document.createElement('div');
+  b.className = `bulle ${moi ? 'moi' : 'eux'}`;
+  b.innerHTML = `<div class="auteur">${auteur}</div>
+    <div class="txt">${escHTML(texte)}</div>
+    <div class="heure">${heure}</div>`;
+  fil.appendChild(b);
+  fil.scrollTop = fil.scrollHeight;
+}
+
+function escHTML(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function envoyerMsgEleve() {
+  if (!room) return;
+  const ta = document.getElementById('saisie-e');
+  const texte = ta.value.trim();
+  if (!texte) return;
+
+  ajouterBulle(MON_PRENOM, texte, true);
+
+  const data = new TextEncoder().encode(JSON.stringify({ type: 'chat', texte }));
+  try { room.localParticipant.publishData(data, { reliable: true }); } catch(e){}
+
+  ta.value = '';
+  ta.style.height = 'auto';
+}
+
+// ========================= TOAST =========================
+let _toastTimer = null;
+function afficherToast(msg, d=3500) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('v');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('v'), d);
+}
+
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('saisie-e');
+  if (ta) ta.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 90) + 'px';
+  });
+});
 </script>
 </body>
 </html>
