@@ -169,10 +169,18 @@
             {{ resa.date_debut.strftime('%H:%M') }} — {{ resa.date_fin.strftime('%H:%M') }}
           </div>
         </div>
-        {% if resa.lien_visio_unique %}
-        <a href="{{ resa.lien_visio_unique }}" class="btn-rejoindre" target="_blank" rel="noopener">
-          <span>▶</span> Rejoindre
-        </a>
+        {% if resa.livekit_room_name %}
+          {# Séance LiveKit : lien vers notre interface dédiée #}
+          <a href="{{ resa.lien_visio_unique }}" class="btn-rejoindre">
+            <span>▶</span> Rejoindre
+          </a>
+        {% elif resa.lien_visio_unique %}
+          {# Lien visio externe (Whereby, Jitsi…) — s'ouvre dans un nouvel onglet #}
+          <a href="{{ resa.lien_visio_unique }}" class="btn-rejoindre" target="_blank" rel="noopener">
+            <span>▶</span> Rejoindre
+          </a>
+        {% else %}
+          <span style="font-size:12px;color:var(--grey);font-style:italic;">Lien à venir</span>
         {% endif %}
       </div>
     {% endfor %}

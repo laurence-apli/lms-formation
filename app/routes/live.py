@@ -50,12 +50,17 @@ def page_hub_live(
     maintenant = datetime.utcnow()
     dans_une_semaine = maintenant + timedelta(days=7)
 
+    # On inclut toutes les réservations visio : avec LiveKit (livekit_room_name renseigné)
+    # ET sans LiveKit (lien_visio_unique renseigné mais pas de salle LiveKit — créées avant
+    # l'activation de LiveKit ou avec un lien externe Whereby/Jitsi).
+    from ..models import Lieu
     reservations_live = (
         session.query(Reservation)
+        .join(Reservation.lieu)
         .filter(
             Reservation.email == eleve.email,
             Reservation.statut == "en_attente",
-            Reservation.livekit_room_name.isnot(None),
+            Lieu.type_lieu == "visio",
             Reservation.date_debut >= maintenant - timedelta(hours=1),
             Reservation.date_debut <= dans_une_semaine,
         )

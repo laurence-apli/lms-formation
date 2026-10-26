@@ -506,6 +506,20 @@ def email_admin_nouvelle_reservation(reservation, type_seance, lieu) -> bool:
     """Notifie Laurence dès qu'une cliente prend rendez-vous."""
     date_fr = _formater_date_fr(reservation.date_debut)
     lieu_label = lieu.nom if lieu else "—"
+
+    # Lien de connexion formateur (si séance LiveKit configurée)
+    bloc_lien_formateur = ""
+    if reservation.livekit_room_name:
+        lien_formateur = f"{URL_PLATEFORME}/admin/live/{reservation.id}"
+        bloc_lien_formateur = f"""
+        <tr><td style="padding:8px 14px;color:#7A6A56;font-size:13px;">Lien formateur</td>
+            <td style="padding:8px 14px;">
+              <a href="{lien_formateur}"
+                 style="color:#B8922A;font-weight:600;font-size:13px;">
+                Démarrer la séance →
+              </a>
+            </td></tr>"""
+
     contenu = f"""
       <p style="margin:0 0 16px;font-size:15px;color:#2E2210;">
         <strong>{reservation.prenom} {reservation.nom}</strong>
@@ -525,6 +539,7 @@ def email_admin_nouvelle_reservation(reservation, type_seance, lieu) -> bool:
             <td style="padding:8px 14px;color:#2E2210;">{reservation.telephone or '—'}</td></tr>
         <tr><td style="padding:8px 14px;color:#7A6A56;font-size:13px;">Message</td>
             <td style="padding:8px 14px;color:#2E2210;">{reservation.message or '—'}</td></tr>
+        {bloc_lien_formateur}
       </table>
       <p style="margin:16px 0 0;font-size:12px;color:#8a7656;">
         Gérer via l'admin : {URL_PLATEFORME}/admin/agenda/
