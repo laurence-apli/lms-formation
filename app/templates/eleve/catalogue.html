@@ -13,8 +13,11 @@
 }
 * { box-sizing:border-box; }
 body { margin:0; font-family:var(--sans); background:var(--creme); color:var(--profond); }
-.topbar { background:var(--profond); color:var(--creme); padding:20px 40px; font-family:var(--serif); font-size:20px; display:flex; align-items:center; justify-content:space-between; gap:20px; }
-.topbar a.retour { font-family:var(--sans); font-size:12.5px; color:var(--creme); text-decoration:none; border:1px solid rgba(253,250,245,.3); border-radius:20px; padding:7px 16px; white-space:nowrap; }
+.topbar { background:var(--profond); color:var(--creme); padding:14px 32px; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:16px; }
+.topbar .brand { font-family:var(--serif); font-size:16px; font-weight:600; cursor:pointer; justify-self:start; display:flex; align-items:center; gap:10px; text-decoration:none; color:var(--creme); }
+.topbar .topbar-titre { font-family:var(--serif); font-size:15px; font-style:italic; color:rgba(253,250,245,.8); text-align:center; justify-self:center; white-space:nowrap; }
+.topbar .nav-droite { font-size:13px; display:flex; align-items:center; gap:10px; justify-self:end; }
+.topbar a.retour { font-family:var(--sans); font-size:12.5px; color:var(--creme); text-decoration:none; border:1px solid rgba(253,250,245,.3); border-radius:20px; padding:6px 14px; white-space:nowrap; }
 .topbar a.retour:hover { border-color:var(--or); color:var(--or); }
 .wrap { max-width:1180px; margin:0 auto; padding:36px 28px 80px; display:grid; grid-template-columns:1fr 360px; gap:32px; align-items:start; }
 h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; }
@@ -92,8 +95,15 @@ h1 { font-family:var(--serif); font-weight:300; font-size:32px; margin:0 0 6px; 
 <body>
 
 <div class="topbar">
-  <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
-  <a class="retour" href="/eleve/tableau-de-bord">← Retour à mon espace</a>
+  <a class="brand" href="/eleve/accueil">
+    <span style="font-size:26px;">🌸</span>
+    <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
+  </a>
+  <span class="topbar-titre">Catalogue des formations</span>
+  <div class="nav-droite">
+    <a class="retour" href="/eleve/accueil">← Accueil</a>
+    <a class="retour" href="/eleve/tableau-de-bord">Mes formations</a>
+  </div>
 </div>
 
 <div class="wrap">

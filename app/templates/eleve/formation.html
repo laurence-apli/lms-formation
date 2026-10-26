@@ -185,16 +185,19 @@ html.lv-pseudo-actif, html.lv-pseudo-actif body { overflow:hidden; }
   .lecteur-audio { gap:8px; padding-right:12px; }
   .lecteur-audio .la-temps { font-size:12px; min-width:32px; }
 }
+.lien-catalogue { background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; text-decoration:none; display:inline-block; }
+.lien-catalogue:hover { border-color:var(--gold); color:var(--gold); }
 </style>
 
 <div class="topbar-eleve">
-  <a class="brand" href="/eleve/tableau-de-bord">
-    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🏷️</span>{% endif %}
+  <a class="brand" href="/eleve/accueil">
+    {% if profil.logo_url %}<img src="{{ profil.logo_url }}" style="height:52px;width:52px;object-fit:contain;border-radius:8px;">{% else %}<span style="font-size:32px;">🌸</span>{% endif %}
     <span>Formation proposée par {{ profil.prenom }} {{ profil.nom }}</span>
   </a>
   <div class="topbar-bienvenue">Bienvenue {{ eleve.prenom }} dans ton espace personnel</div>
   <div class="user-zone">
     <span>{{ eleve.prenom }} {{ eleve.nom }}</span>
+    <a href="/eleve/accueil" class="lien-catalogue">← Accueil</a>
     <form action="/eleve/deconnexion" method="post" style="margin:0;"><button type="submit">Déconnexion</button></form>
   </div>
 </div>
