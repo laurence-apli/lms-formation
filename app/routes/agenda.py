@@ -1713,7 +1713,7 @@ def confirmer_annulation_rendez_vous(
 # CRON — Rappels automatiques
 # ===========================================================================
 
-@cron_router.post("/agenda-rappels")
+@cron_router.api_route("/agenda-rappels", methods=["GET", "POST", "HEAD"])
 def cron_rappels(session: Session = Depends(obtenir_session)):
     """Envoi des rappels J-7, J-1 et suivi post-séance.
     À appeler via un cron Render (toutes les heures suffit).
