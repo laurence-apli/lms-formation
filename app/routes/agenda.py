@@ -16,7 +16,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -689,6 +689,9 @@ def api_lister_types_seances(
     q = session.query(TypeSeance)
     if actif is not None:
         q = q.filter_by(actif=bool(actif))
+    elif not admin:
+        # Par défaut (hors mode admin), n'afficher que les types actifs
+        q = q.filter_by(actif=True)
 
     ts_all = q.order_by(TypeSeance.ordre).all()
 
