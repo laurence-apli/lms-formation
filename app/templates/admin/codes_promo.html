@@ -155,7 +155,15 @@ async function enregistrerCode() {
   const dateFinBrute = document.getElementById('input-fin').value.trim();
 
   if (!code) { afficherToast("Le code est obligatoire."); return; }
-  if (valeurBrute === '' || isNaN(valeur)) { afficherToast("La valeur de la réduction est obligatoire."); return; }
+  // La valeur globale est optionnelle si tous les tarifs cochés ont une valeur spécifique
+  const tarifsCoches = Array.from(document.querySelectorAll('#formations-check input[type=checkbox]:checked'));
+  const tousOntValeurSpecifique = tarifsCoches.length > 0 && tarifsCoches.every(cb => {
+    const inp = document.querySelector(`[data-tarif-valeur="${cb.value}"]`);
+    return inp && inp.value !== '' && !isNaN(parseFloat(inp.value));
+  });
+  if (valeurBrute === '' || isNaN(valeur)) {
+    if (!tousOntValeurSpecifique) { afficherToast("La valeur de la réduction est obligatoire (ou renseigne une valeur spécifique pour chaque tarif coché)."); return; }
+  }
   if (dateFinBrute && !/^\d{2}\/\d{2}\/\d{4}$/.test(dateFinBrute)) { afficherToast("Date de fin : utilise le format jj/mm/aaaa."); return; }
 
   // Construit la liste tarifs avec valeurs spécifiques éventuelles

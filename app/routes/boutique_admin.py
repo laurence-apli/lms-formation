@@ -111,7 +111,7 @@ class TarifPromoRequete(BaseModel):
 class CodePromoRequete(BaseModel):
     code: str
     type_reduction: str
-    valeur: float
+    valeur: float | None = None  # optionnel si tous les tarifs ont une valeur spécifique
     reserve_premier_achat: bool = False
     date_fin: str | None = None
     tarif_ids: list[int] = []  # rétro-compatibilité : simple liste d'IDs sans valeur spécifique
@@ -165,7 +165,7 @@ def creer_code_promo(requete: CodePromoRequete, session: Session = Depends(obten
     from datetime import datetime
     date_fin = datetime.strptime(requete.date_fin, "%d/%m/%Y") if requete.date_fin else None
     code = CodePromo(
-        code=requete.code.strip().upper(), type_reduction=requete.type_reduction, valeur=requete.valeur,
+        code=requete.code.strip().upper(), type_reduction=requete.type_reduction, valeur=requete.valeur or 0,
         reserve_premier_achat=requete.reserve_premier_achat, date_fin=date_fin,
     )
     code.liens_tarifs = _construire_liens_tarifs(requete, session)
@@ -182,7 +182,7 @@ def modifier_code_promo(code_id: int, requete: CodePromoRequete, session: Sessio
         raise HTTPException(status_code=404, detail="Code introuvable.")
     code.code = requete.code.strip().upper()
     code.type_reduction = requete.type_reduction
-    code.valeur = requete.valeur
+    code.valeur = requete.valeur or 0
     code.reserve_premier_achat = requete.reserve_premier_achat
     code.date_fin = datetime.strptime(requete.date_fin, "%d/%m/%Y") if requete.date_fin else None
     # Remplace tous les liens existants (cascade delete-orphan s'en charge)
