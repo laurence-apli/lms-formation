@@ -1181,6 +1181,12 @@ function ouvrirModalType(id = null) {
           <small style="color:var(--grey);font-size:11px;">Pause entre deux réservations</small>
         </div>
       </div>
+      <label>Modalité</label>
+      <select name="modalite" style="width:100%;">
+        <option value="cabinet" ${(type?.modalite||'cabinet')==='cabinet'?'selected':''}>🏢 Cabinet</option>
+        <option value="visio" ${type?.modalite==='visio'?'selected':''}>💻 Visio</option>
+        <option value="les_deux" ${type?.modalite==='les_deux'?'selected':''}>🏢💻 Cabinet ou Visio</option>
+      </select>
       <label>Couleur d'affichage</label>
       <div style="display:flex;align-items:center;gap:10px;">
         <input name="couleur_hex" type="color" value="${type?.couleur_hex||'#B8922A'}" style="height:36px;width:48px;padding:2px;border-radius:6px;cursor:pointer;" oninput="this.nextElementSibling.textContent=this.value">
@@ -1244,7 +1250,7 @@ async function sauvegarderType(evt, id) {
     nom: fd.get('nom'),
     duree_minutes: parseInt(fd.get('duree_minutes')),
     pause_apres_minutes: parseInt(fd.get('pause_apres_minutes') || '0'),
-    modalite: 'cabinet',   // champ supprimé du formulaire, valeur neutre conservée en base
+    modalite: fd.get('modalite') || 'cabinet',
     couleur_hex: fd.get('couleur_hex'),
     description: fd.get('description') || '',
     prix: isNaN(prixVal) ? null : prixVal,
