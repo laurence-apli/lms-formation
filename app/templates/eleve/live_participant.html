@@ -290,7 +290,7 @@ let camActive = true;
 
 // ========================= REJOINDRE =========================
 let _timerTropTot = null;
-const DATE_DEBUT = new Date("{{ reservation.date_debut.isoformat() }}Z");  // UTC
+const DATE_DEBUT = new Date("{{ reservation.date_debut.isoformat() }}");  // heure locale (pas de Z : pas UTC)
 
 function _afficherTropTot(message) {
   const zoneTropTot = document.getElementById('zone-trop-tot');
@@ -633,7 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const jours = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
     const mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
     const d = DATE_DEBUT;
-    // Convertir UTC → heure locale pour l'affichage
+    // Afficher en heure locale (getDay/getHours tiennent compte du fuseau du navigateur)
     const label = `${jours[d.getDay()]} ${d.getDate()} ${mois[d.getMonth()]} à ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
     _afficherTropTot(`Votre rendez-vous est le ${label}. Vous pourrez rejoindre la salle 15 minutes avant.`);
   }
