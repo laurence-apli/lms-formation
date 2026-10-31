@@ -70,6 +70,7 @@
 <div id="tab-reservations" style="display:none;">
   <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
     <select id="filtre-statut" onchange="chargerReservations()" class="btn btn-sm" style="font-family:inherit;">
+      <option value="actifs">À venir (actifs)</option>
       <option value="">Tous statuts</option>
       <option value="en_attente">En attente</option>
       <option value="annulee">Annulée</option>
@@ -609,14 +610,20 @@ async function chargerReservations() {
   const statut = document.getElementById('filtre-statut').value;
   const date = document.getElementById('filtre-date').value;
   const params = new URLSearchParams();
-  if (statut) params.set('statut', statut);
+  // "actifs" = à venir + non annulés (filtre côté client après chargement)
+  const modeActifs = statut === 'actifs';
+  if (!modeActifs && statut) params.set('statut', statut);
   if (date) params.set('date', date);
 
   const conteneur = document.getElementById('liste-reservations');
   conteneur.innerHTML = '<div class="empty-state"><div class="big">⏳</div>Chargement…</div>';
   try {
     const r = await appelApi('/api/agenda/reservations?' + params.toString());
-    const liste = Array.isArray(r) ? r : (r.reservations || []);
+    let liste = Array.isArray(r) ? r : (r.reservations || []);
+    if (modeActifs) {
+      const maintenant = new Date();
+      liste = liste.filter(rdv => rdv.statut !== 'annulee' && new Date(rdv.date_debut) >= maintenant);
+    }
     if (liste.length === 0) {
       conteneur.innerHTML = '<div class="empty-state"><div class="big">📋</div>Aucune réservation trouvée.</div>';
       return;
@@ -653,7 +660,7 @@ function carteReservation(rdv) {
 }
 
 function reinitialiserFiltres() {
-  document.getElementById('filtre-statut').value = '';
+  document.getElementById('filtre-statut').value = 'actifs';
   document.getElementById('filtre-date').value = '';
   chargerReservations();
 }
