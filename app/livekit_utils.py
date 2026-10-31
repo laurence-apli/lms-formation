@@ -184,3 +184,76 @@ def generer_nom_salle(reservation_id: int) -> str:
 def livekit_actif() -> bool:
     """Indique si LiveKit est configuré sur ce déploiement."""
     return _LIVEKIT_ACTIF
+
+
+# ---------------------------------------------------------------------------
+# Actions sur les participants (côté serveur via API REST LiveKit)
+# ---------------------------------------------------------------------------
+
+def expulser_participant(room_name: str, identity: str) -> bool:
+    """
+    Expulse immédiatement un participant de la salle (côté serveur).
+    La déconnexion est forcée par le serveur LiveKit, le client n'a pas son mot à dire.
+    """
+    if not _LIVEKIT_ACTIF:
+        return False
+    resultat = _appel_api("POST", "/twirp/livekit.RoomService/RemoveParticipant", {
+        "room": room_name,
+        "identity": identity,
+    })
+    if resultat is not None:
+        logger.info("LiveKit : participant %s expulsé de %s", identity, room_name)
+        return True
+    return False
+
+
+def muter_participant_serveur(room_name: str, identity: str, track_sid: str, muted: bool) -> bool:
+    """
+    Coupe ou réactive le micro d'un participant côté serveur LiveKit.
+    track_sid : identifiant de la piste audio (récupéré depuis les métadonnées du participant).
+    muted=True  → coupe le micro
+    muted=False → réactive (mais l'élève reste maître de son propre micro)
+    """
+    if not _LIVEKIT_ACTIF:
+        return False
+    resultat = _appel_api("POST", "/twirp/livekit.RoomService/MutePublishedTrack", {
+        "room": room_name,
+        "identity": identity,
+        "track_sid": track_sid,
+        "muted": muted,
+    })
+    if resultat is not None:
+        action = "coupé" if muted else "réactivé"
+        logger.info("LiveKit : micro de %s %s dans %s", identity, action, room_name)
+        return True
+    return False
+
+
+def lister_participants(room_name: str) -> list:
+    """
+    Retourne la liste des participants actifs dans la salle avec leurs pistes.
+    Utile pour obtenir les track_sid avant un mute serveur.
+    """
+    if not _LIVEKIT_ACTIF:
+        return []
+    resultat = _appel_api("POST", "/twirp/livekit.RoomService/ListParticipants", {
+        "room": room_name,
+    })
+    if resultat and "participants" in resultat:
+        return resultat["participants"]
+    return []
+
+
+def terminer_salle(room_name: str) -> bool:
+    """
+    Ferme la salle et expulse tous les participants (fin de séance côté serveur).
+    """
+    if not _LIVEKIT_ACTIF:
+        return False
+    resultat = _appel_api("POST", "/twirp/livekit.RoomService/DeleteRoom", {
+        "room": room_name,
+    })
+    if resultat is not None:
+        logger.info("LiveKit salle supprimée : %s", room_name)
+        return True
+    return False

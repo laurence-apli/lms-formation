@@ -66,27 +66,81 @@
 
   /* ----- Zone vidéo ----- */
   #conteneur-videos {
-    background:#1A1508; display:grid; gap:4px; padding:4px; overflow:auto; position:relative;
+    background:#1A1508; display:grid; gap:4px; padding:4px; overflow:hidden; position:relative;
   }
 
-  /* ----- Barre de contrôle (au-dessus des colonnes droites, en bas de vidéo) ----- */
+  /* Layouts vidéo */
+  #conteneur-videos.layout-grille { /* auto */ }
+  #conteneur-videos.layout-spotlight > .video-wrap:first-child {
+    grid-column: 1 / -1; grid-row: 1;
+  }
+  #conteneur-videos.layout-solo > .video-wrap:not(:first-child) { display:none; }
+
+  /* Wrap vidéo individuel */
+  .video-wrap {
+    position:relative; background:#111; border-radius:6px; overflow:hidden;
+    min-height:140px; display:flex; align-items:center; justify-content:center;
+    transition: border .2s;
+  }
+  .video-wrap.speaker-actif {
+    outline: 2.5px solid var(--green);
+    outline-offset: 0;
+    animation: pulse-speaker .8s ease-in-out infinite;
+  }
+  @keyframes pulse-speaker { 0%,100%{outline-color:var(--green)} 50%{outline-color:rgba(59,140,90,.35)} }
+
+  .video-wrap video { width:100%; height:100%; object-fit:cover; }
+  .video-label {
+    position:absolute; bottom:6px; left:8px;
+    background:rgba(0,0,0,.6); color:#fff; font-size:11px; padding:2px 8px; border-radius:4px; z-index:1;
+    display:flex; align-items:center; gap:5px;
+  }
+  .video-label .main-badge { font-size:14px; }
+
+  /* Bannière ✋ sur la vignette vidéo */
+  .badge-main {
+    position:absolute; top:6px; right:8px;
+    background:rgba(184,146,42,.9); color:#fff;
+    border-radius:6px; padding:2px 7px; font-size:12px; z-index:2;
+    display:none;
+  }
+  .badge-main.visible { display:block; }
+
+  /* ----- Barre de contrôle (en bas de la zone vidéo) ----- */
   .barre-controle {
     position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
-    display:flex; gap:8px; background:rgba(0,0,0,.72); border-radius:40px;
-    padding:8px 14px; z-index:5; white-space:nowrap;
+    display:flex; gap:6px; background:rgba(0,0,0,.75); border-radius:40px;
+    padding:8px 12px; z-index:5; white-space:nowrap; flex-wrap:wrap; justify-content:center;
   }
   .btn-ctrl {
     background:rgba(255,255,255,.12); border:none; border-radius:24px;
-    color:#fff; font-size:12px; font-family:'League Spartan',sans-serif; font-weight:600;
-    padding:8px 14px; cursor:pointer; display:flex; align-items:center; gap:5px;
+    color:#fff; font-size:11px; font-family:'League Spartan',sans-serif; font-weight:600;
+    padding:7px 12px; cursor:pointer; display:flex; align-items:center; gap:4px;
     transition:background .15s; white-space:nowrap;
   }
   .btn-ctrl:hover { background:rgba(255,255,255,.22); }
   .btn-ctrl.actif { background:var(--gold); }
   .btn-ctrl.danger { background:var(--red); }
   .btn-ctrl.danger:hover { background:#a5615a; }
-  .btn-ctrl .icone { font-size:16px; }
+  .btn-ctrl.fin-seance { background:rgba(196,123,110,.9); }
+  .btn-ctrl.fin-seance:hover { background:#a5615a; }
+  .btn-ctrl .icone { font-size:15px; }
   .btn-ctrl.muet { background:rgba(196,123,110,.5); }
+
+  /* Séparateur dans la barre de contrôle */
+  .ctrl-sep { width:1px; background:rgba(255,255,255,.2); align-self:stretch; margin:2px 2px; }
+
+  /* ----- Sélecteur de layout ----- */
+  .layout-picker {
+    display:flex; gap:4px; background:rgba(255,255,255,.1); border-radius:20px; padding:3px;
+  }
+  .btn-layout {
+    background:none; border:none; color:rgba(255,255,255,.5); font-size:14px;
+    cursor:pointer; padding:4px 8px; border-radius:16px; transition:background .15s, color .15s;
+    font-family:'League Spartan',sans-serif; font-size:10px; font-weight:700;
+  }
+  .btn-layout:hover { color:#fff; }
+  .btn-layout.actif { background:rgba(255,255,255,.2); color:#fff; }
 
   /* ----- Panneau participants ----- */
   .panneau-participants {
@@ -109,37 +163,53 @@
 
   /* Carte participant */
   .carte-participant {
-    display:flex; align-items:center; gap:9px; padding:7px 12px;
-    border-radius:6px; margin:2px 6px; transition:background .1s;
+    display:flex; align-items:center; gap:8px; padding:6px 10px;
+    border-radius:6px; margin:2px 5px; transition:background .1s;
   }
   .carte-participant:hover { background:var(--bg); }
   .avatar-p {
-    width:34px; height:34px; border-radius:50%; background:var(--cream);
+    width:32px; height:32px; border-radius:50%; background:var(--cream);
     display:flex; align-items:center; justify-content:center;
-    font-family:'EB Garamond',serif; font-size:14px; color:var(--gold);
+    font-family:'EB Garamond',serif; font-size:13px; color:var(--gold);
     flex-shrink:0; position:relative;
+    transition: box-shadow .2s;
   }
-  .avatar-p.parle::after {
-    content:''; position:absolute; inset:-3px; border-radius:50%;
-    border:2px solid var(--green); animation:pulse-vert .8s ease-in-out infinite;
+  .avatar-p.parle {
+    box-shadow: 0 0 0 2.5px var(--green);
+    animation: pulse-vert .8s ease-in-out infinite;
   }
-  @keyframes pulse-vert { 0%,100% { opacity:1; } 50% { opacity:.4; } }
+  @keyframes pulse-vert { 0%,100% { box-shadow:0 0 0 2.5px var(--green) } 50% { box-shadow:0 0 0 4px rgba(59,140,90,.3) } }
+
+  /* Badge ✋ sur l'avatar */
+  .badge-leve {
+    position:absolute; top:-4px; right:-4px;
+    width:16px; height:16px; border-radius:50%;
+    background:var(--gold); font-size:9px;
+    display:none; align-items:center; justify-content:center;
+  }
+  .badge-leve.visible { display:flex; }
+
   .nom-p { flex:1; font-size:12px; font-weight:500; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .statuts-p { display:flex; gap:4px; align-items:center; }
-  .icone-p { font-size:13px; opacity:.5; }
+  .statuts-p { display:flex; gap:3px; align-items:center; flex-shrink:0; }
+  .icone-p { font-size:12px; opacity:.5; }
   .icone-p.actif { opacity:1; }
-  .icone-p.coupe { opacity:.35; filter:grayscale(1); }
-  .btn-mute-p {
-    background:none; border:1px solid var(--border); border-radius:5px;
-    padding:3px 7px; font-size:10px; cursor:pointer; color:var(--grey);
+  .icone-p.coupe { opacity:.3; filter:grayscale(1); }
+
+  /* Actions participant (menu compact) */
+  .actions-p { display:flex; gap:3px; margin-top:3px; padding-left:40px; }
+  .btn-action-p {
+    background:none; border:1px solid var(--border); border-radius:4px;
+    padding:2px 6px; font-size:10px; cursor:pointer; color:var(--grey);
     font-family:'League Spartan',sans-serif; font-weight:600; white-space:nowrap;
+    transition:background .12s, color .12s;
   }
-  .btn-mute-p:hover { background:var(--cream); color:var(--ink); }
-  .btn-mute-p.muet { border-color:var(--red); color:var(--red); }
+  .btn-action-p:hover { background:var(--cream); color:var(--ink); }
+  .btn-action-p.danger { border-color:var(--red); color:var(--red); }
+  .btn-action-p.danger:hover { background:var(--red); color:#fff; }
+  .btn-action-p.parole { border-color:var(--green); color:var(--green); }
+  .btn-action-p.parole:hover { background:var(--green); color:#fff; }
 
   .vide-liste { padding:14px 12px; font-size:12px; color:var(--grey); text-align:center; }
-
-  /* Séparateur attente / présents */
   .sep-liste { font-family:'League Spartan',sans-serif; font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); padding:6px 12px 3px; }
 
   /* ----- Panneau chat ----- */
@@ -180,7 +250,6 @@
     display:flex; align-items:center; justify-content:center;
   }
   .btn-envoyer-chat:hover { background:#3E2E18; }
-  .btn-envoyer-chat:disabled { opacity:.5; cursor:not-allowed; }
 
   /* ====== Responsive ====== */
   @media(max-width:900px) {
@@ -199,6 +268,29 @@
     font-size:12px; z-index:99; opacity:0; transition:all .25s; pointer-events:none;
   }
   #toast.visible { opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* ====== Modale de confirmation ====== */
+  .modale-overlay {
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.5);
+    z-index:200; align-items:center; justify-content:center;
+  }
+  .modale-overlay.visible { display:flex; }
+  .modale {
+    background:#fff; border-radius:14px; padding:28px 30px; max-width:420px; width:90%;
+    box-shadow: 0 8px 40px rgba(0,0,0,.25);
+    font-size:14px; color:var(--ink);
+  }
+  .modale h3 { font-family:'EB Garamond',serif; font-size:20px; font-weight:600; margin:0 0 10px; }
+  .modale p { margin:0 0 20px; color:var(--grey); font-size:13px; line-height:1.5; }
+  .modale-actions { display:flex; gap:10px; justify-content:flex-end; }
+  .btn-modale {
+    border:none; border-radius:8px; padding:9px 18px;
+    font-family:'League Spartan',sans-serif; font-size:12px; font-weight:700;
+    cursor:pointer; transition:opacity .15s;
+  }
+  .btn-modale:hover { opacity:.85; }
+  .btn-modale.annuler { background:var(--bg); border:1px solid var(--border); color:var(--grey); }
+  .btn-modale.confirmer { background:var(--red); color:#fff; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.1/dist/livekit-client.umd.min.js"></script>
 </head>
@@ -270,10 +362,11 @@
 
     <!-- Vidéos + barre de contrôle -->
     <div style="position:relative; display:flex; flex-direction:column; background:#1A1508; overflow:hidden;">
-      <div id="conteneur-videos" style="flex:1; display:grid; gap:4px; padding:4px; overflow:auto;"></div>
+      <div id="conteneur-videos" class="layout-grille" style="flex:1;"></div>
 
       <!-- Barre de contrôle flottante -->
       <div class="barre-controle">
+        <!-- Micro / Caméra / Écran -->
         <button class="btn-ctrl actif" id="btn-micro" onclick="toggleMicro()" title="Micro">
           <span class="icone" id="icone-micro">🎙</span><span id="label-micro">Micro</span>
         </button>
@@ -283,11 +376,28 @@
         <button class="btn-ctrl" id="btn-ecran" onclick="togglePartageEcran()" title="Partager écran">
           <span class="icone">🖥</span><span>Partager</span>
         </button>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Couper tous (DataChannel) -->
         <button class="btn-ctrl" id="btn-mute-tous" onclick="muterTous()" title="Couper tous les micros">
           <span class="icone">🔇</span><span>Couper tous</span>
         </button>
-        <button class="btn-ctrl danger" onclick="quitterSalle()" title="Terminer">
-          <span class="icone">✕</span><span>Terminer</span>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Layouts vidéo -->
+        <div class="layout-picker" title="Changer la disposition des vidéos">
+          <button class="btn-layout actif" id="btn-layout-grille" onclick="changerLayout('grille')" title="Grille">⊞ Grille</button>
+          <button class="btn-layout" id="btn-layout-spotlight" onclick="changerLayout('spotlight')" title="Spotlight">◉ Spot</button>
+          <button class="btn-layout" id="btn-layout-solo" onclick="changerLayout('solo')" title="Solo">▭ Solo</button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Fin de séance propre -->
+        <button class="btn-ctrl fin-seance" onclick="finSeance()" title="Terminer la séance et éjecter tout le monde">
+          <span class="icone">⏹</span><span>Fin séance</span>
         </button>
       </div>
     </div>
@@ -318,7 +428,7 @@
       <div class="zone-saisie-chat">
         <textarea id="saisie-chat" placeholder="Message…" rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();envoyerMessage();}"></textarea>
-        <button class="btn-envoyer-chat" onclick="envoyerMessage()" id="btn-envoyer-chat" title="Envoyer">➤</button>
+        <button class="btn-envoyer-chat" onclick="envoyerMessage()" title="Envoyer">➤</button>
       </div>
     </div>
 
@@ -328,20 +438,51 @@
 <!-- Toast notification -->
 <div id="toast"></div>
 
+<!-- Modale confirmation fin de séance -->
+<div class="modale-overlay" id="modale-fin">
+  <div class="modale">
+    <h3>⏹ Terminer la séance ?</h3>
+    <p>Cette action mettra fin à la séance pour vous et pour la participante. Elle sera automatiquement déconnectée.</p>
+    <div class="modale-actions">
+      <button class="btn-modale annuler" onclick="fermerModale('modale-fin')">Annuler</button>
+      <button class="btn-modale confirmer" onclick="confirmerFinSeance()">Oui, terminer la séance</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modale confirmation expulsion -->
+<div class="modale-overlay" id="modale-kick">
+  <div class="modale">
+    <h3>❌ Expulser ce participant ?</h3>
+    <p id="modale-kick-texte">Confirmez-vous l'expulsion de ce participant ?</p>
+    <div class="modale-actions">
+      <button class="btn-modale annuler" onclick="fermerModale('modale-kick')">Annuler</button>
+      <button class="btn-modale confirmer" onclick="confirmerExpulsion()">Oui, expulser</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const TOKEN_FORMATEUR = "{{ token_formateur or '' }}";
 const LIVEKIT_URL_WS = "{{ livekit_url }}";
 const LIVEKIT_ACTIF = {{ "true" if livekit_actif else "false" }};
 const MON_NOM = "Laurence";
+const ROOM_NAME = "{{ room_name or '' }}";
 
 let room = null;
 let microActif = true;
 let cameraActive = true;
 let partageEcranActif = false;
 let ecranTrack = null;
-let tousMutes = false; // état "couper tous" (local uniquement — on ne peut pas muter à distance via WebRTC)
+let tousMutes = false;
+let layoutActuel = 'grille'; // grille | spotlight | solo
 
-// Éléments DOM fréquemment accédés
+// État "main levée" : Map identity → bool
+const mainsLevees = new Map();
+// Identity en attente d'expulsion
+let _kickIdentity = null;
+let _kickNom = null;
+
 const elFilChat = () => document.getElementById('fil-chat');
 const elListeParticipants = () => document.getElementById('liste-participants');
 
@@ -378,6 +519,7 @@ async function demarrerSalle() {
     room.on(LivekitClient.RoomEvent.ParticipantDisconnected, p => {
       afficherToast(`${p.name || p.identity} a quitté la séance`);
       supprimerVideo(p.identity);
+      mainsLevees.delete(p.identity);
       mettreAJourListeParticipants();
     });
 
@@ -398,29 +540,31 @@ async function demarrerSalle() {
     room.on(LivekitClient.RoomEvent.TrackMuted, (pub, p) => mettreAJourListeParticipants());
     room.on(LivekitClient.RoomEvent.TrackUnmuted, (pub, p) => mettreAJourListeParticipants());
 
-    // ---- Speaking (indicateur vocal) ----
+    // ---- ActiveSpeaker : border pulse sur vignette + avatar liste ----
     room.on(LivekitClient.RoomEvent.ActiveSpeakersChanged, speakers => {
-      // Retirer indicateur sur tous
+      // Retirer sur tous
+      document.querySelectorAll('.video-wrap').forEach(w => w.classList.remove('speaker-actif'));
       document.querySelectorAll('.avatar-p').forEach(a => a.classList.remove('parle'));
+
       speakers.forEach(p => {
+        const wrap = document.getElementById(`video-${p.identity}`);
+        if (wrap) wrap.classList.add('speaker-actif');
         const av = document.getElementById(`avatar-${p.identity}`);
         if (av) av.classList.add('parle');
       });
     });
 
-    // ---- Chat via DataChannel ----
+    // ---- DataChannel reçu ----
     room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
       try {
         const msg = JSON.parse(new TextDecoder().decode(payload));
-        if (msg.type === 'chat') {
-          ajouterBulleChat(participant ? (participant.name || participant.identity) : '?', msg.texte, false);
-        }
+        gererDataChannel(msg, participant);
       } catch(e) { /* ignore */ }
     });
 
     room.on(LivekitClient.RoomEvent.Disconnected, () => {
       afficherToast("Déconnecté de la salle.");
-      setTimeout(() => window.location.reload(), 1500);
+      setTimeout(() => window.location.reload(), 2000);
     });
 
     await room.connect(LIVEKIT_URL_WS, TOKEN_FORMATEUR);
@@ -452,6 +596,40 @@ async function demarrerSalle() {
   }
 }
 
+// ========================= DATACHANNEL REÇU =========================
+function gererDataChannel(msg, emetteur) {
+  const nom = emetteur ? (emetteur.name || emetteur.identity) : '?';
+  const identity = emetteur ? emetteur.identity : null;
+
+  switch (msg.type) {
+    case 'chat':
+      ajouterBulleChat(nom, msg.texte, false);
+      break;
+
+    case 'raise_hand':
+      // L'élève lève la main
+      if (identity) {
+        mainsLevees.set(identity, true);
+        afficherToast(`✋ ${nom} lève la main`);
+        mettreAJourListeParticipants();
+        // Badge sur la vignette vidéo
+        const badge = document.getElementById(`badge-main-${identity}`);
+        if (badge) badge.classList.add('visible');
+      }
+      break;
+
+    case 'lower_hand':
+      // L'élève baisse la main
+      if (identity) {
+        mainsLevees.delete(identity);
+        mettreAJourListeParticipants();
+        const badge2 = document.getElementById(`badge-main-${identity}`);
+        if (badge2) badge2.classList.remove('visible');
+      }
+      break;
+  }
+}
+
 // ========================= CONTRÔLE MICRO / CAMÉRA =========================
 async function toggleMicro() {
   if (!room) return;
@@ -479,7 +657,6 @@ async function toggleCamera() {
   if (cameraActive) {
     btn.classList.add('actif'); btn.classList.remove('muet');
     icone.textContent = '📷'; label.textContent = 'Caméra';
-    // Remettre la vidéo locale
     room.localParticipant.videoTrackPublications.forEach(pub => {
       if (pub.track) ajouterVideo(room.localParticipant, pub.track, true);
     });
@@ -493,11 +670,9 @@ async function toggleCamera() {
 // ========================= PARTAGE D'ÉCRAN =========================
 async function togglePartageEcran() {
   if (!room) return;
-
   const btn = document.getElementById('btn-ecran');
 
   if (partageEcranActif) {
-    // Arrêter le partage
     if (ecranTrack) {
       await room.localParticipant.unpublishTrack(ecranTrack);
       ecranTrack.stop();
@@ -512,21 +687,13 @@ async function togglePartageEcran() {
   }
 
   try {
-    const stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { cursor: 'always' },
-      audio: false,
-    });
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video: { cursor: 'always' }, audio: false });
     const screenVideoTrack = stream.getVideoTracks()[0];
-
-    // Arrêter si l'utilisateur ferme le partage nativement
-    screenVideoTrack.onended = () => {
-      if (partageEcranActif) togglePartageEcran();
-    };
+    screenVideoTrack.onended = () => { if (partageEcranActif) togglePartageEcran(); };
 
     ecranTrack = new LivekitClient.LocalVideoTrack(screenVideoTrack, {}, false);
     await room.localParticipant.publishTrack(ecranTrack, {
-      name: 'screen',
-      source: LivekitClient.Track.Source.ScreenShare,
+      name: 'screen', source: LivekitClient.Track.Source.ScreenShare,
     });
 
     // Afficher localement
@@ -544,22 +711,16 @@ async function togglePartageEcran() {
     btn.querySelector('span:last-child').textContent = 'Arrêter';
     afficherToast("Partage d'écran démarré");
   } catch(e) {
-    if (e.name !== 'NotAllowedError') {
-      afficherToast(`Impossible de partager l'écran : ${e.message}`);
-    }
+    if (e.name !== 'NotAllowedError') afficherToast(`Impossible de partager l'écran : ${e.message}`);
   }
 }
 
-// ========================= MUTE TOUS (local) =========================
-// Note: WebRTC ne permet pas de muter à distance un autre participant.
-// On peut uniquement envoyer un message via DataChannel pour demander
-// aux participants de se muter eux-mêmes.
+// ========================= COUPER TOUS (DataChannel) =========================
 function muterTous() {
   if (!room) return;
   tousMutes = !tousMutes;
   const btn = document.getElementById('btn-mute-tous');
 
-  // Envoyer demande de mute à tous via DataChannel
   const msg = JSON.stringify({ type: tousMutes ? 'mute_request' : 'unmute_request' });
   const data = new TextEncoder().encode(msg);
   try { room.localParticipant.publishData(data, { reliable: true }); } catch(e) {}
@@ -575,33 +736,159 @@ function muterTous() {
   }
 }
 
-// Muter un participant individuel (via message DataChannel)
-function muterParticipant(identity) {
+// ========================= MUTE DATACHANNEL INDIVIDUEL =========================
+function muterParticipantDataChannel(identity) {
   if (!room) return;
   const p = room.remoteParticipants.get(identity);
   if (!p) return;
-
   const msg = JSON.stringify({ type: 'mute_request', target: identity });
   const data = new TextEncoder().encode(msg);
   try { room.localParticipant.publishData(data, { reliable: true, destinationIdentities: [identity] }); } catch(e) {}
-  afficherToast(`Demande de coupure micro envoyée à ${p.name || identity}`);
+  afficherToast(`🔇 Demande de coupure micro envoyée à ${p.name || identity}`);
+}
+
+// ========================= MUTE CÔTÉ SERVEUR =========================
+async function muterParticipantServeur(identity) {
+  if (!room || !ROOM_NAME) return;
+  try {
+    const resp = await fetch(`/api/admin/live/${encodeURIComponent(ROOM_NAME)}/mute/${encodeURIComponent(identity)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ muted: true }),
+    });
+    if (resp.ok) {
+      const p = room.remoteParticipants.get(identity);
+      afficherToast(`🔇 Micro coupé côté serveur pour ${p ? (p.name || identity) : identity}`);
+      mettreAJourListeParticipants();
+    } else {
+      const err = await resp.json().catch(() => ({}));
+      // Si track_sid non trouvé, fallback DataChannel
+      afficherToast(`⚠️ ${err.detail || 'Mute serveur échoué'} — envoi via DataChannel`);
+      muterParticipantDataChannel(identity);
+    }
+  } catch(e) {
+    afficherToast(`Erreur réseau — envoi via DataChannel`);
+    muterParticipantDataChannel(identity);
+  }
+}
+
+// ========================= DONNER LA PAROLE =========================
+function donnerLaParole(identity) {
+  if (!room) return;
+  const p = room.remoteParticipants.get(identity);
+  if (!p) return;
+  // Demander de baisser la main si levée
+  if (mainsLevees.get(identity)) {
+    mainsLevees.delete(identity);
+    mettreAJourListeParticipants();
+    const badge = document.getElementById(`badge-main-${identity}`);
+    if (badge) badge.classList.remove('visible');
+  }
+  // Envoyer message DataChannel "give_floor" → l'élève reçoit la notification et son micro est réactivé
+  const msg = JSON.stringify({ type: 'give_floor', target: identity });
+  const data = new TextEncoder().encode(msg);
+  try { room.localParticipant.publishData(data, { reliable: true, destinationIdentities: [identity] }); } catch(e) {}
+  afficherToast(`🎙 Parole donnée à ${p.name || identity}`);
+}
+
+// ========================= EXPULSION =========================
+function demanderExpulsion(identity, nom) {
+  _kickIdentity = identity;
+  _kickNom = nom;
+  document.getElementById('modale-kick-texte').textContent =
+    `Voulez-vous expulser ${nom} de la séance ? Elle sera déconnectée immédiatement.`;
+  document.getElementById('modale-kick').classList.add('visible');
+}
+
+async function confirmerExpulsion() {
+  fermerModale('modale-kick');
+  if (!_kickIdentity || !ROOM_NAME) return;
+  try {
+    const resp = await fetch(`/api/admin/live/${encodeURIComponent(ROOM_NAME)}/kick/${encodeURIComponent(_kickIdentity)}`, {
+      method: 'POST',
+    });
+    if (resp.ok) {
+      afficherToast(`❌ ${_kickNom} a été expulsée`);
+      supprimerVideo(_kickIdentity);
+      mainsLevees.delete(_kickIdentity);
+      mettreAJourListeParticipants();
+    } else {
+      const err = await resp.json().catch(() => ({}));
+      afficherToast(`Erreur expulsion : ${err.detail || resp.status}`);
+    }
+  } catch(e) {
+    afficherToast(`Erreur réseau : ${e.message}`);
+  }
+  _kickIdentity = null; _kickNom = null;
+}
+
+// ========================= FIN DE SÉANCE =========================
+function finSeance() {
+  document.getElementById('modale-fin').classList.add('visible');
+}
+
+async function confirmerFinSeance() {
+  fermerModale('modale-fin');
+  if (!room) return;
+
+  // 1. Notifier tous les participants via DataChannel
+  try {
+    const msg = JSON.stringify({ type: 'session_ended' });
+    room.localParticipant.publishData(new TextEncoder().encode(msg), { reliable: true });
+  } catch(e) {}
+
+  // 2. Fermer la salle côté serveur (éjecte tout le monde)
+  if (ROOM_NAME) {
+    try {
+      await fetch(`/api/admin/live/${encodeURIComponent(ROOM_NAME)}/end`, { method: 'POST' });
+    } catch(e) {}
+  }
+
+  // 3. Déconnecter Laurence
+  if (room) { await room.disconnect(); room = null; }
+
+  // 4. Rediriger
+  window.location.href = '/admin/page/agenda';
+}
+
+// ========================= LAYOUTS =========================
+function changerLayout(mode) {
+  layoutActuel = mode;
+  const conteneur = document.getElementById('conteneur-videos');
+  conteneur.className = ''; // reset
+  conteneur.classList.add(`layout-${mode}`);
+
+  ['grille','spotlight','solo'].forEach(m => {
+    const btn = document.getElementById(`btn-layout-${m}`);
+    if (btn) btn.classList.toggle('actif', m === mode);
+  });
+  miseEnPage();
 }
 
 // ========================= VIDÉO =========================
 function creerWrapVideo(id, labelTexte) {
   const wrap = document.createElement('div');
   wrap.id = `video-${id}`;
-  wrap.style.cssText = 'position:relative;background:#111;border-radius:6px;overflow:hidden;min-height:160px;';
+  wrap.className = 'video-wrap';
+
+  // Badge main levée (caché par défaut)
+  const badgeMain = document.createElement('div');
+  badgeMain.className = 'badge-main';
+  badgeMain.id = `badge-main-${id}`;
+  badgeMain.textContent = '✋';
+  wrap.appendChild(badgeMain);
+
   const label = document.createElement('div');
-  label.textContent = labelTexte;
-  label.style.cssText = 'position:absolute;bottom:6px;left:8px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:4px;z-index:1;';
+  label.className = 'video-label';
+  label.innerHTML = `<span>${labelTexte}</span>`;
   wrap.appendChild(label);
+
   return wrap;
 }
 
 function ajouterVideo(participant, track, local=false) {
   const conteneur = document.getElementById('conteneur-videos');
-  const identity = local ? participant.identity : participant.identity;
+  const identity = participant.identity;
   const vid_id = `video-${identity}`;
   if (document.getElementById(vid_id)) return;
 
@@ -615,6 +902,12 @@ function ajouterVideo(participant, track, local=false) {
   track.attach(video);
   wrap.insertBefore(video, wrap.firstChild);
 
+  // Restaurer badge main levée si l'élève était déjà dans l'état
+  if (mainsLevees.get(identity)) {
+    const badge = wrap.querySelector('.badge-main');
+    if (badge) badge.classList.add('visible');
+  }
+
   conteneur.appendChild(wrap);
   miseEnPage();
 }
@@ -626,9 +919,23 @@ function supprimerVideo(identity) {
 
 function miseEnPage() {
   const conteneur = document.getElementById('conteneur-videos');
-  const n = conteneur.children.length;
-  const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
-  conteneur.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  const n = conteneur.querySelectorAll('.video-wrap:not([style*="display:none"])').length || conteneur.children.length;
+  if (layoutActuel === 'grille') {
+    const cols = n <= 1 ? 1 : n <= 4 ? 2 : 3;
+    conteneur.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  } else if (layoutActuel === 'spotlight') {
+    // 1 grand + petits en bas
+    const cols = Math.max(1, n - 1);
+    conteneur.style.gridTemplateColumns = n <= 1 ? '1fr' : `1fr`;
+    conteneur.style.gridTemplateRows = n <= 1 ? '1fr' : '2fr 1fr';
+    // Spotlight : première vignette full width, les suivantes en ligne
+    if (n > 1) {
+      conteneur.style.gridTemplateColumns = `repeat(${n-1},1fr)`;
+    }
+  } else if (layoutActuel === 'solo') {
+    conteneur.style.gridTemplateColumns = '1fr';
+    conteneur.style.gridTemplateRows = '1fr';
+  }
 }
 
 // ========================= LISTE PARTICIPANTS =========================
@@ -639,10 +946,7 @@ function mettreAJourListeParticipants() {
   const total = room.remoteParticipants.size;
 
   document.getElementById('compteur-participants').textContent = total;
-
-  // Supprimer les cartes existantes (pas le vide)
-  liste.querySelectorAll('.carte-participant').forEach(e => e.remove());
-  liste.querySelectorAll('.sep-liste').forEach(e => e.remove());
+  liste.querySelectorAll('.carte-participant, .actions-p, .sep-liste').forEach(e => e.remove());
 
   if (total === 0) {
     if (vide) vide.style.display = '';
@@ -650,37 +954,46 @@ function mettreAJourListeParticipants() {
   }
   if (vide) vide.style.display = 'none';
 
-  // Ajouter une carte par participant distant
   room.remoteParticipants.forEach(p => {
     const micPub = p.audioTrackPublications.values().next().value;
     const camPub = p.videoTrackPublications.values().next().value;
     const micMute = micPub ? micPub.isMuted : true;
     const camMute = camPub ? camPub.isMuted : true;
+    const mainLevee = mainsLevees.get(p.identity) || false;
+    const nomAffiche = p.name || p.identity;
+    const initiale = nomAffiche[0].toUpperCase();
 
+    // Carte principale
     const carte = document.createElement('div');
     carte.className = 'carte-participant';
     carte.id = `carte-${p.identity}`;
     carte.innerHTML = `
-      <div class="avatar-p" id="avatar-${p.identity}">${(p.name || '?')[0].toUpperCase()}</div>
-      <div class="nom-p" title="${p.name || p.identity}">${p.name || p.identity}</div>
+      <div class="avatar-p" id="avatar-${p.identity}">
+        ${initiale}
+        <div class="badge-leve ${mainLevee ? 'visible' : ''}">✋</div>
+      </div>
+      <div class="nom-p" title="${nomAffiche}">${nomAffiche}${mainLevee ? ' <span title="Main levée">✋</span>' : ''}</div>
       <div class="statuts-p">
         <span class="icone-p ${micMute ? 'coupe' : 'actif'}" title="${micMute ? 'Micro coupé' : 'Micro actif'}">${micMute ? '🔕' : '🎙'}</span>
         <span class="icone-p ${camMute ? 'coupe' : 'actif'}" title="${camMute ? 'Caméra coupée' : 'Caméra active'}">${camMute ? '📵' : '📷'}</span>
-        <button class="btn-mute-p ${micMute ? 'muet' : ''}"
-          onclick="muterParticipant('${p.identity}')"
-          title="Demander de couper le micro">
-          ${micMute ? '✓ Muet' : '🔇 Muter'}
-        </button>
       </div>`;
     liste.appendChild(carte);
+
+    // Ligne d'actions
+    const actions = document.createElement('div');
+    actions.className = 'actions-p';
+    actions.innerHTML = `
+      <button class="btn-action-p" onclick="muterParticipantServeur('${p.identity}')" title="Couper le micro côté serveur">🔇 Muter</button>
+      ${mainLevee ? `<button class="btn-action-p parole" onclick="donnerLaParole('${p.identity}')">🎙 Parole</button>` : ''}
+      <button class="btn-action-p danger" onclick="demanderExpulsion('${p.identity}','${escapeHTML(nomAffiche)}')">❌ Expulser</button>
+    `;
+    liste.appendChild(actions);
   });
 }
 
 // ========================= CHAT =========================
 function ajouterBulleChat(auteur, texte, moi=false) {
   const fil = elFilChat();
-
-  // Retirer le message vide si présent
   const vide = fil.querySelector('.vide-chat');
   if (vide) vide.remove();
 
@@ -698,7 +1011,7 @@ function ajouterBulleChat(auteur, texte, moi=false) {
 }
 
 function escapeHTML(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 function envoyerMessage() {
@@ -706,35 +1019,27 @@ function envoyerMessage() {
   const texte = input.value.trim();
   if (!texte || !room) return;
 
-  // Afficher localement
   ajouterBulleChat(MON_NOM, texte, true);
 
-  // Envoyer via DataChannel
   const msg = JSON.stringify({ type: 'chat', texte });
   const data = new TextEncoder().encode(msg);
-  try {
-    room.localParticipant.publishData(data, { reliable: true });
-  } catch(e) {
-    console.error('Erreur envoi chat:', e);
-  }
+  try { room.localParticipant.publishData(data, { reliable: true }); } catch(e) {}
 
   input.value = '';
   input.style.height = 'auto';
 }
 
-// ========================= QUITTER =========================
-async function quitterSalle() {
-  if (!confirm('Voulez-vous vraiment terminer la séance pour tout le monde ?')) return;
-  if (room) {
-    // Notifier les participants
-    try {
-      const msg = JSON.stringify({ type: 'session_ended' });
-      room.localParticipant.publishData(new TextEncoder().encode(msg), { reliable: true });
-    } catch(e){}
-    await room.disconnect();
-  }
-  window.location.href = '/admin/page/agenda';
+// ========================= MODALE =========================
+function fermerModale(id) {
+  document.getElementById(id).classList.remove('visible');
 }
+
+// Fermer les modales en cliquant sur l'overlay
+document.querySelectorAll('.modale-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('visible');
+  });
+});
 
 // ========================= UTILITAIRES =========================
 function copierLien() {
@@ -747,7 +1052,7 @@ function copierLien() {
 }
 
 let toastTimer = null;
-function afficherToast(msg, duree=3000) {
+function afficherToast(msg, duree=3500) {
   const el = document.getElementById('toast');
   el.textContent = msg;
   el.classList.add('visible');

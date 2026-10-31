@@ -28,6 +28,10 @@ from ..livekit_utils import (
     generer_token_formateur,
     livekit_actif,
     LIVEKIT_URL,
+    expulser_participant,
+    muter_participant_serveur,
+    lister_participants,
+    terminer_salle,
 )
 from ..routes.auth import eleve_connecte, admin_connecte
 from ..models import Eleve
@@ -195,6 +199,7 @@ def page_formateur_live(
             "token_formateur": token_formateur,
             "livekit_url": LIVEKIT_URL,
             "livekit_actif": livekit_actif(),
+            "room_name": resa.livekit_room_name,
         },
     )
 
@@ -214,3 +219,81 @@ def page_admin_live_redirect(
         raise HTTPException(status_code=404, detail="Réservation introuvable.")
 
     return RedirectResponse(url=f"/live/formateur/{resa.token_annulation}", status_code=303)
+
+
+# ---------------------------------------------------------------------------
+# API admin : actions sur la salle LiveKit (expulsion, mute serveur, fin séance)
+# ---------------------------------------------------------------------------
+
+def _verifier_admin(request: Request):
+    """Vérifie que la session admin est active, lève 401 sinon."""
+    if not request.session.get("admin_id"):
+        raise HTTPException(status_code=401, detail="Non autorisé.")
+
+
+@router.post("/api/admin/live/{room_name}/kick/{identity}")
+def api_kick_participant(
+    room_name: str, identity: str, request: Request,
+    session: Session = Depends(obtenir_session),
+):
+    """Expulse un participant de la salle LiveKit côté serveur."""
+    _verifier_admin(request)
+    if not livekit_actif():
+        raise HTTPException(status_code=503, detail="LiveKit non configuré.")
+
+    ok = expulser_participant(room_name, identity)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Impossible d'expulser le participant.")
+    return {"ok": True, "identity": identity}
+
+
+@router.post("/api/admin/live/{room_name}/mute/{identity}")
+async def api_mute_participant(
+    room_name: str, identity: str, request: Request,
+    session: Session = Depends(obtenir_session),
+):
+    """
+    Coupe le micro d'un participant côté serveur LiveKit.
+    Corps JSON attendu : { "muted": true|false }
+    """
+    _verifier_admin(request)
+    if not livekit_actif():
+        raise HTTPException(status_code=503, detail="LiveKit non configuré.")
+
+    body = await request.json()
+    muted = body.get("muted", True)
+
+    # Récupérer le track_sid audio du participant
+    participants = lister_participants(room_name)
+    track_sid = None
+    for p in participants:
+        if p.get("identity") == identity:
+            for track in p.get("tracks", []):
+                if track.get("type") == 0:  # 0 = AUDIO dans le proto LiveKit
+                    track_sid = track.get("sid")
+                    break
+            break
+
+    if not track_sid:
+        # Pas de piste audio trouvée — le participant n'est peut-être pas encore connecté
+        raise HTTPException(status_code=404, detail="Piste audio introuvable pour ce participant.")
+
+    ok = muter_participant_serveur(room_name, identity, track_sid, muted)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Impossible de modifier le micro.")
+    return {"ok": True, "identity": identity, "muted": muted}
+
+
+@router.post("/api/admin/live/{room_name}/end")
+def api_terminer_seance(
+    room_name: str, request: Request,
+    session: Session = Depends(obtenir_session),
+):
+    """Ferme la salle LiveKit et expulse tous les participants côté serveur."""
+    _verifier_admin(request)
+    if not livekit_actif():
+        raise HTTPException(status_code=503, detail="LiveKit non configuré.")
+
+    ok = terminer_salle(room_name)
+    # On ne lève pas d'erreur si la salle était déjà vide/inexistante
+    return {"ok": ok, "room": room_name}

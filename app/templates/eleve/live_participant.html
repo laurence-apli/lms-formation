@@ -90,6 +90,8 @@
   .btn-ctrl-e.muet  { background:rgba(196,123,110,.55); }
   .btn-ctrl-e.quitter { background:rgba(196,123,110,.8); }
   .btn-ctrl-e.quitter:hover { background:rgba(164,97,90,.9); }
+  .btn-ctrl-e.main-levee { background:rgba(184,146,42,.85); animation:clignoter-main 1.5s ease-in-out infinite; }
+  @keyframes clignoter-main { 0%,100%{opacity:1} 50%{opacity:.55} }
 
   /* Bannière mute forcé */
   #banniere-mute {
@@ -244,6 +246,9 @@
         <button class="btn-ctrl-e actif" id="btn-cam-e" onclick="toggleCamEleve()" title="Caméra">
           <span id="icone-cam-e">📷</span><span id="label-cam-e">Caméra</span>
         </button>
+        <button class="btn-ctrl-e" id="btn-main" onclick="toggleMain()" title="Lever la main pour demander la parole">
+          <span id="icone-main">✋</span><span id="label-main">Lever la main</span>
+        </button>
         <button class="btn-ctrl-e quitter" onclick="quitter()" title="Quitter">
           <span>✕</span><span>Quitter</span>
         </button>
@@ -287,6 +292,7 @@ const MON_PRENOM = "{{ reservation.prenom }}";
 let room = null;
 let microActif = true;
 let camActive = true;
+let mainLevee = false;  // état "lever la main"
 
 // ========================= REJOINDRE =========================
 let _timerTropTot = null;
@@ -447,6 +453,17 @@ function gererMessageDataChannel(msg, emetteur) {
       ajouterBulle(emetteur ? (emetteur.name || emetteur.identity) : 'Laurence', msg.texte, false);
       break;
 
+    case 'give_floor':
+      // Admin donne la parole : baisser automatiquement la main et notifier
+      if (mainLevee) baisserMain(false);
+      afficherToast("🎙 Laurence vous donne la parole !");
+      // Réactiver le micro si coupé
+      if (!microActif) {
+        couperMicro(false);
+        afficherBanniereMute(false);
+      }
+      break;
+
     case 'session_ended':
       if (room) room.disconnect();
       afficherFin();
@@ -558,6 +575,45 @@ async function toggleCamEleve() {
 
 function afficherBanniereMute(visible) {
   document.getElementById('banniere-mute').classList.toggle('visible', visible);
+}
+
+// ========================= LEVER / BAISSER LA MAIN =========================
+function toggleMain() {
+  if (!room) return;
+  if (mainLevee) {
+    baisserMain(true);
+  } else {
+    leverMain();
+  }
+}
+
+function leverMain() {
+  if (!room) return;
+  mainLevee = true;
+  const btn = document.getElementById('btn-main');
+  const label = document.getElementById('label-main');
+  btn.classList.add('main-levee');
+  label.textContent = 'Baisser la main';
+
+  // Notifier l'admin via DataChannel
+  const data = new TextEncoder().encode(JSON.stringify({ type: 'raise_hand' }));
+  try { room.localParticipant.publishData(data, { reliable: true }); } catch(e) {}
+  afficherToast("✋ Main levée — Laurence a été notifiée");
+}
+
+function baisserMain(notifier=true) {
+  if (!room) return;
+  mainLevee = false;
+  const btn = document.getElementById('btn-main');
+  const label = document.getElementById('label-main');
+  btn.classList.remove('main-levee');
+  label.textContent = 'Lever la main';
+
+  if (notifier) {
+    // Notifier l'admin que la main est baissée
+    const data = new TextEncoder().encode(JSON.stringify({ type: 'lower_hand' }));
+    try { room.localParticipant.publishData(data, { reliable: true }); } catch(e) {}
+  }
 }
 
 async function quitter() {
