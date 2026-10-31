@@ -684,6 +684,29 @@ def creer_reservation_admin(
             logging.getLogger(__name__).warning("LiveKit admin : impossible de créer la salle : %s", _e)
 
     session.commit()
+
+    # Email de confirmation à la cliente
+    try:
+        from ..emails_agenda import email_confirmation_reservation
+        email_confirmation_reservation(
+            destinataire=resa.email,
+            prenom=resa.prenom,
+            reservation=resa,
+            type_seance=ts,
+            lieu=lieu,
+        )
+    except Exception as _e:
+        import logging
+        logging.getLogger(__name__).warning("Email confirmation admin RDV %s : %s", resa.id, _e)
+
+    # Email de notification à Laurence
+    try:
+        from ..emails_agenda import email_admin_nouvelle_reservation
+        email_admin_nouvelle_reservation(reservation=resa, type_seance=ts, lieu=lieu)
+    except Exception as _e:
+        import logging
+        logging.getLogger(__name__).warning("Email admin nouvelle resa %s : %s", resa.id, _e)
+
     return {"id": resa.id, "ok": True}
 
 

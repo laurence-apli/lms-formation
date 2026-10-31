@@ -356,19 +356,26 @@ async function chargerSemaine() {
 
   try {
     let donnees = [];
+    let reservations = [];
     if (modeVue === 'reservations') {
       const r = await appelApi(`/api/agenda/semaine?debut=${debutStr}&fin=${finStr}`);
       donnees = r.reservations || r || [];
     } else {
-      donnees = await appelApi(`/api/agenda/creneaux-semaine?debut=${debutStr}&fin=${finStr}`);
-      if (!Array.isArray(donnees)) donnees = [];
+      // Mode créneaux : charger créneaux ET réservations en parallèle
+      const [creneaux, resaData] = await Promise.all([
+        appelApi(`/api/agenda/creneaux-semaine?debut=${debutStr}&fin=${finStr}`),
+        appelApi(`/api/agenda/semaine?debut=${debutStr}&fin=${finStr}`),
+      ]);
+      donnees = Array.isArray(creneaux) ? creneaux : [];
+      reservations = resaData.reservations || resaData || [];
     }
 
-    // Calculer les bornes horaires réelles (min planche de toutes les données)
+    // Calculer les bornes horaires réelles (toutes les données)
     let hMin = 8, hMax = 20;
-    if (donnees.length > 0) {
+    const toutesLesEntrees = [...donnees, ...reservations];
+    if (toutesLesEntrees.length > 0) {
       let minH = 23, maxH = 0;
-      donnees.forEach(d => {
+      toutesLesEntrees.forEach(d => {
         // Mode créneaux : heure_debut / heure_fin (strings "HH:MM:SS")
         if (d.heure_debut) {
           const h = parseInt(d.heure_debut.split(':')[0]);
@@ -407,6 +414,8 @@ async function chargerSemaine() {
       donnees.forEach(rdv => afficherRdvGrille(rdv, lundi));
     } else {
       afficherBandeauxGrouillant(donnees, lundi);
+      // Superposer les réservations (y compris celles créées par l'admin)
+      reservations.forEach(rdv => afficherRdvGrille(rdv, lundi));
     }
     // Toujours charger et afficher les indisponibilités
     await afficherIndisposGrille(debutStr, finStr, lundi);
