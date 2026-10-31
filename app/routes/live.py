@@ -116,6 +116,9 @@ def page_participant_live(
 # API token participant (appelée en JS depuis la page participant)
 # ---------------------------------------------------------------------------
 
+DELAI_ACCES_AVANT_RDV_MINUTES = 15  # accès autorisé X minutes avant le début
+
+
 @router.get("/api/live/token/{token_annulation}")
 def api_token_participant(token_annulation: str, session: Session = Depends(obtenir_session)):
     resa = session.query(Reservation).filter_by(token_annulation=token_annulation).first()
@@ -124,7 +127,27 @@ def api_token_participant(token_annulation: str, session: Session = Depends(obte
     if not resa.livekit_room_name:
         raise HTTPException(status_code=400, detail="Salle LiveKit non définie.")
 
-    # Identité unique : email + timestamp pour éviter les conflits si plusieurs
+    # Vérification de la fenêtre d'accès : autorisé seulement à partir de
+    # DELAI_ACCES_AVANT_RDV_MINUTES minutes avant le début.
+    maintenant = datetime.utcnow()
+    ouverture = resa.date_debut - timedelta(minutes=DELAI_ACCES_AVANT_RDV_MINUTES)
+    if maintenant < ouverture:
+        # Formater la date en français pour le message
+        date_rdv = resa.date_debut
+        jours_fr = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"]
+        mois_fr = ["janvier", "février", "mars", "avril", "mai", "juin",
+                   "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+        label_date = (
+            f"{jours_fr[date_rdv.weekday()]} {date_rdv.day} "
+            f"{mois_fr[date_rdv.month - 1]} à {date_rdv.strftime('%H:%M')}"
+        )
+        raise HTTPException(
+            status_code=425,
+            detail=f"La salle n'est pas encore ouverte. Votre rendez-vous est le {label_date}. "
+                   f"Vous pourrez rejoindre la salle {DELAI_ACCES_AVANT_RDV_MINUTES} minutes avant.",
+        )
+
+    # Identité unique : email + id pour éviter les conflits si plusieurs
     # tentatives de connexion
     identite = f"{resa.email}-{resa.id}"
     token = generer_token_participant(resa.livekit_room_name, identite, resa.prenom)

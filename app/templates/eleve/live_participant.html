@@ -208,7 +208,13 @@
     <span>Connexion en cours…</span>
   </div>
   <div class="erreur" id="erreur"></div>
-  <p class="instructions">
+  <div id="zone-trop-tot" style="display:none; background:var(--cream-light,#FAF6EF); border:1px solid var(--gold,#B8922A); border-radius:12px; padding:18px 22px; max-width:440px; margin:16px auto 0; text-align:center;">
+    <div style="font-size:28px; margin-bottom:8px;">⏰</div>
+    <p style="font-weight:700; margin:0 0 6px; color:var(--ink,#1A1A1A);" id="msg-trop-tot"></p>
+    <p style="font-size:13px; color:var(--grey,#888); margin:0;">La salle s'ouvrira automatiquement à ce moment.</p>
+    <p style="font-size:13px; color:var(--grey,#888); margin:6px 0 0;" id="compte-rebours"></p>
+  </div>
+  <p class="instructions" id="instructions-cam">
     Assurez-vous d'autoriser l'accès à votre caméra et à votre microphone
     lorsque votre navigateur vous le demande.
   </p>
@@ -283,6 +289,46 @@ let microActif = true;
 let camActive = true;
 
 // ========================= REJOINDRE =========================
+let _timerTropTot = null;
+const DATE_DEBUT = new Date("{{ reservation.date_debut.isoformat() }}Z");  // UTC
+
+function _afficherTropTot(message) {
+  const zoneTropTot = document.getElementById('zone-trop-tot');
+  const msgEl = document.getElementById('msg-trop-tot');
+  const rebours = document.getElementById('compte-rebours');
+  const btn = document.getElementById('btn-rejoindre');
+  const instrCam = document.getElementById('instructions-cam');
+
+  msgEl.textContent = message;
+  zoneTropTot.style.display = 'block';
+  btn.style.display = 'none';
+  if (instrCam) instrCam.style.display = 'none';
+
+  // Compte à rebours jusqu'à 15 min avant le RDV
+  const ouverture = DATE_DEBUT.getTime() - 15 * 60 * 1000;
+
+  function majRebours() {
+    const restant = Math.ceil((ouverture - Date.now()) / 1000);
+    if (restant <= 0) {
+      rebours.textContent = "La salle est maintenant disponible, actualisation…";
+      clearInterval(_timerTropTot);
+      // Recharge la page pour relancer la connexion
+      setTimeout(() => location.reload(), 1500);
+      return;
+    }
+    const h = Math.floor(restant / 3600);
+    const m = Math.floor((restant % 3600) / 60);
+    const s = restant % 60;
+    const parties = [];
+    if (h > 0) parties.push(`${h}h`);
+    if (m > 0 || h > 0) parties.push(`${m}min`);
+    parties.push(`${s}s`);
+    rebours.textContent = `Ouverture dans ${parties.join(' ')}`;
+  }
+  majRebours();
+  _timerTropTot = setInterval(majRebours, 1000);
+}
+
 async function rejoindre() {
   const btn = document.getElementById('btn-rejoindre');
   const chargement = document.getElementById('chargement');
@@ -296,6 +342,13 @@ async function rejoindre() {
     const rep = await fetch(`/api/live/token/${TOKEN_ANNULATION}`);
     if (!rep.ok) {
       const d = await rep.json().catch(() => ({}));
+      // Code 425 = trop tôt → afficher le bloc informatif
+      if (rep.status === 425) {
+        chargement.classList.remove('visible');
+        btn.disabled = false;
+        _afficherTropTot(d.detail || "La salle n'est pas encore ouverte.");
+        return;
+      }
       throw new Error(d.detail || `Erreur ${rep.status}`);
     }
     const data = await rep.json();
@@ -571,6 +624,19 @@ document.addEventListener('DOMContentLoaded', () => {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 90) + 'px';
   });
+
+  // Vérification automatique au chargement : si trop tôt, afficher le message
+  // sans attendre que l'élève clique sur "Rejoindre".
+  const maintenant = Date.now();
+  const ouverture = DATE_DEBUT.getTime() - 15 * 60 * 1000;
+  if (maintenant < ouverture) {
+    const jours = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+    const mois = ['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    const d = DATE_DEBUT;
+    // Convertir UTC → heure locale pour l'affichage
+    const label = `${jours[d.getDay()]} ${d.getDate()} ${mois[d.getMonth()]} à ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+    _afficherTropTot(`Votre rendez-vous est le ${label}. Vous pourrez rejoindre la salle 15 minutes avant.`);
+  }
 });
 </script>
 </body>
