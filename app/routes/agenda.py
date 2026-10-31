@@ -1420,7 +1420,7 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
 
     # Envoyer l'email de confirmation avec .ics
     try:
-        from ..emails_agenda import email_confirmation_reservation
+        from ..emails_agenda import email_confirmation_reservation, email_admin_nouvelle_reservation
         ok = email_confirmation_reservation(
             destinataire=resa.email,
             prenom=resa.prenom,
@@ -1438,6 +1438,13 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
             session.commit()
     except Exception:
         pass  # L'email est best-effort, la réservation est confirmée quoi qu'il arrive
+
+    # Notifier Laurence (admin) de la nouvelle réservation
+    try:
+        from ..emails_agenda import email_admin_nouvelle_reservation
+        email_admin_nouvelle_reservation(reservation=resa, type_seance=ts, lieu=lieu)
+    except Exception:
+        pass
 
     return {
         "ok": True,
