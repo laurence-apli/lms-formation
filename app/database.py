@@ -66,6 +66,9 @@ _MIGRATIONS_COLONNES = [
     # LiveKit visioconférence (ajouté oct. 2026)
     "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS livekit_room_name VARCHAR(200)",
     "ALTER TABLE agenda_reservations ADD COLUMN IF NOT EXISTS livekit_token_formateur TEXT",
+    # Codes promo — valeur et type spécifiques par tarif (ajouté oct. 2026)
+    "ALTER TABLE codes_promo_tarifs ADD COLUMN IF NOT EXISTS valeur_specifique NUMERIC(10,2)",
+    "ALTER TABLE codes_promo_tarifs ADD COLUMN IF NOT EXISTS type_specifique VARCHAR(20)",
 ]
 
 

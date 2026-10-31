@@ -14,8 +14,13 @@
 label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); display:block; margin-top:12px; }
 .row2 { display:flex; gap:12px; }
 .row2 > div { flex:1; }
-.formations-check { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
-.formations-check label { background:var(--cream-light); padding:5px 10px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:5px; }
+.formations-check { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+.tarif-ligne { background:var(--cream-light); padding:8px 12px; border-radius:10px; font-size:12px; }
+.tarif-ligne label { display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:600; }
+.tarif-details { display:none; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+.tarif-details.visible { display:flex; gap:10px; align-items:center; }
+.tarif-details select, .tarif-details input { padding:5px 8px; border:1px solid var(--border); border-radius:6px; font-size:12px; }
+.tarif-details .note { font-size:11px; color:var(--grey); }
 </style>
 
 <div class="topbar"><div><h1>Codes promo</h1></div></div>
@@ -40,7 +45,7 @@ label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); displ
 <input type="checkbox" id="input-premier-achat">
 <label class="petit">Date de fin (jj/mm/aaaa, optionnel)</label>
 <input class="champ-inline" id="input-fin" placeholder="jj/mm/aaaa">
-<label class="petit">Formations concernées</label>
+<label class="petit">Formations / tarifs concernés <span style="font-size:10px;color:var(--grey)">(optionnel : remise différente par tarif)</span></label>
 <div class="formations-check" id="formations-check"></div>
 <button class="btn btn-primary" style="margin-top:16px" onclick="enregistrerCode()">Enregistrer</button>
 </div>
@@ -54,24 +59,61 @@ async function chargerCodesEtTarifs() {
   catalogue.forEach(f => f.tarifs.forEach(t => tousLesTarifs.push({
     id: t.tarif_id, label: f.titre + (t.nom_option !== 'Tarif unique' ? ' — ' + t.nom_option : ''),
   })));
-  document.getElementById('formations-check').innerHTML = tousLesTarifs.map(t =>
-    `<label><input type="checkbox" value="${t.id}"> ${t.label}</label>`
-  ).join('');
+
+  const conteneur = document.getElementById('formations-check');
+  conteneur.innerHTML = tousLesTarifs.map(t => `
+    <div class="tarif-ligne" data-tarif-id="${t.id}">
+      <label>
+        <input type="checkbox" value="${t.id}" onchange="toggleDetailsTarif(this)">
+        ${t.label}
+      </label>
+      <div class="tarif-details" id="details-${t.id}">
+        <span class="note">Remise spécifique (laisse vide = remise globale du code) :</span>
+        <select data-tarif-type="${t.id}">
+          <option value="">— idem code —</option>
+          <option value="pourcentage">%</option>
+          <option value="montant">€ fixe</option>
+        </select>
+        <input type="number" data-tarif-valeur="${t.id}" placeholder="Valeur" style="width:80px">
+      </div>
+    </div>
+  `).join('');
 
   const codes = await appelApi('/admin/codes-promo');
-  document.getElementById('liste-codes').innerHTML = codes.map(c => `
+  document.getElementById('liste-codes').innerHTML = codes.map(c => {
+    // Résumé des remises : si toutes identiques, affiche une ligne ; sinon liste
+    const remisesSpecifiques = (c.tarifs || []).filter(t => t.valeur_specifique !== null);
+    let infosRemises;
+    if (remisesSpecifiques.length === 0) {
+      infosRemises = c.type_reduction === 'pourcentage' ? `-${c.valeur}%` : `-${c.valeur}€`;
+    } else {
+      infosRemises = `<em>remises variables par tarif</em> (défaut : ${c.type_reduction === 'pourcentage' ? `-${c.valeur}%` : `-${c.valeur}€`})`;
+    }
+    return `
     <div class="ligne-code">
       <span class="nom">${c.code}</span>
       <span class="infos">
-        ${c.type_reduction === 'pourcentage' ? '-' + c.valeur + '%' : '-' + c.valeur + '€'}
+        ${infosRemises}
         ${c.reserve_premier_achat ? '· 1er achat uniquement' : ''}
         ${c.date_fin ? '· jusqu\'au ' + c.date_fin : '· sans date de fin'}
         · ${c.actif ? 'Actif' : 'Désactivé'}
       </span>
       <button class="btn btn-outline" onclick='modifierCode(${JSON.stringify(c)})'>Modifier</button>
       <button class="btn btn-outline" onclick="toggleCode(${c.id})">${c.actif ? 'Désactiver' : 'Activer'}</button>
-    </div>
-  `).join('') || '<p style="color:var(--grey);font-size:13px">Aucun code créé pour le moment.</p>';
+    </div>`;
+  }).join('') || '<p style="color:var(--grey);font-size:13px">Aucun code créé pour le moment.</p>';
+}
+
+function toggleDetailsTarif(cb) {
+  const details = document.getElementById(`details-${cb.value}`);
+  if (details) details.classList.toggle('visible', cb.checked);
+  if (!cb.checked) {
+    // Vide les champs spécifiques quand on décoche
+    const sel = document.querySelector(`[data-tarif-type="${cb.value}"]`);
+    const inp = document.querySelector(`[data-tarif-valeur="${cb.value}"]`);
+    if (sel) sel.value = '';
+    if (inp) inp.value = '';
+  }
 }
 
 function modifierCode(c) {
@@ -81,9 +123,27 @@ function modifierCode(c) {
   document.getElementById('input-valeur').value = c.valeur;
   document.getElementById('input-premier-achat').checked = c.reserve_premier_achat;
   document.getElementById('input-fin').value = c.date_fin || '';
-  document.querySelectorAll('#formations-check input').forEach(cb => {
-    cb.checked = c.tarif_ids.includes(parseInt(cb.value));
+
+  // Remet à zéro tous les tarifs, puis coche les bons
+  document.querySelectorAll('#formations-check input[type=checkbox]').forEach(cb => {
+    cb.checked = false;
+    toggleDetailsTarif(cb);
   });
+
+  (c.tarifs || []).forEach(t => {
+    const cb = document.querySelector(`#formations-check input[value="${t.id}"]`);
+    if (cb) {
+      cb.checked = true;
+      toggleDetailsTarif(cb);
+      if (t.valeur_specifique !== null && t.valeur_specifique !== undefined) {
+        const sel = document.querySelector(`[data-tarif-type="${t.id}"]`);
+        const inp = document.querySelector(`[data-tarif-valeur="${t.id}"]`);
+        if (sel) sel.value = t.type_specifique || '';
+        if (inp) inp.value = t.valeur_specifique;
+      }
+    }
+  });
+
   window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 }
 
@@ -95,15 +155,30 @@ async function enregistrerCode() {
   const dateFinBrute = document.getElementById('input-fin').value.trim();
 
   if (!code) { afficherToast("Le code est obligatoire."); return; }
-  if (valeurBrute === '' || isNaN(valeur)) { afficherToast("La valeur de la réduction est obligatoire et doit être un nombre."); return; }
+  if (valeurBrute === '' || isNaN(valeur)) { afficherToast("La valeur de la réduction est obligatoire."); return; }
   if (dateFinBrute && !/^\d{2}\/\d{2}\/\d{4}$/.test(dateFinBrute)) { afficherToast("Date de fin : utilise le format jj/mm/aaaa."); return; }
 
-  const tarif_ids = Array.from(document.querySelectorAll('#formations-check input:checked')).map(cb => parseInt(cb.value));
+  // Construit la liste tarifs avec valeurs spécifiques éventuelles
+  const tarifs = [];
+  document.querySelectorAll('#formations-check input[type=checkbox]:checked').forEach(cb => {
+    const tid = parseInt(cb.value);
+    const sel = document.querySelector(`[data-tarif-type="${tid}"]`);
+    const inp = document.querySelector(`[data-tarif-valeur="${tid}"]`);
+    const typeSpec = sel ? sel.value : '';
+    const valeurSpec = inp ? parseFloat(inp.value) : NaN;
+    tarifs.push({
+      id: tid,
+      type_specifique: typeSpec || null,
+      valeur_specifique: (!isNaN(valeurSpec) && inp && inp.value !== '') ? valeurSpec : null,
+    });
+  });
+
   const corps = {
     code, type_reduction: document.getElementById('input-type').value, valeur,
     reserve_premier_achat: document.getElementById('input-premier-achat').checked,
     date_fin: dateFinBrute || null,
-    tarif_ids,
+    tarifs,
+    tarif_ids: tarifs.map(t => t.id),  // rétro-compatibilité
   };
   const url = idEnCours ? `/admin/codes-promo/${idEnCours}` : '/admin/codes-promo';
   const methode = idEnCours ? 'PUT' : 'POST';
@@ -114,7 +189,10 @@ async function enregistrerCode() {
     document.getElementById('input-valeur').value = '';
     document.getElementById('input-fin').value = '';
     document.getElementById('input-premier-achat').checked = false;
-    document.querySelectorAll('#formations-check input').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#formations-check input[type=checkbox]').forEach(cb => {
+      cb.checked = false;
+      toggleDetailsTarif(cb);
+    });
     afficherToast('Code enregistré !');
     chargerCodesEtTarifs();
   } catch (e) {

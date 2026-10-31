@@ -9,18 +9,23 @@ indépendantes et non cumulables, ou plusieurs paliers cumulables (niveau
 """
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Numeric, Table
+    Column, Integer, String, Boolean, DateTime, ForeignKey, Text, Numeric
 )
 from sqlalchemy.orm import relationship, Session
 
 from ..models import Base, Formation, Eleve, AccesFormation
 
-codes_promo_tarifs = Table(
-    "codes_promo_tarifs",
-    Base.metadata,
-    Column("code_promo_id", Integer, ForeignKey("codes_promo.id"), primary_key=True),
-    Column("tarif_formation_id", Integer, ForeignKey("tarifs_formation.id"), primary_key=True),
-)
+class CodePromoTarif(Base):
+    """Liaison code promo ↔ tarif avec valeur/type optionnels par tarif.
+    Si valeur_specifique est NULL, on utilise les valeurs globales du code."""
+    __tablename__ = "codes_promo_tarifs"
+
+    code_promo_id = Column(Integer, ForeignKey("codes_promo.id"), primary_key=True)
+    tarif_formation_id = Column(Integer, ForeignKey("tarifs_formation.id"), primary_key=True)
+    valeur_specifique = Column(Numeric(10, 2), nullable=True)   # NULL = utilise code.valeur
+    type_specifique = Column(String(20), nullable=True)          # NULL = utilise code.type_reduction
+
+    tarif = relationship("TarifFormation")
 
 class TarifFormation(Base):
     __tablename__ = "tarifs_formation"
@@ -59,7 +64,12 @@ class CodePromo(Base):
     date_fin = Column(DateTime, nullable=True)
     cree_le = Column(DateTime, default=datetime.utcnow)
 
-    tarifs_concernes = relationship("TarifFormation", secondary=codes_promo_tarifs, backref="codes_promo")
+    liens_tarifs = relationship("CodePromoTarif", cascade="all, delete-orphan")
+
+    @property
+    def tarifs_concernes(self):
+        """Accès rétro-compatible aux TarifFormation liés."""
+        return [lien.tarif for lien in self.liens_tarifs if lien.tarif is not None]
 
     def est_valide_maintenant(self) -> bool:
         if not self.actif:
@@ -116,10 +126,19 @@ def calculer_meilleur_prix(tarif: TarifFormation, code):
     source = "promo" if prix_promo < prix_original else None
 
     if code and tarif in code.tarifs_concernes:
-        if code.type_reduction == "pourcentage":
-            prix_code = round(prix_original * (1 - float(code.valeur) / 100), 2)
+        # Cherche un lien spécifique à ce tarif (valeur/type per-tarif)
+        lien = next(
+            (l for l in code.liens_tarifs if l.tarif_formation_id == tarif.id),
+            None,
+        )
+        # Valeur et type : spécifiques si définis, sinon globaux du code
+        valeur = float(lien.valeur_specifique) if (lien and lien.valeur_specifique is not None) else float(code.valeur)
+        type_r = lien.type_specifique if (lien and lien.type_specifique) else code.type_reduction
+
+        if type_r == "pourcentage":
+            prix_code = round(prix_original * (1 - valeur / 100), 2)
         else:
-            prix_code = max(0.0, prix_original - float(code.valeur))
+            prix_code = max(0.0, prix_original - valeur)
         if prix_code < meilleur_prix:
             meilleur_prix = prix_code
             source = "code"

@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import Administrateur, Formation
 from .auth import admin_connecte
-from .boutique_models import TarifFormation, CodePromo
+from .boutique_models import TarifFormation, CodePromo, CodePromoTarif
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -101,27 +101,63 @@ def supprimer_tarif(tarif_id: int, session: Session = Depends(obtenir_session)):
 
 # --- Codes promo ---------------------------------------------------------
 
+class TarifPromoRequete(BaseModel):
+    """Un tarif lié à un code promo, avec valeur/type optionnels spécifiques."""
+    id: int
+    valeur_specifique: float | None = None    # None = utilise la valeur globale du code
+    type_specifique: str | None = None        # None = utilise le type global du code
+
+
 class CodePromoRequete(BaseModel):
     code: str
     type_reduction: str
     valeur: float
     reserve_premier_achat: bool = False
     date_fin: str | None = None
-    tarif_ids: list[int] = []
+    tarif_ids: list[int] = []  # rétro-compatibilité : simple liste d'IDs sans valeur spécifique
+    tarifs: list[TarifPromoRequete] = []  # nouveau : liste avec valeurs optionnelles par tarif
+
+
+def _code_promo_dict(c):
+    """Sérialise un code promo avec les valeurs spécifiques par tarif."""
+    tarifs_detail = []
+    for lien in c.liens_tarifs:
+        tarifs_detail.append({
+            "id": lien.tarif_formation_id,
+            "valeur_specifique": float(lien.valeur_specifique) if lien.valeur_specifique is not None else None,
+            "type_specifique": lien.type_specifique,
+        })
+    return {
+        "id": c.id, "code": c.code, "type_reduction": c.type_reduction, "valeur": float(c.valeur),
+        "actif": c.actif, "reserve_premier_achat": c.reserve_premier_achat,
+        "date_fin": c.date_fin.strftime("%d/%m/%Y") if c.date_fin else None,
+        "tarif_ids": [t.id for t in c.tarifs_concernes],  # rétro-compatibilité
+        "tarifs": tarifs_detail,  # avec valeurs spécifiques par tarif
+    }
+
+
+def _construire_liens_tarifs(requete: CodePromoRequete, session: Session) -> list:
+    """Construit la liste de CodePromoTarif à partir de la requête.
+    Priorité à `tarifs` (avec valeurs spécifiques) ; repli sur `tarif_ids` (sans valeur)."""
+    liens = []
+    if requete.tarifs:
+        for t in requete.tarifs:
+            lien = CodePromoTarif(
+                tarif_formation_id=t.id,
+                valeur_specifique=t.valeur_specifique,
+                type_specifique=t.type_specifique,
+            )
+            liens.append(lien)
+    elif requete.tarif_ids:
+        for tid in requete.tarif_ids:
+            liens.append(CodePromoTarif(tarif_formation_id=tid))
+    return liens
 
 
 @router.get("/codes-promo")
 def lire_codes_promo(session: Session = Depends(obtenir_session)):
     codes = session.query(CodePromo).all()
-    return [
-        {
-            "id": c.id, "code": c.code, "type_reduction": c.type_reduction, "valeur": float(c.valeur),
-            "actif": c.actif, "reserve_premier_achat": c.reserve_premier_achat,
-            "date_fin": c.date_fin.strftime("%d/%m/%Y") if c.date_fin else None,
-            "tarif_ids": [t.id for t in c.tarifs_concernes],
-        }
-        for c in codes
-    ]
+    return [_code_promo_dict(c) for c in codes]
 
 
 @router.post("/codes-promo")
@@ -132,8 +168,7 @@ def creer_code_promo(requete: CodePromoRequete, session: Session = Depends(obten
         code=requete.code.strip().upper(), type_reduction=requete.type_reduction, valeur=requete.valeur,
         reserve_premier_achat=requete.reserve_premier_achat, date_fin=date_fin,
     )
-    if requete.tarif_ids:
-        code.tarifs_concernes = session.query(TarifFormation).filter(TarifFormation.id.in_(requete.tarif_ids)).all()
+    code.liens_tarifs = _construire_liens_tarifs(requete, session)
     session.add(code)
     session.commit()
     return {"id": code.id}
@@ -150,7 +185,8 @@ def modifier_code_promo(code_id: int, requete: CodePromoRequete, session: Sessio
     code.valeur = requete.valeur
     code.reserve_premier_achat = requete.reserve_premier_achat
     code.date_fin = datetime.strptime(requete.date_fin, "%d/%m/%Y") if requete.date_fin else None
-    code.tarifs_concernes = session.query(TarifFormation).filter(TarifFormation.id.in_(requete.tarif_ids)).all()
+    # Remplace tous les liens existants (cascade delete-orphan s'en charge)
+    code.liens_tarifs = _construire_liens_tarifs(requete, session)
     session.commit()
     return {"ok": True}
 
