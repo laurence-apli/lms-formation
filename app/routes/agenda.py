@@ -190,6 +190,24 @@ def modifier_type_seance(ts_id: int, data: TypeSeanceIn, session: Session = Depe
     return {"ok": True}
 
 
+@admin_router.post("/types-seances/{ts_id}/modalite")
+def patcher_modalite_type_seance(
+    ts_id: int,
+    payload: dict,
+    session: Session = Depends(obtenir_session),
+):
+    """Corrige la modalité d'un type de séance (endpoint de correction ponctuelle)."""
+    ts = session.get(TypeSeance, ts_id)
+    if not ts:
+        raise HTTPException(status_code=404, detail="Type de séance introuvable.")
+    nouvelle = payload.get("modalite")
+    if nouvelle not in ("cabinet", "visio", "les_deux"):
+        raise HTTPException(status_code=400, detail="Valeur invalide pour modalite.")
+    ts.modalite = nouvelle
+    session.commit()
+    return {"ok": True, "id": ts.id, "nom": ts.nom, "modalite": ts.modalite}
+
+
 @admin_router.delete("/types-seances/{ts_id}")
 def supprimer_type_seance(ts_id: int, session: Session = Depends(obtenir_session)):
     ts = session.get(TypeSeance, ts_id)
@@ -1307,6 +1325,15 @@ async def reserver(request: Request, session: Session = Depends(obtenir_session)
     )
     if conflit:
         raise HTTPException(status_code=409, detail="Ce créneau chevauche une réservation existante. Veuillez en choisir un autre.")
+
+    # Délai minimum de réservation : 48 h avant le début de la séance
+    DELAI_MIN_RESERVATION_HEURES = 48
+    if (dt_debut - datetime.utcnow()).total_seconds() < DELAI_MIN_RESERVATION_HEURES * 3600:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Les réservations doivent être effectuées au moins "
+                   f"{DELAI_MIN_RESERVATION_HEURES} heures à l'avance.",
+        )
 
     # Lien visio unique : on utilise le lien du lieu (à terme : lien by-session via Whereby/Jitsi)
     lien_visio = None
