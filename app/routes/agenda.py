@@ -899,7 +899,13 @@ def api_semaine(
     maintenant = datetime.utcnow()
     try:
         dt_debut = datetime.fromisoformat(debut) if debut else maintenant.replace(hour=0, minute=0, second=0)
-        dt_fin = datetime.fromisoformat(fin) if fin else dt_debut + timedelta(days=7)
+        if fin:
+            dt_fin = datetime.fromisoformat(fin)
+            # Si fin est une date pure (sans heure), couvrir toute la journée jusqu'à 23:59:59
+            if len(fin) == 10:
+                dt_fin = dt_fin.replace(hour=23, minute=59, second=59)
+        else:
+            dt_fin = dt_debut + timedelta(days=7)
     except ValueError:
         raise HTTPException(status_code=400, detail="Format de date invalide.")
 
