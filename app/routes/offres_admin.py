@@ -448,3 +448,69 @@ def exporter_clients_csv(
         media_type="text/csv; charset=utf-8-sig",
         headers={"Content-Disposition": "attachment; filename=clientes_export.csv"},
     )
+
+
+# ---------------------------------------------------------------------------
+# API clients unifiés : élèves + clientes RDV avec badges statuts
+# ---------------------------------------------------------------------------
+
+@router.get("/api/clients")
+def lister_clients(
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    """Retourne toutes les personnes connues avec leurs statuts (formation / RDV / les deux)."""
+    from ..models import Eleve as EleveModel, Reservation, AccesFormation, Formation
+
+    # --- Élèves formation ---
+    eleves = session.query(EleveModel).order_by(EleveModel.nom).all()
+    clients = {}  # email_lower → dict
+
+    for e in eleves:
+        key = e.email.lower()
+        formations = [a.formation.titre for a in e.acces_formations if a.formation]
+        clients[key] = {
+            "prenom": e.prenom,
+            "nom": e.nom,
+            "email": e.email,
+            "telephone": "",
+            "est_eleve": True,
+            "est_rdv": False,
+            "formations": formations,
+            "nb_rdv": 0,
+            "cree_le": e.cree_le.strftime("%d/%m/%Y") if e.cree_le else "",
+            "eleve_id": e.id,
+        }
+
+    # --- Clientes RDV (toutes, pas seulement payantes) ---
+    reservations = (
+        session.query(Reservation)
+        .filter(Reservation.statut != "annulee")
+        .order_by(Reservation.date_debut.desc())
+        .all()
+    )
+    for r in reservations:
+        if not r.email:
+            continue
+        key = r.email.lower()
+        if key in clients:
+            clients[key]["est_rdv"] = True
+            clients[key]["nb_rdv"] = clients[key]["nb_rdv"] + 1
+            if not clients[key]["telephone"] and r.telephone:
+                clients[key]["telephone"] = r.telephone
+        else:
+            clients[key] = {
+                "prenom": r.prenom,
+                "nom": r.nom,
+                "email": r.email,
+                "telephone": r.telephone or "",
+                "est_eleve": False,
+                "est_rdv": True,
+                "formations": [],
+                "nb_rdv": 1,
+                "cree_le": r.cree_le.strftime("%d/%m/%Y") if r.cree_le else "",
+                "eleve_id": None,
+            }
+
+    toutes = sorted(clients.values(), key=lambda x: (x["nom"].lower(), x["prenom"].lower()))
+    return toutes
