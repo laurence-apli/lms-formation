@@ -347,3 +347,104 @@ def supprimer_paiement(
     session.delete(commande)
     session.commit()
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# API : paiements RDV agenda (Stripe) — lecture seule
+# ---------------------------------------------------------------------------
+
+@router.get("/api/paiements/rdv")
+def api_paiements_rdv(
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    """Réservations agenda ayant un paiement Stripe enregistré (prix_paye > 0)."""
+    from ..models import Reservation, TypeSeance
+    from sqlalchemy.orm import joinedload
+
+    reservations = (
+        session.query(Reservation)
+        .options(joinedload(Reservation.type_seance))
+        .filter(Reservation.prix_paye.isnot(None), Reservation.prix_paye > 0)
+        .order_by(Reservation.date_debut.desc())
+        .all()
+    )
+    result = []
+    for r in reservations:
+        nom_type = r.type_seance.nom if r.type_seance else "Séance"
+        result.append({
+            "id": r.id,
+            "date": r.date_debut.strftime("%d/%m/%Y") if r.date_debut else "",
+            "heure": r.date_debut.strftime("%H:%M") if r.date_debut else "",
+            "prenom": r.prenom,
+            "nom": r.nom,
+            "email": r.email,
+            "telephone": r.telephone or "",
+            "type_seance": nom_type,
+            "montant": float(r.prix_paye),
+            "statut": r.statut,
+            "stripe_id": r.stripe_checkout_session_id or "",
+        })
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Export CSV : toutes les clientes (élèves + clientes RDV, dédupliquées par email)
+# ---------------------------------------------------------------------------
+
+@router.get("/api/clients/export-csv")
+def exporter_clients_csv(
+    session: Session = Depends(obtenir_session),
+    admin=Depends(admin_connecte),
+):
+    """Export CSV de toutes les clientes connues : élèves + clientes RDV."""
+    import io
+    import csv
+    from fastapi.responses import StreamingResponse
+    from ..models import Eleve as EleveModel, Reservation
+
+    # Élèves inscrits sur la plateforme
+    eleves = session.query(EleveModel).order_by(EleveModel.nom).all()
+    eleves_par_email = {e.email.lower(): {
+        "prenom": e.prenom,
+        "nom": e.nom,
+        "email": e.email,
+        "telephone": "",
+        "source": "Élève formation",
+        "cree_le": e.cree_le.strftime("%d/%m/%Y") if e.cree_le else "",
+    } for e in eleves}
+
+    # Clientes RDV (toutes réservations, pas seulement payantes)
+    reservations = (
+        session.query(Reservation)
+        .filter(Reservation.statut != "annulee")
+        .order_by(Reservation.date_debut.desc())
+        .all()
+    )
+    for r in reservations:
+        email_key = r.email.lower()
+        if email_key not in eleves_par_email:
+            eleves_par_email[email_key] = {
+                "prenom": r.prenom,
+                "nom": r.nom,
+                "email": r.email,
+                "telephone": r.telephone or "",
+                "source": "Cliente RDV",
+                "cree_le": r.cree_le.strftime("%d/%m/%Y") if r.cree_le else "",
+            }
+
+    # Tri alphabétique final par nom
+    toutes = sorted(eleves_par_email.values(), key=lambda x: (x["nom"].lower(), x["prenom"].lower()))
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, delimiter=";")
+    writer.writerow(["Prénom", "Nom", "Email", "Téléphone", "Source", "Date"])
+    for c in toutes:
+        writer.writerow([c["prenom"], c["nom"], c["email"], c["telephone"], c["source"], c["cree_le"]])
+
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": "attachment; filename=clientes_export.csv"},
+    )

@@ -2,12 +2,21 @@
 {% block titre %}Suivi des paiements{% endblock %}
 {% block contenu %}
 <div class="topbar">
-  <div><h1>Suivi des paiements</h1><p style="color:var(--grey);font-size:13px;margin-top:4px;">Boutique et offres publiques — paiements Stripe et manuels</p></div>
-  <div style="margin-left:auto">
+  <div><h1>Suivi des paiements</h1><p style="color:var(--grey);font-size:13px;margin-top:4px;">Boutique, offres publiques et RDV agenda</p></div>
+  <div style="margin-left:auto;display:flex;gap:10px;">
+    <a href="/admin/api/clients/export-csv" class="btn btn-outline" style="text-decoration:none;font-size:13px;" title="Télécharger la liste de toutes les clientes (élèves + RDV)">📥 Export clientes CSV</a>
     <button class="btn btn-gold" onclick="ouvrirModal()">💳 Nouveau paiement</button>
   </div>
 </div>
 
+<!-- Onglets principaux -->
+<div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;">
+  <button id="ong-boutique" onclick="switchOnglet('boutique')" class="ong-btn ong-active">🛒 Boutique & offres</button>
+  <button id="ong-rdv" onclick="switchOnglet('rdv')" class="ong-btn">📅 RDV payants</button>
+</div>
+
+<!-- ════ ONGLET BOUTIQUE ════ -->
+<div id="pan-boutique">
 <div id="stat-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem">
   <div class="stat-card"><div class="stat-label">Total encaissé</div><div class="stat-val" id="s-total">—</div></div>
   <div class="stat-card"><div class="stat-label">Soldes en attente</div><div class="stat-val orange" id="s-reste">—</div></div>
@@ -49,6 +58,44 @@
   <tbody id="tbody"></tbody>
 </table>
 </div>
+</div><!-- fin pan-boutique -->
+
+<!-- ════ ONGLET RDV PAYANTS ════ -->
+<div id="pan-rdv" style="display:none;">
+<div id="rdv-stat-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.5rem">
+  <div class="stat-card"><div class="stat-label">Total Stripe RDV</div><div class="stat-val" id="rdv-total">—</div></div>
+  <div class="stat-card"><div class="stat-label">Nombre de RDV payants</div><div class="stat-val" id="rdv-count">—</div></div>
+  <div class="stat-card"><div class="stat-label">Clientes uniques</div><div class="stat-val" id="rdv-uniq">—</div></div>
+</div>
+
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:1.25rem">
+  <select id="rdv-filtre-statut" onchange="renderTableRdv()" style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;">
+    <option value="">Tous les statuts</option>
+    <option value="en_attente">En attente</option>
+    <option value="realisee">Réalisée</option>
+    <option value="annulee">Annulée</option>
+  </select>
+  <input id="rdv-recherche" type="text" placeholder="🔍 Rechercher nom / email…" oninput="renderTableRdv()"
+    style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:220px;">
+  <span id="rdv-recap" style="margin-left:auto;font-size:13px;color:var(--grey);"></span>
+</div>
+
+<div style="overflow-x:auto;border:1px solid var(--border);border-radius:10px;">
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead>
+    <tr style="border-bottom:1px solid var(--border);">
+      <th style="padding:10px;color:var(--grey);font-weight:600;width:95px;text-align:left">Date RDV</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Cliente</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Type de séance</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;width:90px;text-align:right">Montant</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;width:100px;text-align:left">Statut</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;width:120px;text-align:left">Réf. Stripe</th>
+    </tr>
+  </thead>
+  <tbody id="tbody-rdv"></tbody>
+</table>
+</div>
+</div><!-- fin pan-rdv -->
 
 <!-- Modal unifié : onglet Paiement reçu / Facture Stripe -->
 <div id="modal-principal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;overflow-y:auto;">
@@ -134,9 +181,9 @@
 .stat-val{font-size:22px;font-weight:600;color:var(--ink);}
 .stat-val.orange{color:#B8622A;}
 .badge-s{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
-.badge-s.payee{background:#e8f5e9;color:#2e7d32;}
+.badge-s.payee,.badge-s.realisee{background:#e8f5e9;color:#2e7d32;}
 .badge-s.acompte{background:#fff3cd;color:#856404;}
-.badge-s.attente{background:#dbeafe;color:#1d4ed8;}
+.badge-s.attente,.badge-s.en_attente{background:#dbeafe;color:#1d4ed8;}
 .badge-s.annulee{background:#fce4e4;color:#c0392b;}
 .lbl{font-size:12px;color:var(--grey);font-weight:600;display:block;margin-bottom:4px;}
 .inp{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;}
@@ -144,17 +191,85 @@
 .btn-icon{background:none;border:1px solid var(--border);border-radius:5px;padding:3px 7px;font-size:12px;cursor:pointer;color:var(--grey);line-height:1.4;}
 .btn-icon:hover{border-color:#c0392b;color:#c0392b;}
 .btn-icon.lien:hover{border-color:#1d4ed8;color:#1d4ed8;}
+/* Onglets principaux */
+.ong-btn{background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s;}
+.ong-active{color:var(--gold,#B8622A);border-bottom-color:var(--gold,#B8622A);}
+.ong-btn:hover:not(.ong-active){color:var(--ink);}
 </style>
 
 <script>
 let allData = [];
+let allRdvData = [];
+let ongletActuel = 'boutique';
 
-/* ─── Onglets ─── */
+/* ─── Onglets principaux boutique / RDV ─── */
+function switchOnglet(ong) {
+  ongletActuel = ong;
+  document.getElementById('pan-boutique').style.display = ong==='boutique' ? 'block' : 'none';
+  document.getElementById('pan-rdv').style.display = ong==='rdv' ? 'block' : 'none';
+  document.getElementById('ong-boutique').classList.toggle('ong-active', ong==='boutique');
+  document.getElementById('ong-rdv').classList.toggle('ong-active', ong==='rdv');
+  if(ong==='rdv' && allRdvData.length===0) chargerRdv();
+}
+
+/* ─── Onglets modal paiement ─── */
 function switchTab(tab) {
   ['recu','stripe'].forEach(t => {
     document.getElementById('pan-'+t).style.display = t===tab ? 'block' : 'none';
     document.getElementById('tab-'+t).classList.toggle('tab-active', t===tab);
   });
+}
+
+/* ─── RDV payants ─── */
+async function chargerRdv() {
+  const tbody = document.getElementById('tbody-rdv');
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--grey);">Chargement…</td></tr>';
+  const r = await fetch('/admin/api/paiements/rdv');
+  if(!r.ok){tbody.innerHTML='<tr><td colspan="6" style="color:red;padding:20px;text-align:center;">Erreur de chargement</td></tr>';return;}
+  allRdvData = await r.json();
+  updateStatsRdv();
+  renderTableRdv();
+}
+
+function updateStatsRdv() {
+  const total = allRdvData.reduce((s,r)=>s+r.montant,0);
+  const uniq = new Set(allRdvData.map(r=>r.email.toLowerCase())).size;
+  document.getElementById('rdv-total').textContent = total.toFixed(2)+' €';
+  document.getElementById('rdv-count').textContent = allRdvData.length;
+  document.getElementById('rdv-uniq').textContent = uniq;
+}
+
+function badgeRdvStatut(s) {
+  const map={en_attente:'En attente',realisee:'Réalisée',annulee:'Annulée'};
+  const cls=s==='realisee'?'realisee':s==='annulee'?'annulee':'en_attente';
+  return `<span class="badge-s ${cls}">${map[s]||s}</span>`;
+}
+
+function renderTableRdv() {
+  const st = document.getElementById('rdv-filtre-statut').value;
+  const q = (document.getElementById('rdv-recherche').value||'').toLowerCase();
+  let data = allRdvData.filter(r =>
+    (!st || r.statut===st) &&
+    (!q || r.nom.toLowerCase().includes(q) || r.prenom.toLowerCase().includes(q) || r.email.toLowerCase().includes(q))
+  );
+  const total = data.reduce((s,r)=>s+r.montant,0);
+  document.getElementById('rdv-recap').textContent = data.length+' RDV — '+total.toFixed(2)+' € Stripe';
+  const tbody = document.getElementById('tbody-rdv');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--grey);">Aucun RDV payant trouvé.</td></tr>';return;}
+  tbody.innerHTML = data.map(r=>{
+    const stripeShort = r.stripe_id ? r.stripe_id.substring(0,20)+'…' : '—';
+    const stripeLink = r.stripe_id
+      ? `<a href="https://dashboard.stripe.com/payments/${r.stripe_id}" target="_blank" style="font-size:11px;color:#1d4ed8;text-decoration:none;" title="${r.stripe_id}">${stripeShort}</a>`
+      : '—';
+    return `<tr style="border-bottom:1px solid var(--border);">
+      <td style="padding:10px;white-space:nowrap;color:var(--grey);font-size:12px;">${r.date}<br><span style="font-size:11px;">${r.heure}</span></td>
+      <td style="padding:10px;"><div style="font-weight:600;">${r.prenom} ${r.nom}</div><div style="font-size:11px;color:var(--grey);">${r.email}</div>${r.telephone?`<div style="font-size:11px;color:var(--grey);">${r.telephone}</div>`:''}</td>
+      <td style="padding:10px;font-size:13px;">${r.type_seance}</td>
+      <td style="padding:10px;text-align:right;font-weight:600;">${r.montant.toFixed(2)} €</td>
+      <td style="padding:10px;">${badgeRdvStatut(r.statut)}</td>
+      <td style="padding:10px;">${stripeLink}</td>
+    </tr>`;
+  }).join('');
 }
 function ouvrirModal(email, prenom, nom, desc, montant) {
   if(email !== undefined) {
