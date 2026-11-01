@@ -459,16 +459,49 @@ def lister_clients(
     session: Session = Depends(obtenir_session),
     admin=Depends(admin_connecte),
 ):
-    """Retourne toutes les personnes connues avec leurs statuts (formation / RDV / les deux)."""
-    from ..models import Eleve as EleveModel, Reservation, AccesFormation, Formation
+    """Retourne toutes les personnes connues avec détail financier complet."""
+    from ..models import Eleve as EleveModel, Reservation
+    from ..routes.boutique_models import Commande
+    from sqlalchemy.orm import joinedload
 
-    # --- Élèves formation ---
-    eleves = session.query(EleveModel).order_by(EleveModel.nom).all()
     clients = {}  # email_lower → dict
 
+    # ── 1. Élèves formation ──────────────────────────────────────────────────
+    eleves = (
+        session.query(EleveModel)
+        .options(
+            joinedload(EleveModel.acces_formations),
+            joinedload(EleveModel.commandes),
+        )
+        .order_by(EleveModel.nom)
+        .all()
+    )
     for e in eleves:
         key = e.email.lower()
         formations = [a.formation.titre for a in e.acces_formations if a.formation]
+
+        # Commandes boutique : cherche acomptes non soldés
+        montant_paye_formation = 0.0
+        paiement_en_attente = False
+        detail_commandes = []
+        for cmd in e.commandes:
+            paye = float(cmd.montant_total or 0)
+            total = float(cmd.montant_prix_total or cmd.montant_total or 0)
+            montant_paye_formation += paye
+            est_acompte = cmd.type_paiement == "acompte"
+            solde_restant = round(total - paye, 2) if est_acompte else 0.0
+            if solde_restant > 0:
+                paiement_en_attente = True
+            detail_commandes.append({
+                "statut": cmd.statut,
+                "type": cmd.type_paiement or "comptant",
+                "paye": paye,
+                "total": total,
+                "solde_restant": solde_restant,
+                "date": cmd.cree_le.strftime("%d/%m/%Y") if cmd.cree_le else "",
+            })
+
+        derniere_activite = e.cree_le
         clients[key] = {
             "prenom": e.prenom,
             "nom": e.nom,
@@ -478,14 +511,21 @@ def lister_clients(
             "est_rdv": False,
             "formations": formations,
             "nb_rdv": 0,
+            "nb_rdv_annules": 0,
+            "montant_paye_rdv": 0.0,
+            "rdv_non_payes": 0,
+            "montant_paye_formation": round(montant_paye_formation, 2),
+            "paiement_en_attente": paiement_en_attente,
+            "detail_commandes": detail_commandes,
+            "derniere_activite": derniere_activite.strftime("%Y-%m-%d") if derniere_activite else "",
+            "derniere_activite_affichage": derniere_activite.strftime("%d/%m/%Y") if derniere_activite else "",
             "cree_le": e.cree_le.strftime("%d/%m/%Y") if e.cree_le else "",
             "eleve_id": e.id,
         }
 
-    # --- Clientes RDV (toutes, pas seulement payantes) ---
+    # ── 2. Toutes les réservations (y compris annulées pour comptage) ────────
     reservations = (
         session.query(Reservation)
-        .filter(Reservation.statut != "annulee")
         .order_by(Reservation.date_debut.desc())
         .all()
     )
@@ -493,11 +533,27 @@ def lister_clients(
         if not r.email:
             continue
         key = r.email.lower()
+        est_annulee = r.statut == "annulee"
+        prix = float(r.prix_paye) if r.prix_paye else 0.0
+        rdv_non_paye = not est_annulee and (r.prix_paye is None or r.prix_paye == 0)
+        date_rdv = r.date_debut or r.cree_le
+
         if key in clients:
-            clients[key]["est_rdv"] = True
-            clients[key]["nb_rdv"] = clients[key]["nb_rdv"] + 1
-            if not clients[key]["telephone"] and r.telephone:
-                clients[key]["telephone"] = r.telephone
+            c = clients[key]
+            if est_annulee:
+                c["nb_rdv_annules"] += 1
+            else:
+                c["est_rdv"] = True
+                c["nb_rdv"] += 1
+                c["montant_paye_rdv"] = round(c["montant_paye_rdv"] + prix, 2)
+                if rdv_non_paye:
+                    c["rdv_non_payes"] += 1
+            # Mise à jour dernière activité
+            if date_rdv and (not c["derniere_activite"] or date_rdv.strftime("%Y-%m-%d") > c["derniere_activite"]):
+                c["derniere_activite"] = date_rdv.strftime("%Y-%m-%d")
+                c["derniere_activite_affichage"] = date_rdv.strftime("%d/%m/%Y")
+            if not c["telephone"] and r.telephone:
+                c["telephone"] = r.telephone
         else:
             clients[key] = {
                 "prenom": r.prenom,
@@ -505,9 +561,17 @@ def lister_clients(
                 "email": r.email,
                 "telephone": r.telephone or "",
                 "est_eleve": False,
-                "est_rdv": True,
+                "est_rdv": not est_annulee,
                 "formations": [],
-                "nb_rdv": 1,
+                "nb_rdv": 0 if est_annulee else 1,
+                "nb_rdv_annules": 1 if est_annulee else 0,
+                "montant_paye_rdv": prix,
+                "rdv_non_payes": 1 if rdv_non_paye else 0,
+                "montant_paye_formation": 0.0,
+                "paiement_en_attente": False,
+                "detail_commandes": [],
+                "derniere_activite": date_rdv.strftime("%Y-%m-%d") if date_rdv else "",
+                "derniere_activite_affichage": date_rdv.strftime("%d/%m/%Y") if date_rdv else "",
                 "cree_le": r.cree_le.strftime("%d/%m/%Y") if r.cree_le else "",
                 "eleve_id": None,
             }

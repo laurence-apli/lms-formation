@@ -13,6 +13,7 @@
 <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:1.25rem;">
   <button id="ong-boutique" onclick="switchOnglet('boutique')" class="ong-btn ong-active">🛒 Boutique & offres</button>
   <button id="ong-rdv" onclick="switchOnglet('rdv')" class="ong-btn">📅 RDV payants</button>
+  <button id="ong-clients" onclick="switchOnglet('clients')" class="ong-btn">👥 Toutes les clientes</button>
 </div>
 
 <!-- ════ ONGLET BOUTIQUE ════ -->
@@ -96,6 +97,50 @@
 </table>
 </div>
 </div><!-- fin pan-rdv -->
+
+<!-- ════ ONGLET CLIENTES ════ -->
+<div id="pan-clients" style="display:none;">
+
+<!-- Filtres et tri -->
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:1rem;">
+  <div style="display:flex;gap:6px;">
+    <button class="filtre-btn filtre-active" data-filtre="toutes" onclick="setFiltre('toutes')">Toutes</button>
+    <button class="filtre-btn" data-filtre="formation" onclick="setFiltre('formation')">🎓 Formation</button>
+    <button class="filtre-btn" data-filtre="rdv" onclick="setFiltre('rdv')">📅 RDV</button>
+    <button class="filtre-btn" data-filtre="les_deux" onclick="setFiltre('les_deux')">✨ Les deux</button>
+  </div>
+  <div style="display:flex;gap:6px;margin-left:auto;">
+    <button class="tri-btn tri-active" data-tri="activite" onclick="setTri('activite')">⏱ Dernière activité</button>
+    <button class="tri-btn" data-tri="nom" onclick="setTri('nom')">🔤 Nom A→Z</button>
+  </div>
+  <input id="search-clients" type="search" placeholder="🔍 Rechercher…" oninput="renderTableClients()"
+    style="padding:7px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;min-width:180px;">
+</div>
+
+<!-- Stats rapides -->
+<div id="clients-stats" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.2rem;"></div>
+
+<!-- Table -->
+<div style="overflow-x:auto;">
+<table style="width:100%;border-collapse:collapse;font-size:13px;">
+  <thead>
+    <tr style="border-bottom:2px solid var(--border);">
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Nom / Prénom</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Email</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Tél.</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:center">Statut</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:center">RDV</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:center">Formations</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:right">Payé RDV</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:right">Payé form.</th>
+      <th style="padding:10px;color:var(--grey);font-weight:600;text-align:left">Dernière activité</th>
+    </tr>
+  </thead>
+  <tbody id="tbody-clients"></tbody>
+</table>
+</div>
+<p id="clients-vide" style="display:none;color:var(--grey);text-align:center;padding:30px;">Aucune cliente pour ce filtre.</p>
+</div><!-- fin pan-clients -->
 
 <!-- Modal unifié : onglet Paiement reçu / Facture Stripe -->
 <div id="modal-principal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;overflow-y:auto;">
@@ -195,21 +240,38 @@
 .ong-btn{background:none;border:none;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;color:var(--grey);border-bottom:3px solid transparent;margin-bottom:-2px;transition:color .15s;}
 .ong-active{color:var(--gold,#B8622A);border-bottom-color:var(--gold,#B8622A);}
 .ong-btn:hover:not(.ong-active){color:var(--ink);}
+/* Filtres et tri clientes */
+.filtre-btn,.tri-btn{background:none;border:1px solid var(--border);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;color:var(--grey);transition:all .15s;}
+.filtre-active{background:var(--gold,#B8622A);border-color:var(--gold,#B8622A);color:#fff;}
+.tri-active{background:var(--ink,#1a1a1a);border-color:var(--ink,#1a1a1a);color:#fff;}
+.filtre-btn:hover:not(.filtre-active),.tri-btn:hover:not(.tri-active){border-color:var(--ink);color:var(--ink);}
+/* Badges statut clientes */
+.badge-formation{background:#e8f4e8;color:#2d6a2d;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+.badge-rdv{background:#e8f0fb;color:#1d4ed8;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;white-space:nowrap;}
+/* Stats mini */
+.stat-mini{background:var(--surface,#f8f8f6);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;color:var(--ink);}
+.stat-alert{background:#fff7ed;border-color:#f59e0b;color:#92400e;}
 </style>
 
 <script>
 let allData = [];
 let allRdvData = [];
+let allClientsData = [];
+let clientsFiltre = 'toutes';
+let clientsTri = 'activite';
 let ongletActuel = 'boutique';
 
-/* ─── Onglets principaux boutique / RDV ─── */
+/* ─── Onglets principaux boutique / RDV / Clientes ─── */
 function switchOnglet(ong) {
   ongletActuel = ong;
   document.getElementById('pan-boutique').style.display = ong==='boutique' ? 'block' : 'none';
   document.getElementById('pan-rdv').style.display = ong==='rdv' ? 'block' : 'none';
+  document.getElementById('pan-clients').style.display = ong==='clients' ? 'block' : 'none';
   document.getElementById('ong-boutique').classList.toggle('ong-active', ong==='boutique');
   document.getElementById('ong-rdv').classList.toggle('ong-active', ong==='rdv');
+  document.getElementById('ong-clients').classList.toggle('ong-active', ong==='clients');
   if(ong==='rdv' && allRdvData.length===0) chargerRdv();
+  if(ong==='clients' && allClientsData.length===0) chargerClients();
 }
 
 /* ─── Onglets modal paiement ─── */
@@ -424,6 +486,101 @@ async function genererLienStripe() {
   }
 }
 function copierLien(){navigator.clipboard.writeText(document.getElementById('sl-url').textContent).then(()=>alert('Lien copié !'));}
+
+/* ─── Clientes unifiées ─── */
+async function chargerClients() {
+  const tbody = document.getElementById('tbody-clients');
+  tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--grey);">Chargement…</td></tr>';
+  const r = await fetch('/admin/api/clients');
+  if(!r.ok){tbody.innerHTML='<tr><td colspan="9" style="color:red;padding:20px;text-align:center;">Erreur de chargement</td></tr>';return;}
+  allClientsData = await r.json();
+  renderTableClients();
+}
+
+function setFiltre(f) {
+  clientsFiltre = f;
+  document.querySelectorAll('.filtre-btn').forEach(b => b.classList.toggle('filtre-active', b.dataset.filtre===f));
+  renderTableClients();
+}
+
+function setTri(t) {
+  clientsTri = t;
+  document.querySelectorAll('.tri-btn').forEach(b => b.classList.toggle('tri-active', b.dataset.tri===t));
+  renderTableClients();
+}
+
+function renderTableClients() {
+  const q = (document.getElementById('search-clients')?.value||'').toLowerCase();
+  let data = allClientsData.filter(c => {
+    if(clientsFiltre==='formation') return c.est_eleve && !c.est_rdv;
+    if(clientsFiltre==='rdv') return c.est_rdv && !c.est_eleve;
+    if(clientsFiltre==='les_deux') return c.est_eleve && c.est_rdv;
+    return true;
+  });
+  if(q) data = data.filter(c =>
+    (c.nom+' '+c.prenom+' '+c.email).toLowerCase().includes(q)
+  );
+  if(clientsTri==='activite') {
+    data = [...data].sort((a,b) => (b.derniere_activite||'').localeCompare(a.derniere_activite||''));
+  } else {
+    data = [...data].sort((a,b) => (a.nom+a.prenom).localeCompare(b.nom+b.prenom));
+  }
+
+  /* Stats */
+  const stats = document.getElementById('clients-stats');
+  const nbEleves = data.filter(c=>c.est_eleve).length;
+  const nbRdv = data.filter(c=>c.est_rdv).length;
+  const nbDeux = data.filter(c=>c.est_eleve&&c.est_rdv).length;
+  const nbAlert = data.filter(c=>c.paiement_en_attente||c.rdv_non_payes>0).length;
+  stats.innerHTML = `
+    <div class="stat-mini">👥 <strong>${data.length}</strong> clientes</div>
+    <div class="stat-mini">🎓 <strong>${nbEleves}</strong> formation${nbEleves>1?'s':''}</div>
+    <div class="stat-mini">📅 <strong>${nbRdv}</strong> RDV</div>
+    <div class="stat-mini">✨ <strong>${nbDeux}</strong> les deux</div>
+    ${nbAlert>0?`<div class="stat-mini stat-alert">⚠️ <strong>${nbAlert}</strong> paiement${nbAlert>1?'s':''} en attente</div>`:''}
+  `;
+
+  const tbody = document.getElementById('tbody-clients');
+  const vide = document.getElementById('clients-vide');
+  if(!data.length){tbody.innerHTML='';vide.style.display='block';return;}
+  vide.style.display='none';
+
+  tbody.innerHTML = data.map(c => {
+    /* Badge statut */
+    let badges = '';
+    if(c.est_eleve) badges += '<span class="badge-formation">🎓 Formation</span> ';
+    if(c.est_rdv)   badges += '<span class="badge-rdv">📅 RDV</span>';
+
+    /* RDV : nb + annulés + non payés */
+    let rdvCell = c.nb_rdv>0 ? `<strong>${c.nb_rdv}</strong>` : '—';
+    if(c.nb_rdv_annules>0) rdvCell += ` <span style="color:var(--grey);font-size:11px;">(${c.nb_rdv_annules} annulé${c.nb_rdv_annules>1?'s':''})</span>`;
+    if(c.rdv_non_payes>0)  rdvCell += ` <span style="color:#e67e22;font-size:11px;">⚠️${c.rdv_non_payes} non payé${c.rdv_non_payes>1?'s':''}</span>`;
+
+    /* Formations */
+    let formCell = '—';
+    if(c.formations && c.formations.length>0){
+      formCell = c.formations.map(f=>`<div style="font-size:11px;white-space:nowrap;">${f}</div>`).join('');
+      if(c.paiement_en_attente) formCell += '<div style="color:#e67e22;font-size:11px;">⚠️ solde restant</div>';
+    }
+
+    /* Montants */
+    const rdvPaye = c.montant_paye_rdv>0 ? c.montant_paye_rdv.toFixed(2)+' €' : '—';
+    const formPaye = c.montant_paye_formation>0 ? c.montant_paye_formation.toFixed(2)+' €' : '—';
+
+    const rowStyle = (c.paiement_en_attente||c.rdv_non_payes>0) ? 'background:rgba(230,126,34,.06);' : '';
+    return `<tr style="border-bottom:1px solid var(--border);${rowStyle}">
+      <td style="padding:9px 10px;font-weight:600;">${c.nom} ${c.prenom}</td>
+      <td style="padding:9px 10px;font-size:12px;color:var(--grey);">${c.email}</td>
+      <td style="padding:9px 10px;font-size:12px;">${c.telephone||'—'}</td>
+      <td style="padding:9px 10px;text-align:center;">${badges}</td>
+      <td style="padding:9px 10px;text-align:center;">${rdvCell}</td>
+      <td style="padding:9px 10px;">${formCell}</td>
+      <td style="padding:9px 10px;text-align:right;">${rdvPaye}</td>
+      <td style="padding:9px 10px;text-align:right;">${formPaye}</td>
+      <td style="padding:9px 10px;font-size:12px;color:var(--grey);">${c.derniere_activite_affichage||'—'}</td>
+    </tr>`;
+  }).join('');
+}
 
 charger();
 </script>
