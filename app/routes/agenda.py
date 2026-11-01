@@ -1867,6 +1867,14 @@ def cron_rappels(session: Session = Depends(obtenir_session)):
 # ===========================================================================
 
 def _serialiser_reservation(r: Reservation) -> dict:
+    def _dt_utc(dt):
+        """Sérialise un datetime naïf UTC en ISO 8601 avec suffixe +00:00.
+        Sans ce suffixe, JavaScript interprète la chaîne comme heure LOCALE,
+        ce qui décale l'affichage d'1h (UTC+1 Paris hiver) et fait disparaître
+        les réservations du filtre « À venir »."""
+        if dt is None:
+            return None
+        return dt.isoformat() + "+00:00"
     return {
         "id": r.id,
         "prenom": r.prenom,
@@ -1874,8 +1882,8 @@ def _serialiser_reservation(r: Reservation) -> dict:
         "email": r.email,
         "telephone": r.telephone,
         "message": r.message,
-        "date_debut": r.date_debut.isoformat() if r.date_debut else None,
-        "date_fin": r.date_fin.isoformat() if r.date_fin else None,
+        "date_debut": _dt_utc(r.date_debut),
+        "date_fin": _dt_utc(r.date_fin),
         "statut": r.statut,
         "source": r.source,
         "type_seance": r.type_seance.nom if r.type_seance else None,
