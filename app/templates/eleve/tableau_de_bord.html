@@ -32,6 +32,20 @@
 .bandeau-inactif p { margin:4px 0; font-size:14px; color:#72243E; }
 .empty-dashboard { text-align:center; padding:60px 20px; color:var(--grey); }
 .lien-catalogue { background:none; border:1px solid rgba(245,237,214,.3); color:#F5EDD6; border-radius:6px; padding:6px 12px; font-size:12px; text-decoration:none; display:inline-block; }
+/* Description courte de la formation */
+.carte-description {
+  font-size:12px; line-height:1.5; color:#D6CAAA;
+  margin-top:8px; padding-top:8px; border-top:1px solid rgba(255,255,255,.12);
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical;
+  overflow:hidden; cursor:default; transition:max-height .25s ease;
+  max-height:5.2em;
+}
+.carte-description:hover, .carte-description.expanded {
+  -webkit-line-clamp:unset; max-height:40em;
+  overflow:visible;
+}
+/* Description dans les cartes "disponibles" (fond clair) */
+.carte-disponible .carte-description { color:var(--grey); border-top-color:var(--border); }
 </style>
 
 <div class="topbar-eleve">
@@ -72,6 +86,7 @@
 {% if f.nb_niveaux > 1 %}<div class="carte-niveau">Niveau {{ f.niveau }} sur {{ f.nb_niveaux }}</div>{% endif %}
 <div class="carte-progress-track"><div class="fill" style="width:{{ f.progression }}%"></div></div>
 <div class="carte-progress-label">{% if f.progression == 100 %}Terminée{% else %}{{ f.progression }}% complété{% endif %}</div>
+{% if f.description_courte %}<p class="carte-description" title="{{ f.description_courte }}">{{ f.description_courte }}</p>{% endif %}
 </div>
 </a>
 {% if f.messages_non_lus and eleve.actif %}
@@ -98,6 +113,7 @@
 <div class="carte-visuel" style="background-color:{{ f.couleur }};">{% if f.image_url %}<div class="fond" style="background-image:url('{{ f.image_url }}');"></div><img src="{{ f.image_url }}" alt="{{ f.titre }}" loading="lazy">{% endif %}</div>
 <div class="carte-corps">
 <h3>{{ f.titre }}</h3>
+{% if f.description_courte %}<p class="carte-description" title="{{ f.description_courte }}">{{ f.description_courte }}</p>{% endif %}
 <div class="carte-voir-catalogue">Voir dans le catalogue →</div>
 </div>
 </a>

@@ -144,6 +144,7 @@ def page_tableau_de_bord(
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
             "progression": progression_pourcentage(session, eleve.id, formation),
             "messages_non_lus": 0,
+            "description_courte": formation.description_courte or "",
         })
     # Pastille « nouveaux messages » par formation (messagerie ; ne fait jamais échouer la page)
     from .routes.messagerie import infos_onglets_eleve
@@ -152,7 +153,7 @@ def page_tableau_de_bord(
     formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage}
+        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
         for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
