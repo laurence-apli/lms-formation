@@ -1087,8 +1087,20 @@ async function soumettreCreerResa(e) {
       return;
     }
     fermerModal();
-    // Basculer sur l'onglet Réservations et recharger
-    changerOnglet('reservations');
+    afficherToast('✓ RDV créé — confirmation envoyée par e-mail');
+    // Rafraîchir l'onglet actif sans navigation inutile
+    const tabSemaine = document.getElementById('tab-semaine');
+    const tabResa    = document.getElementById('tab-reservations');
+    if (tabSemaine && tabSemaine.style.display !== 'none') {
+      // On est sur la vue semaine : recharger les données directement
+      chargerSemaine();
+    } else if (tabResa && tabResa.style.display !== 'none') {
+      chargerReservations();
+    } else {
+      // Fallback : basculer sur l'onglet Réservations
+      const btnResa = document.querySelector('[data-tab="reservations"]');
+      if (btnResa) changerOnglet('reservations', btnResa);
+    }
   } catch(err) {
     errDiv.textContent = 'Erreur réseau';
     errDiv.style.display = 'block';
