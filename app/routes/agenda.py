@@ -1236,6 +1236,34 @@ def creneaux_du_jour(
     return {"creneaux": creneaux_libres, "lieux": lieux}
 
 
+@api_router.post("/verifier-email")
+async def verifier_email(request: Request, session: Session = Depends(obtenir_session)):
+    """Vérifie si un email est déjà dans la base et retourne les infos de base pour pré-remplissage.
+    Aucun mot de passe requis — uniquement les champs non sensibles.
+    Body JSON : { email }
+    Retourne : { connu: bool, prenom?, nom?, telephone? }
+    """
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Corps JSON invalide.")
+
+    email_norm = (data.get("email") or "").strip().lower()
+    if not email_norm or "@" not in email_norm:
+        return {"connu": False}
+
+    eleve = session.query(Eleve).filter_by(email=email_norm).first()
+    if not eleve:
+        return {"connu": False}
+
+    return {
+        "connu": True,
+        "prenom": eleve.prenom or "",
+        "nom": eleve.nom or "",
+        "telephone": eleve.telephone or "",
+    }
+
+
 @api_router.post("/connexion-rdv")
 async def connexion_rdv(request: Request, session: Session = Depends(obtenir_session)):
     """Connexion légère depuis la page de réservation.

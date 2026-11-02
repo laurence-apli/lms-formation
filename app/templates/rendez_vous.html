@@ -1025,6 +1025,32 @@ body {
         <div class="mobile-recap-prix" id="mRecapPrix"></div>
       </div>
 
+      <!-- E-mail en premier pour reconnaissance automatique -->
+      <div class="mobile-form-group">
+        <label class="mobile-form-label">E-mail *</label>
+        <input class="mobile-form-input" id="mEmail" type="email" autocomplete="email" placeholder="marie@email.fr" onblur="mVerifierEmail()">
+      </div>
+
+      <!-- Bandeau reconnaissance automatique mobile -->
+      <div id="mBandeauReconnue" style="display:none;margin-bottom:14px;padding:12px 14px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;font-size:13px;color:#92400e;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <strong id="mBandeauReconnueTexte">Vous êtes déjà cliente 👋</strong>
+        </div>
+        <p style="margin:0 0 10px;font-size:12px;color:#78350f;line-height:1.5;">Souhaitez-vous pré-remplir vos coordonnées automatiquement ?</p>
+        <div style="display:flex;gap:8px;">
+          <button onclick="mPreRemplir()" style="flex:1;padding:8px 12px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Oui, pré-remplir</button>
+          <button onclick="mIgnorerReconnaissance()" style="flex:1;padding:8px 12px;background:transparent;border:1px solid #d97706;border-radius:6px;font-size:12px;color:#92400e;cursor:pointer;">Non merci</button>
+        </div>
+      </div>
+
+      <!-- Bandeau "pré-rempli" mobile -->
+      <div id="mBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;margin-bottom:14px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span id="mBandeauConnecteeTexte">Coordonnées pré-remplies</span>
+        <span onclick="mDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Modifier</span>
+      </div>
+
       <div class="mobile-form-row">
         <div class="mobile-form-group-half">
           <label class="mobile-form-label">Prénom *</label>
@@ -1035,10 +1061,6 @@ body {
           <input class="mobile-form-input" id="mNom" type="text" autocomplete="family-name" placeholder="Dupont">
         </div>
       </div>
-      <div class="mobile-form-group">
-        <label class="mobile-form-label">E-mail *</label>
-        <input class="mobile-form-input" id="mEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
-      </div>
       <div class="mobile-form-group" style="margin-top:14px;">
         <label class="mobile-form-label">Téléphone</label>
         <input class="mobile-form-input" id="mTel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78">
@@ -1048,30 +1070,15 @@ body {
         <textarea class="mobile-form-input mobile-form-textarea" id="mMessage" placeholder="Précisez vos symptômes ou questions éventuelles…"></textarea>
       </div>
 
-      <!-- Widget connexion mobile -->
-      <div id="mWidgetCompte" style="margin-top:16px;">
-        <div id="mBtnConnexion" onclick="mToggleConnexion()" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--gold,#c9a96e);border-radius:8px;font-size:13px;color:var(--gold,#c9a96e);">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          Vous avez déjà un compte ? Me connecter
+      <!-- Éléments masqués conservés pour compatibilité JS (widget connexion par mot de passe) -->
+      <div id="mWidgetCompte" style="display:none;">
+        <div id="mBtnConnexion" style="display:none;"></div>
+        <div id="mPanelConnexion" style="display:none;">
+          <input id="mLoginEmail" type="hidden">
+          <input id="mLoginMdp" type="hidden">
+          <div id="mLoginErreur"></div>
         </div>
-        <div id="mPanelConnexion" style="display:none;margin-top:10px;padding:14px;border:1px solid #e5e7eb;border-radius:8px;">
-          <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:#6b7280;">Connexion à votre espace</div>
-          <div class="mobile-form-group" style="margin-bottom:8px;">
-            <label class="mobile-form-label">E-mail</label>
-            <input class="mobile-form-input" id="mLoginEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
-          </div>
-          <div class="mobile-form-group" style="margin-bottom:10px;">
-            <label class="mobile-form-label">Mot de passe</label>
-            <input class="mobile-form-input" id="mLoginMdp" type="password" autocomplete="current-password" placeholder="••••••••">
-          </div>
-          <div id="mLoginErreur" style="display:none;font-size:12px;color:#b91c1c;margin-bottom:8px;"></div>
-          <button onclick="mConnexionCompte()" style="width:100%;padding:10px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
-        </div>
-        <div id="mBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-          <span id="mBandeauConnecteeTexte">Connectée</span>
-          <span onclick="mDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Changer</span>
-        </div>
+        <div id="mBandeauConnectee-old" style="display:none;"></div>
       </div>
 
       <!-- Option créer compte mobile -->
@@ -1231,31 +1238,30 @@ body {
         <!-- Formulaire -->
         <div class="form-body" id="dFormBody">
 
-          <!-- Widget connexion compte existant -->
-          <div id="dWidgetCompte" style="margin-bottom:16px;">
-            <div id="dBtnConnexion" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 14px;border:1px solid var(--gold,#c9a96e);border-radius:8px;background:transparent;font-size:13px;color:var(--gold,#c9a96e);transition:background .15s;" onclick="dToggleConnexion()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              Vous avez déjà un compte ? Me connecter
+          <!-- E-mail en premier pour reconnaissance automatique -->
+          <div class="form-group">
+            <label class="form-label">E-mail *</label>
+            <input class="form-input" id="dEmail" type="email" autocomplete="email" placeholder="marie@email.fr" onblur="dVerifierEmail()">
+          </div>
+
+          <!-- Bandeau reconnaissance automatique (affiché si email connu) -->
+          <div id="dBandeauReconnue" style="display:none;margin-bottom:14px;padding:12px 14px;border:1px solid #fde68a;border-radius:8px;background:#fffbeb;font-size:13px;color:#92400e;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <strong id="dBandeauReconnueTexte">Vous êtes déjà cliente 👋</strong>
             </div>
-            <div id="dPanelConnexion" style="display:none;margin-top:10px;padding:14px;border:1px solid #e5e7eb;border-radius:8px;background:var(--surface,#fafafa);">
-              <div style="font-size:12px;font-weight:600;margin-bottom:10px;color:var(--text-secondary,#6b7280);">Connexion à votre espace</div>
-              <div class="form-group" style="margin-bottom:8px;">
-                <label class="form-label">E-mail</label>
-                <input class="form-input" id="dLoginEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
-              </div>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label class="form-label">Mot de passe</label>
-                <input class="form-input" id="dLoginMdp" type="password" autocomplete="current-password" placeholder="••••••••">
-              </div>
-              <div id="dLoginErreur" style="display:none;font-size:12px;color:#b91c1c;margin-bottom:8px;"></div>
-              <button onclick="dConnexionCompte()" style="width:100%;padding:9px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;">Se connecter</button>
+            <p style="margin:0 0 10px;font-size:12px;color:#78350f;line-height:1.5;">Souhaitez-vous pré-remplir vos coordonnées automatiquement ?</p>
+            <div style="display:flex;gap:8px;">
+              <button onclick="dPreRemplir()" style="flex:1;padding:7px 12px;background:var(--gold,#c9a96e);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;">Oui, pré-remplir</button>
+              <button onclick="dIgnorerReconnaissance()" style="flex:1;padding:7px 12px;background:transparent;border:1px solid #d97706;border-radius:6px;font-size:12px;color:#92400e;cursor:pointer;">Non merci</button>
             </div>
-            <!-- Bandeau "connectée" -->
-            <div id="dBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span id="dBandeauConnecteeTexte">Connectée</span>
-              <span onclick="dDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Changer</span>
-            </div>
+          </div>
+
+          <!-- Bandeau "pré-rempli" (affiché après pré-remplissage) -->
+          <div id="dBandeauConnectee" style="display:none;align-items:center;gap:8px;padding:10px 14px;border:1px solid #d1fae5;border-radius:8px;background:#f0fdf4;font-size:13px;color:#065f46;margin-bottom:14px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="dBandeauConnecteeTexte">Coordonnées pré-remplies</span>
+            <span onclick="dDeconnexionCompte()" style="margin-left:auto;cursor:pointer;font-size:11px;text-decoration:underline;color:#065f46;">Modifier</span>
           </div>
 
           <div class="form-row">
@@ -1269,10 +1275,6 @@ body {
             </div>
           </div>
           <div class="form-group">
-            <label class="form-label">E-mail *</label>
-            <input class="form-input" id="dEmail" type="email" autocomplete="email" placeholder="marie@email.fr">
-          </div>
-          <div class="form-group">
             <label class="form-label">Téléphone</label>
             <input class="form-input" id="dTel" type="tel" autocomplete="tel" placeholder="06 12 34 56 78">
           </div>
@@ -1281,10 +1283,20 @@ body {
             <textarea class="form-input form-textarea" id="dMessage" placeholder="Précisez vos symptômes ou questions…"></textarea>
           </div>
 
-          <!-- Option créer compte (visible si pas connectée) -->
+          <!-- Option créer compte (visible si pas reconnue automatiquement) -->
           <div id="dOptionCreerCompte" style="margin-top:12px;display:flex;align-items:flex-start;gap:8px;">
             <input type="checkbox" id="dCreerCompte" style="margin-top:2px;accent-color:var(--gold,#c9a96e);cursor:pointer;">
             <label for="dCreerCompte" style="font-size:12px;color:var(--text-secondary,#6b7280);cursor:pointer;line-height:1.5;">Créer un espace personnel pour suivre mes réservations<br><span style="color:var(--text-tertiary,#9ca3af);">Vous recevrez un e-mail pour choisir votre mot de passe.</span></label>
+          </div>
+
+          <!-- Éléments masqués conservés pour compatibilité JS (widget connexion par mot de passe) -->
+          <div id="dWidgetCompte" style="display:none;">
+            <div id="dBtnConnexion" style="display:none;"></div>
+            <div id="dPanelConnexion" style="display:none;">
+              <input id="dLoginEmail" type="hidden">
+              <input id="dLoginMdp" type="hidden">
+              <div id="dLoginErreur"></div>
+            </div>
           </div>
 
           <!-- Bouton envoyer un message sans RDV -->
@@ -2194,6 +2206,92 @@ async function deskEnvoyerMessage() {
   }
   btn.disabled = false;
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Envoyer un message sans réserver';
+}
+
+// ═══════════════════════════════════════════════════════
+// RECONNAISSANCE AUTOMATIQUE PAR EMAIL
+// ═══════════════════════════════════════════════════════
+let _clientReconnuData = null; // cache des infos récupérées
+
+async function _verifierEmailCommun(email, prefix) {
+  if (!email || !email.includes('@')) return;
+  try {
+    const r = await fetch('/api/agenda/verifier-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await r.json();
+    if (data.connu) {
+      _clientReconnuData = data;
+      const bandeauReconnue = document.getElementById(prefix + 'BandeauReconnue');
+      if (bandeauReconnue) bandeauReconnue.style.display = 'block';
+    }
+  } catch(e) { /* silencieux — ne pas bloquer si le réseau est lent */ }
+}
+
+// ── Desktop ──────────────────────────────────────────
+async function dVerifierEmail() {
+  const email = (document.getElementById('dEmail')?.value || '').trim();
+  // Ne pas re-vérifier si déjà pré-rempli
+  const bc = document.getElementById('dBandeauConnectee');
+  if (bc && bc.style.display !== 'none') return;
+  const br = document.getElementById('dBandeauReconnue');
+  if (br) br.style.display = 'none';
+  await _verifierEmailCommun(email, 'd');
+}
+
+function dPreRemplir() {
+  if (!_clientReconnuData) return;
+  const el = (id) => document.getElementById(id);
+  if (el('dPrenom')) el('dPrenom').value = _clientReconnuData.prenom || '';
+  if (el('dNom'))    el('dNom').value    = _clientReconnuData.nom || '';
+  if (el('dTel'))    el('dTel').value    = _clientReconnuData.telephone || '';
+  el('dBandeauReconnue').style.display = 'none';
+  const bc = el('dBandeauConnectee');
+  if (bc) { bc.style.display = 'flex'; }
+  const bct = el('dBandeauConnecteeTexte');
+  if (bct) bct.textContent = `Bienvenue ${_clientReconnuData.prenom} 👋 — Coordonnées pré-remplies`;
+  const occ = el('dOptionCreerCompte');
+  if (occ) occ.style.display = 'none';
+}
+
+function dIgnorerReconnaissance() {
+  const br = document.getElementById('dBandeauReconnue');
+  if (br) br.style.display = 'none';
+  _clientReconnuData = null;
+}
+
+// ── Mobile ───────────────────────────────────────────
+async function mVerifierEmail() {
+  const email = (document.getElementById('mEmail')?.value || '').trim();
+  // Ne pas re-vérifier si déjà pré-rempli
+  const bc = document.getElementById('mBandeauConnectee');
+  if (bc && bc.style.display !== 'none') return;
+  const br = document.getElementById('mBandeauReconnue');
+  if (br) br.style.display = 'none';
+  await _verifierEmailCommun(email, 'm');
+}
+
+function mPreRemplir() {
+  if (!_clientReconnuData) return;
+  const el = (id) => document.getElementById(id);
+  if (el('mPrenom')) el('mPrenom').value = _clientReconnuData.prenom || '';
+  if (el('mNom'))    el('mNom').value    = _clientReconnuData.nom || '';
+  if (el('mTel'))    el('mTel').value    = _clientReconnuData.telephone || '';
+  el('mBandeauReconnue').style.display = 'none';
+  const bc = el('mBandeauConnectee');
+  if (bc) { bc.style.display = 'flex'; }
+  const bct = el('mBandeauConnecteeTexte');
+  if (bct) bct.textContent = `Bienvenue ${_clientReconnuData.prenom} 👋 — Coordonnées pré-remplies`;
+  const occ = el('mOptionCreerCompte');
+  if (occ) occ.style.display = 'none';
+}
+
+function mIgnorerReconnaissance() {
+  const br = document.getElementById('mBandeauReconnue');
+  if (br) br.style.display = 'none';
+  _clientReconnuData = null;
 }
 </script>
 </body>
