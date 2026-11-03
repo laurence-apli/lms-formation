@@ -69,6 +69,8 @@ _MIGRATIONS_COLONNES = [
     # Codes promo — valeur et type spécifiques par tarif (ajouté oct. 2026)
     "ALTER TABLE codes_promo_tarifs ADD COLUMN IF NOT EXISTS valeur_specifique NUMERIC(10,2)",
     "ALTER TABLE codes_promo_tarifs ADD COLUMN IF NOT EXISTS type_specifique VARCHAR(20)",
+    # Facturation Stripe automatique (ajouté nov. 2026)
+    "ALTER TABLE commandes ADD COLUMN IF NOT EXISTS stripe_invoice_id VARCHAR(200)",
 ]
 
 

@@ -109,6 +109,10 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
     session.add(commande)
     session.flush()
 
+    # Libellé de la facture : "Acompte — [nom offre]" ou "[nom offre]"
+    est_acompte = data.type_paiement == "acompte"
+    nom_produit_facture = ("Acompte — " if est_acompte else "") + offre.nom
+
     # Session Stripe Checkout
     url_base = URL_PLATEFORME.rstrip("/")
     checkout = stripe.checkout.Session.create(
@@ -117,8 +121,8 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
                 "currency": "eur",
                 "unit_amount": int(round(float(montant) * 100)),
                 "product_data": {
-                    "name": offre.nom,
-                    "description": ("Acompte — " if data.type_paiement == "acompte" else "") + (offre.description or offre.nom),
+                    "name": nom_produit_facture,
+                    "description": offre.description or offre.nom,
                 },
             },
             "quantity": 1,
@@ -134,6 +138,12 @@ def checkout_offre(slug: str, data: CheckoutOffreIn, session: Session = Depends(
             "commande_id": str(commande.id),
             "type_paiement": data.type_paiement,
             "compte_cree": "1" if compte_cree else "0",
+        },
+        invoice_creation={
+            "enabled": True,
+            "invoice_data": {
+                "description": nom_produit_facture,
+            },
         },
     )
 

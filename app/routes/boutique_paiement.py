@@ -172,13 +172,22 @@ def creer_session_paiement(
     if panier["total"] >= SEUIL_MESSAGE_KLARNA:
         payment_method_types.append("klarna")
 
+    # Description facture = noms des produits du panier
+    description_facture = " + ".join(l["nom"] for l in panier["lignes"])
+
     checkout_session = stripe.checkout.Session.create(
         mode="payment", line_items=line_items,
         customer_email=eleve.email,
         success_url=f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{URL_PLATEFORME}/eleve/catalogue",
         **({"custom_text": {"submit": {"message": "Paiement en 3 ou 4 fois disponible avec Klarna"}}} if "klarna" in payment_method_types else {}),
-    metadata={"commande_id": str(commande.id), "eleve_id": str(eleve.id)},
+        metadata={"commande_id": str(commande.id), "eleve_id": str(eleve.id)},
+        invoice_creation={
+            "enabled": True,
+            "invoice_data": {
+                "description": description_facture,
+            },
+        },
     )
 
     commande.stripe_session_id = checkout_session.id
@@ -234,12 +243,13 @@ def creer_session_paiement_montee_niveau(
     if montant >= SEUIL_MESSAGE_KLARNA:
         payment_method_types.append("klarna")
 
+    nom_produit = f"{proposition['formation_titre']} — montée vers {proposition['nom_option']}"
     checkout_session = stripe.checkout.Session.create(
         mode="payment",
         line_items=[{
             "price_data": {
                 "currency": "eur",
-                "product_data": {"name": f"{proposition['formation_titre']} — montée vers {proposition['nom_option']}"},
+                "product_data": {"name": nom_produit},
                 "unit_amount": round(montant * 100),
             },
             "quantity": 1,
@@ -248,6 +258,12 @@ def creer_session_paiement_montee_niveau(
         success_url=f"{URL_PLATEFORME}/eleve/paiement-confirme?session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{URL_PLATEFORME}/eleve/tableau-de-bord",
         metadata={"commande_id": str(commande.id), "eleve_id": str(eleve.id)},
+        invoice_creation={
+            "enabled": True,
+            "invoice_data": {
+                "description": nom_produit,
+            },
+        },
     )
     commande.stripe_session_id = checkout_session.id
     session.commit()
@@ -281,6 +297,10 @@ def traiter_session_stripe_payee(session: Session, stripe_session: dict) -> bool
         commande.statut = "payee"
         commande.payee_le = datetime.utcnow()
         commande.moyen_paiement = (stripe_session.get("payment_method_types") or ["card"])[0]
+        # Stocker la référence de la facture Stripe générée automatiquement
+        invoice_id = stripe_session.get("invoice")
+        if invoice_id:
+            commande.stripe_invoice_id = invoice_id
         session.commit()
         activer_acces_commande(session, commande)
     return True
@@ -357,6 +377,10 @@ def _activer_offre_apres_paiement(session, stripe_session, metadata):
         commande.statut = "payee"
         commande.payee_le = datetime.utcnow()
         commande.moyen_paiement = stripe_session.get("payment_method_types", ["card"])[0]
+        # Stocker la référence de la facture Stripe générée automatiquement
+        invoice_id = stripe_session.get("invoice")
+        if invoice_id:
+            commande.stripe_invoice_id = invoice_id
     if offre.formations_ids:
         from ..models import Formation
         for fid in json.loads(offre.formations_ids):

@@ -94,6 +94,7 @@ class Commande(Base):
     type_paiement = Column(String(20), nullable=True)  # "comptant" ou "acompte"
     note = Column(Text, nullable=True)
     montant_prix_total = Column(Numeric(10, 2), nullable=True)  # prix total (utile pour les acomptes manuels)
+    stripe_invoice_id = Column(String(200), nullable=True)  # identifiant de la facture Stripe automatique
 
     eleve = relationship("Eleve", backref="commandes")
     lignes = relationship("LigneCommande", back_populates="commande", cascade="all, delete-orphan")
