@@ -115,8 +115,19 @@ def modifier_formation(
         formation.presentation_html = presentation_html or None
     formation.ordre_affichage = ordre_affichage
     formation.lien_visio = lien_visio or None
+    acces_auto_vient_detre_active = acces_auto and not formation.acces_auto
     formation.acces_auto = acces_auto
     formation.code_acces_rdv = code_acces_rdv.strip().lower() or None
+
+    # Si acces_auto vient d'être coché, on donne l'accès à toutes les élèves actives existantes
+    if acces_auto_vient_detre_active:
+        eleves_avec_acces = {
+            a.eleve_id for a in session.query(AccesFormation.eleve_id).filter_by(formation_id=formation.id).all()
+        }
+        from ..models import Eleve as _Eleve
+        for eleve in session.query(_Eleve).filter_by(actif=True).all():
+            if eleve.id not in eleves_avec_acces:
+                session.add(AccesFormation(eleve_id=eleve.id, formation_id=formation.id, niveau=1))
 
     if nb_niveaux != formation.nb_niveaux:
         niveaux_existants = {j.niveau for j in formation.jours_par_niveau}

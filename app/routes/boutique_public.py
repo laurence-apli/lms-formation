@@ -22,7 +22,12 @@ def lire_catalogue(session: Session = Depends(obtenir_session)):
     """Renvoie toutes les formations actives avec leurs tarifs, photo et
     description -- c'est cette route que le site vitrine et le catalogue
     élève appellent pour tout afficher, toujours à jour."""
-    formations = session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
+    formations = (
+        session.query(Formation)
+        .filter(Formation.actif == True, Formation.acces_auto == False)  # noqa: E712
+        .order_by(Formation.ordre_affichage, Formation.id)
+        .all()
+    )
     resultat = []
     for f in formations:
         tarifs = [t for t in f.tarifs if t.actif]
@@ -78,7 +83,11 @@ def monter_niveau(
 def tarifs_site(session: Session = Depends(obtenir_session)):
     """Endpoint public CORS pour le site vitrine — retourne les tarifs actifs
     de toutes les formations. Permet au site statique d'afficher les prix à jour."""
-    formations = session.query(Formation).filter_by(actif=True).all()
+    formations = (
+        session.query(Formation)
+        .filter(Formation.actif == True, Formation.acces_auto == False)  # noqa: E712
+        .all()
+    )
     result = []
     for f in formations:
         tarifs_actifs = [t for t in f.tarifs if t.actif]
