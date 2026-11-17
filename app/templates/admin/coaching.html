@@ -189,9 +189,7 @@ async function envoyerLienCoaching() {
   await charger();
 }
 
-document.getElementById('modal-envoi').addEventListener('click', function(e) {
-  if (e.target === this) fermerModal();
-});
+// Pas de fermeture au clic à côté de la fenêtre : on ne perd plus la saisie (fermer = bouton Annuler / ✕)
 
 charger();
 </script>
