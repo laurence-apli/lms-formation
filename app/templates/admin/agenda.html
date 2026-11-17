@@ -560,7 +560,7 @@ function afficherBandeauxGrouillant(bandeaux, lundi) {
 function ouvrirInfoPlage(bandeau) {
   const modaliteLabel = {cabinet:'Cabinet',visio:'Visio',les_deux:'Cabinet ou Visio'}[bandeau.modalite] || bandeau.modalite || '';
   const html = `
-    <div class="overlay" onclick="if(event.target===this)fermerModal()">
+    <div class="overlay">
       <div class="modal" style="max-width:380px;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
           <div style="width:16px;height:40px;border-radius:4px;background:${bandeau.couleur || '#B8922A'};flex-shrink:0;"></div>
