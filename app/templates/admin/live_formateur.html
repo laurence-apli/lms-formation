@@ -1034,12 +1034,7 @@ function fermerModale(id) {
   document.getElementById(id).classList.remove('visible');
 }
 
-// Fermer les modales en cliquant sur l'overlay
-document.querySelectorAll('.modale-overlay').forEach(overlay => {
-  overlay.addEventListener('click', e => {
-    if (e.target === overlay) overlay.classList.remove('visible');
-  });
-});
+// Pas de fermeture au clic à côté de la fenêtre : on ne perd plus la saisie (fermer = bouton Annuler / ✕)
 
 // ========================= UTILITAIRES =========================
 function copierLien() {
