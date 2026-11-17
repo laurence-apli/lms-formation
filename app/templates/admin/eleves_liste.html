@@ -93,7 +93,7 @@ function afficherOverlay(html) {
   const overlay = document.createElement('div');
   overlay.className = 'overlay';
   overlay.innerHTML = html;
-  overlay.onclick = (e) => { if (e.target === overlay) fermerModal(); };
+  // Pas de fermeture au clic à côté de la fenêtre : on ne perd plus la saisie (fermer = bouton Annuler / ✕)
   document.body.appendChild(overlay);
 }
 
