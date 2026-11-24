@@ -2,7 +2,12 @@
 {% block titre %}Formations — Administration{% endblock %}
 {% block contenu %}
 <style>
-.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
+.groupe-ordre { margin-bottom:22px; }
+.groupe-ordre .groupe-titre { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); margin:0 0 8px; }
+.card-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+@media (max-width:900px) { .card-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.formation-card .card-head { display:flex; justify-content:space-between; align-items:flex-start; }
+.formation-card .ordre-badge { font-size:12px; font-weight:600; color:var(--gold); border:1px solid var(--gold); border-radius:12px; padding:2px 9px; }
 .formation-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; transition:border-color .15s; }
 .formation-card:hover { border-color:var(--gold); }
 .formation-card .card-clickzone { cursor:pointer; }
@@ -16,7 +21,7 @@
 <div class="topbar"><div><h1>Formations</h1></div>
 <button class="btn btn-primary" onclick="ouvrirModalCreerFormation()">+ Nouvelle formation</button>
 </div>
-<div class="card-grid" id="liste-formations"><div class="empty-state">Chargement…</div></div>
+<div id="liste-formations"><div class="empty-state">Chargement…</div></div>
 
 {% endblock %}
 {% block scripts %}
@@ -28,10 +33,27 @@ if (formations.length === 0) {
 conteneur.innerHTML = `<div class="empty-state"><div class="big">📚</div>Aucune formation pour l'instant.<br>Crée ta première formation pour commencer.</div>`;
 return;
 }
-conteneur.innerHTML = formations.map(f => `
+// Groupes par dizaine d'ordre d'affichage (0-9, 10-19, …), tri par numéro puis titre
+const tries = [...formations].sort((a, b) =>
+(a.ordre_affichage - b.ordre_affichage) || String(a.titre).localeCompare(String(b.titre), 'fr', { sensitivity: 'base' }));
+const groupes = new Map();
+tries.forEach(f => {
+const cle = Math.floor((f.ordre_affichage || 0) / 10);
+if (!groupes.has(cle)) groupes.set(cle, []);
+groupes.get(cle).push(f);
+});
+conteneur.innerHTML = [...groupes.entries()].map(([cle, liste]) => `
+<div class="groupe-ordre">
+<div class="groupe-titre">Ordre ${cle * 10} – ${cle * 10 + 9}</div>
+<div class="card-grid">${liste.map(carteFormation).join('')}</div>
+</div>`).join('');
+}
+
+function carteFormation(f) {
+return `
 <div class="formation-card">
 <div class="card-clickzone" onclick="window.location.href='/admin/page/formations/${f.id}'">
-<div class="swatch" style="background:${f.couleur}"></div>
+<div class="card-head"><div class="swatch" style="background:${f.couleur}"></div><span class="ordre-badge" title="Ordre d'affichage">N° ${f.ordre_affichage}</span></div>
 <h3>${esc(f.titre)}</h3>
 <div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}</div>
 ${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
@@ -40,7 +62,7 @@ ${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
 <button class="btn btn-sm btn-danger-outline" onclick="demanderSuppressionFormation(${f.id}, '${esc(f.titre)}')">Supprimer</button>
 </div>
 </div>
-`).join('');
+`;
 }
 
 function esc(s) {
