@@ -2,7 +2,8 @@
 {% block titre %}Mon espace formation{% endblock %}
 {% block contenu %}
 <style>
-.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:18px; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(max(230px, calc((100% - 54px) / 4)),1fr)); gap:18px; }
+.dashboard-grid + .dashboard-grid { margin-top:26px; } /* une rangée par dizaine d'ordre d'affichage */
 .carte-formation-eleve { position:relative; border-radius:14px; overflow:hidden; display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--border); transition:box-shadow .15s, border-color .15s; }
 .carte-formation-eleve:hover { border-color:var(--gold); box-shadow:0 6px 20px rgba(184,146,42,0.16); }
 .carte-formation-eleve.desactivee { opacity:.4; filter:grayscale(60%); pointer-events:none; }
@@ -75,8 +76,9 @@
 {% endif %}
 
 {% if formations_acquises %}
+{% for groupe in formations_acquises|groupby('groupe') %}
 <div class="dashboard-grid">
-{% for f in formations_acquises %}
+{% for f in groupe.list %}
 <div class="carte-formation-eleve {% if f.progression == 100 %}terminee{% endif %} {% if not eleve.actif %}desactivee{% endif %}">
 <a class="carte-zone-principale" href="{% if eleve.actif %}/eleve/voir-formation/{{ f.id }}{% else %}#{% endif %}"
 >
@@ -98,6 +100,7 @@
 </div>
 {% endfor %}
 </div>
+{% endfor %}
 {% else %}
 <div class="empty-dashboard">Vous n'avez accès à aucune formation pour l'instant.</div>
 {% endif %}
@@ -105,8 +108,9 @@
 {% if formations_disponibles %}
 <div class="section-dispo">
 <h2>FORMATIONS DISPONIBLES</h2>
+{% for groupe in formations_disponibles|groupby('groupe') %}
 <div class="dashboard-grid">
-{% for f in formations_disponibles %}
+{% for f in groupe.list %}
 <div class="carte-formation-eleve carte-disponible">
 <a class="carte-zone-principale" href="/eleve/catalogue"
 >
@@ -120,6 +124,7 @@
 </div>
 {% endfor %}
 </div>
+{% endfor %}
 </div>
 {% endif %}
 

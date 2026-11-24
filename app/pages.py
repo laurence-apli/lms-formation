@@ -150,13 +150,20 @@ def page_tableau_de_bord(
     from .routes.messagerie import infos_onglets_eleve
     for f in formations_acquises:
         f["messages_non_lus"] = infos_onglets_eleve(session, eleve, f["id"])["nb_messages_non_lus"]
-    formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
+    # Même classement que l'admin : une rangée par dizaine d'ordre d'affichage (0-9, 10-19…),
+    # tri par numéro puis par titre (ordre alphabétique) ; « groupe » = numéro de la rangée
+    def _cle_tri(f):
+        return ((f["ordre_affichage"] or 0), (f["titre"] or "").casefold())
+    formations_acquises.sort(key=_cle_tri)
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
         {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
         for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
+    formations_disponibles.sort(key=_cle_tri)
+    for f in formations_acquises + formations_disponibles:
+        f["groupe"] = (f["ordre_affichage"] or 0) // 10
     return templates.TemplateResponse(
         request, "eleve/tableau_de_bord.html",
         {
