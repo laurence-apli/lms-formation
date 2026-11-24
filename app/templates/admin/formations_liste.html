@@ -55,7 +55,7 @@ return `
 <div class="card-clickzone" onclick="window.location.href='/admin/page/formations/${f.id}'">
 <div class="card-head"><div class="swatch" style="background:${f.couleur}"></div><span class="ordre-badge" title="Ordre d'affichage">N° ${f.ordre_affichage}</span></div>
 <h3>${esc(f.titre)}</h3>
-<div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}</div>
+<div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}<br>${f.nb_niveaux} niveau${f.nb_niveaux > 1 ? 'x' : ''} d'accès</div>
 ${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
 </div>
 <div class="card-footer">
