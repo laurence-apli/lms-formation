@@ -17,6 +17,7 @@ from ..models import (
 from .auth import admin_connecte
 from .medias_fichiers import media_json
 from .. import stockage_r2
+from ..acces_comptes_test import donner_acces_comptes_test
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -89,6 +90,8 @@ def creer_formation(
     session.flush()
     for niveau in range(1, nb_niveaux + 1):
         session.add(JoursAccompagnementNiveau(formation_id=formation.id, niveau=niveau, jours=0))
+    # Comptes test : accès immédiat à la nouvelle formation (même inactive)
+    donner_acces_comptes_test(session, formation_id=formation.id)
     session.commit()
     return {"id": formation.id, "titre": formation.titre}
 
@@ -215,6 +218,9 @@ def dupliquer_formation(formation_id: int, session: Session = Depends(obtenir_se
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
     copie = dupliquer_formation_modele(session, formation_id)
+    # Comptes test : accès immédiat à la copie (même inactive)
+    if donner_acces_comptes_test(session, formation_id=copie.id):
+        session.commit()
     return {"id": copie.id, "titre": copie.titre}
 
 # ---------- Modules ----------

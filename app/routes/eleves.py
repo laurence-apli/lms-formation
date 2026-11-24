@@ -16,6 +16,7 @@ from ..models import (
 )
 from .auth import admin_connecte, creer_token_premiere_connexion
 from ..emails import email_coaching_rdv
+from ..acces_comptes_test import donner_acces_comptes_test
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
@@ -117,6 +118,10 @@ def toggle_test_eleve(eleve_id: int, session: Session = Depends(obtenir_session)
     if eleve is None:
         raise HTTPException(status_code=404, detail="Élève introuvable.")
     eleve.compte_test = not eleve.compte_test
+    if eleve.compte_test:
+        session.flush()
+        # Compte test : accès à toutes les formations, actives ou non
+        donner_acces_comptes_test(session, eleve_id=eleve.id)
     session.commit()
     return {"id": eleve.id, "compte_test": eleve.compte_test}
 

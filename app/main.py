@@ -81,6 +81,15 @@ def au_demarrage():
         session.close()
     except Exception:
         pass  # table pas encore créée au tout premier démarrage
+    # Comptes test : rattrape les accès manquants à toutes les formations
+    try:
+        from .acces_comptes_test import donner_acces_comptes_test
+        session = SessionLocal()
+        if donner_acces_comptes_test(session):
+            session.commit()
+        session.close()
+    except Exception as e:
+        print("Accès comptes test non synchronisés :", e)
 
 
 @app.get("/")
