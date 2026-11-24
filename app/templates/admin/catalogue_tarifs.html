@@ -2,7 +2,12 @@
 {% block titre %}Catalogue & Tarifs — Administration{% endblock %}
 {% block contenu %}
 <style>
-.grid-catalogue { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; margin-top:20px; }
+.groupe-ordre { margin-top:20px; }
+.groupe-ordre .groupe-titre { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); margin:0 0 8px; }
+.grid-catalogue { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+@media (max-width:1100px) { .grid-catalogue { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.ordre-badge { font-size:12px; font-weight:600; color:var(--gold); border:1px solid var(--gold); border-radius:12px; padding:2px 9px; white-space:nowrap; }
+.inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; }
 .carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
 .carte-formation .ligne-haut { display:flex; gap:14px; align-items:flex-start; }
 .carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
@@ -23,7 +28,7 @@ label.petit { font-size:11px; text-transform:uppercase; color:var(--grey); displ
 <div class="topbar"><div><h1>Catalogue & Tarifs</h1></div></div>
 <p style="font-size:13px;color:var(--grey);margin-bottom:10px">Modifie ici la photo, le texte de présentation, les prix et les promotions de chaque formation — tout se répercute automatiquement sur le site et le catalogue élève.</p>
 
-<div id="zone-catalogue" class="grid-catalogue">Chargement…</div>
+<div id="zone-catalogue">Chargement…</div>
 
 <script>
 let dernierCatalogueCharge = [];
@@ -32,13 +37,32 @@ async function chargerCatalogueAdmin() {
   const catalogue = await appelApi('/admin/catalogue-complet');
   dernierCatalogueCharge = catalogue;
   const zone = document.getElementById('zone-catalogue');
-  zone.innerHTML = catalogue.map(f => `
+  // Même classement que la page Formations : groupes par dizaine d'ordre, tri par numéro puis titre
+  const tries = [...catalogue].sort((a, b) =>
+    ((a.ordre_affichage || 0) - (b.ordre_affichage || 0)) || String(a.titre).localeCompare(String(b.titre), 'fr', { sensitivity: 'base' }));
+  const groupes = new Map();
+  tries.forEach(f => {
+    const cle = Math.floor((f.ordre_affichage || 0) / 10);
+    if (!groupes.has(cle)) groupes.set(cle, []);
+    groupes.get(cle).push(f);
+  });
+  zone.innerHTML = [...groupes.entries()].map(([cle, liste]) => `
+    <div class="groupe-ordre">
+      <div class="groupe-titre">Ordre ${cle * 10} – ${cle * 10 + 9}</div>
+      <div class="grid-catalogue">${liste.map(carteCatalogue).join('')}</div>
+    </div>`).join('');
+}
+
+function carteCatalogue(f) {
+  return `
     <div class="carte-formation" data-id="${f.formation_id}">
       <div class="ligne-haut">
         <img class="apercu" src="${f.image_url || ''}" onerror="this.style.display='none'">
         <div style="flex:1">
           <h3>${f.titre}</h3>
+          ${!f.actif ? '<span class="inactive-tag">Inactive</span>' : ''}
         </div>
+        <span class="ordre-badge" title="Ordre d'affichage">N° ${f.ordre_affichage || 0}</span>
       </div>
       <label class="petit">Photo (URL ou base64)</label>
       <input type="file" accept="image/*" onchange="previsualiserPhotoFormation(event, ${f.formation_id})">
@@ -79,7 +103,7 @@ async function chargerCatalogueAdmin() {
         <button class="btn btn-primary" style="margin-top:10px" onclick="ouvrirCreationTarif(${f.formation_id})">+ Ajouter un tarif</button>
       </div>
     </div>
-  `).join('');
+  `;
 }
 
 function previsualiserPhotoFormation(event, formationId) {
