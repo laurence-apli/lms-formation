@@ -5,10 +5,11 @@
 .groupe-ordre { margin-top:20px; }
 .groupe-ordre .groupe-titre { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); margin:0 0 8px; }
 .grid-catalogue { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-@media (max-width:1100px) { .grid-catalogue { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:1200px) { .grid-catalogue { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 .ordre-badge { font-size:12px; font-weight:600; color:var(--gold); border:1px solid var(--gold); border-radius:12px; padding:2px 9px; white-space:nowrap; }
 .inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; }
-.carte-formation { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
+.carte-formation input[type=file] { max-width:100%; font-size:12px; }
+.carte-formation { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
 .carte-formation .ligne-haut { display:flex; gap:14px; align-items:flex-start; }
 .carte-formation img.apercu { width:56px; height:56px; border-radius:8px; object-fit:cover; background:var(--cream-light); flex-shrink:0; }
 .carte-formation h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 4px; }
