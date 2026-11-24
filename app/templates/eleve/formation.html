@@ -694,6 +694,12 @@ async function afficherContenu() {
       zone.innerHTML += '<div class="medias-eleve">' + rendreMediasEleve(m.medias) + '</div>';
       initVideosYT(zone);
     }
+    // Module sans chapitre : bouton vers le module suivant (rien si c'est le dernier)
+    const _mods = donneesFormation ? donneesFormation.modules : [];
+    const _mIdx = _mods.findIndex(x => x.id === noeudActif.moduleId);
+    if (_mIdx !== -1 && _mods[_mIdx].chapitres.length === 0 && _mIdx + 1 < _mods.length) {
+      zone.insertAdjacentHTML('beforeend', `<button class="btn-valider-chapitre" onclick="selectionnerModule(${_mods[_mIdx + 1].id})">Module suivant →</button>`);
+    }
     if (_mEstPage) { const _if = document.createElement('iframe'); _if.style.cssText = 'width:100%;border:none;display:block;'; _if.onload = function(){ try{ _if.style.height=(_if.contentDocument.body.scrollHeight+20)+'px'; }catch(e){ _if.style.height='80vh'; } }; _if.srcdoc = _mHtml.replace(/<\/head>/i,'<style>html{zoom:0.9;}body{height:auto!important;min-height:0!important;overflow-x:hidden!important;max-width:100%!important;box-sizing:border-box!important;}section,div,main,article{max-height:none!important;}*{min-height:0!important;}</style></head>'); document.getElementById('slot-iframe-html').replaceWith(_if); }
   } else if (noeudActif.type === 'chapitre') {
     const resp = await fetch(`/api/eleve/chapitres/${noeudActif.chapId}`);
@@ -1000,6 +1006,18 @@ async function validerChapitre(chapId) {
       const entrees = [];
       donneesFormation.modules.forEach(m => m.chapitres.forEach(c => entrees.push({ chap: c, moduleId: m.id })));
       const idx = entrees.findIndex(e => e.chap.id === chapId);
+      // Si ce chapitre termine son module et que le module suivant n'a pas de chapitre,
+      // on affiche ce module (sinon il serait sauté)
+      const mods = donneesFormation.modules;
+      const mIdx = mods.findIndex(m => m.chapitres.some(c => c.id === chapId));
+      if (mIdx !== -1) {
+        const mChaps = mods[mIdx].chapitres;
+        const estDernier = mChaps.length && mChaps[mChaps.length - 1].id === chapId;
+        if (estDernier && mIdx + 1 < mods.length && mods[mIdx + 1].chapitres.length === 0) {
+          selectionnerModule(mods[mIdx + 1].id);
+          return;
+        }
+      }
       const next = idx !== -1 && idx + 1 < entrees.length ? entrees[idx + 1] : null;
       if (next && (next.chap.accessible || next.chap.valide)) {
         selectionnerChapitre(next.moduleId, next.chap.id);

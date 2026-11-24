@@ -101,7 +101,9 @@ def detail_formation(
                 "accessible": ok, "valide": deja_valide,
             })
 
-        if chapitres_visibles:  # un module sans aucun chapitre visible n'apparaît pas du tout
+        # Un module SANS AUCUN chapitre (module « page seule ») s'affiche quand même.
+        # Un module dont tous les chapitres sont hors niveau reste invisible.
+        if chapitres_visibles or not module.chapitres:
             modules_visibles.append({
                 "id": module.id, "titre": module.titre, "chapitres": chapitres_visibles,
             })
