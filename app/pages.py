@@ -154,7 +154,9 @@ def page_tableau_de_bord(
     # tri par numéro puis par titre (ordre alphabétique) ; « groupe » = numéro de la rangée
     def _cle_tri(f):
         return ((f["ordre_affichage"] or 0), (f["titre"] or "").casefold())
-    formations_acquises.sort(key=_cle_tri)
+    # Dans chaque rangée : de la moins avancée à la plus avancée, les terminées en dernier ;
+    # à progression égale (dont toutes les terminées), ordre alphabétique
+    formations_acquises.sort(key=lambda f: ((f["ordre_affichage"] or 0) // 10, f["progression"], (f["titre"] or "").casefold()))
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
         {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
