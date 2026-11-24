@@ -28,7 +28,7 @@ def lister_formations(session: Session = Depends(obtenir_session)):
     return [
         {
             "id": f.id, "titre": f.titre, "couleur": f.couleur, "actif": f.actif,
-            "nb_niveaux": f.nb_niveaux, "ordre_affichage": f.ordre_affichage, "nb_modules": len(f.modules),
+            "nb_niveaux": f.nb_niveaux, "ordre_affichage": f.ordre_affichage, "acces_auto": bool(f.acces_auto), "nb_modules": len(f.modules),
             "nb_chapitres": sum(len(m.chapitres) for m in f.modules),
         }
         for f in formations

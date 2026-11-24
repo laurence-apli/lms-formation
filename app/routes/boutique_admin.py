@@ -211,7 +211,7 @@ def lire_catalogue_complet(session: Session = Depends(obtenir_session)):
     resultat = []
     for f in formations:
         tarifs_tries = sorted(f.tarifs, key=lambda t: t.ordre)
-        resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "ordre_affichage": f.ordre_affichage or 0, "image_url": f.image_url, "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
+        resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "ordre_affichage": f.ordre_affichage or 0, "acces_auto": bool(f.acces_auto), "image_url": f.image_url, "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
     return resultat
 
 

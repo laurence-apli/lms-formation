@@ -4,9 +4,10 @@
 <style>
 .groupe-ordre { margin-top:20px; }
 .groupe-ordre .groupe-titre { font-family:'League Spartan',sans-serif; font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--grey); margin:0 0 8px; }
-.grid-catalogue { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
-@media (max-width:1200px) { .grid-catalogue { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-.ordre-badge { font-size:12px; font-weight:600; color:var(--gold); border:1px solid var(--gold); border-radius:12px; padding:2px 9px; white-space:nowrap; }
+.grid-catalogue { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+@media (max-width:1000px) { .grid-catalogue { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+.tous-tag { font-size:11px; background:#EAF0FB; color:#2D5FAA; padding:2px 8px; border-radius:4px; display:inline-block; margin-right:4px; }
+.ordre-badge { flex-shrink:0; font-size:12px; font-weight:600; color:var(--gold); border:1px solid var(--gold); border-radius:12px; padding:2px 9px; white-space:nowrap; }
 .inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; }
 .carte-formation input[type=file] { max-width:100%; font-size:12px; }
 .carte-formation { min-width:0; overflow:hidden; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:20px; }
@@ -59,9 +60,9 @@ function carteCatalogue(f) {
     <div class="carte-formation" data-id="${f.formation_id}">
       <div class="ligne-haut">
         <img class="apercu" src="${f.image_url || ''}" onerror="this.style.display='none'">
-        <div style="flex:1">
+        <div style="flex:1;min-width:0">
           <h3>${f.titre}</h3>
-          ${!f.actif ? '<span class="inactive-tag">Inactive</span>' : ''}
+          ${f.acces_auto ? '<span class="tous-tag">🔓 Accessible à toutes</span>' : ''}${!f.actif ? '<span class="inactive-tag">Inactive</span>' : ''}
         </div>
         <span class="ordre-badge" title="Ordre d'affichage">N° ${f.ordre_affichage || 0}</span>
       </div>
@@ -101,7 +102,9 @@ function carteCatalogue(f) {
             </div>
           </div>
         `).join('')}
-        <button class="btn btn-primary" style="margin-top:10px" onclick="ouvrirCreationTarif(${f.formation_id})">+ Ajouter un tarif</button>
+        ${f.acces_auto
+          ? '<div style="font-size:12px;color:var(--grey);margin-top:10px">Formation accessible à toutes : pas de tarif à ajouter.</div>'
+          : `<button class="btn btn-primary" style="margin-top:10px" onclick="ouvrirCreationTarif(${f.formation_id})">+ Ajouter un tarif</button>`}
       </div>
     </div>
   `;

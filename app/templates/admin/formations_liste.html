@@ -14,6 +14,7 @@
 .formation-card .swatch { width:36px; height:36px; border-radius:8px; margin-bottom:12px; }
 .formation-card h3 { font-family:'EB Garamond',serif; font-size:17px; margin:0 0 6px; }
 .formation-card .meta { font-size:12px; color:var(--grey); }
+.formation-card .tous-tag { font-size:11px; background:#EAF0FB; color:#2D5FAA; padding:2px 8px; border-radius:4px; display:inline-block; margin-top:8px; margin-right:4px; }
 .formation-card .inactive-tag { font-size:11px; background:#f0ece2; color:var(--grey); padding:2px 8px; border-radius:4px; display:inline-block; margin-top:8px; }
 .formation-card .card-footer { display:flex; justify-content:flex-end; gap:6px; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
 </style>
@@ -56,7 +57,7 @@ return `
 <div class="card-head"><div class="swatch" style="background:${f.couleur}"></div><span class="ordre-badge" title="Ordre d'affichage">N° ${f.ordre_affichage}</span></div>
 <h3>${esc(f.titre)}</h3>
 <div class="meta">${f.nb_modules} module${f.nb_modules !== 1 ? 's' : ''} · ${f.nb_chapitres} chapitre${f.nb_chapitres !== 1 ? 's' : ''}<br>${f.nb_niveaux} niveau${f.nb_niveaux > 1 ? 'x' : ''} d'accès</div>
-${!f.actif ? '<div class="inactive-tag">Inactive</div>' : ''}
+${f.acces_auto ? '<span class="tous-tag">🔓 Accessible à toutes</span>' : ''}${!f.actif ? '<span class="inactive-tag">Inactive</span>' : ''}
 </div>
 <div class="card-footer">
 <button class="btn btn-sm btn-danger-outline" onclick="demanderSuppressionFormation(${f.id}, '${esc(f.titre)}')">Supprimer</button>
