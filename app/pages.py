@@ -10,7 +10,7 @@ import base64
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, undefer
 
 from .database import obtenir_session
 from .models import Eleve, Formation, Administrateur, TokenAuthEleve, TokenAuthAdmin, AccesFormation, progression_pourcentage
@@ -133,23 +133,29 @@ def page_accueil(
 def page_tableau_de_bord(
     request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
 ):
+    # PERFORMANCE (26/11/2026) : tout est chargé en quelques requêtes (formations + modules +
+    # chapitres + validations + messages) au lieu d'une série de requêtes par formation.
+    from .perf_eleve import charger_formations, ids_chapitres_valides, progression
+    from .routes.messagerie import non_lus_par_formation
+    acces_liste = session.query(AccesFormation).filter_by(eleve_id=eleve.id).all()
+    formations_par_id = charger_formations(session, [a.formation_id for a in acces_liste], avec_image=True)
+    valides = ids_chapitres_valides(session, eleve.id)
+    non_lus = non_lus_par_formation(session, eleve)
     formations_acquises = []
-    for acces in eleve.acces_formations:
-        formation = acces.formation
+    for acces in acces_liste:
+        formation = formations_par_id.get(acces.formation_id)
+        if formation is None:
+            continue
         if not formation.actif and not eleve.compte_test:
             continue
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "image_url": formation.image_url,
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
-            "progression": progression_pourcentage(session, eleve.id, formation),
-            "messages_non_lus": 0,
+            "progression": progression(formation, acces.niveau, valides),
+            "messages_non_lus": non_lus.get(formation.id, 0),
             "description_courte": formation.description_courte or "",
         })
-    # Pastille « nouveaux messages » par formation (messagerie ; ne fait jamais échouer la page)
-    from .routes.messagerie import infos_onglets_eleve
-    for f in formations_acquises:
-        f["messages_non_lus"] = infos_onglets_eleve(session, eleve, f["id"])["nb_messages_non_lus"]
     # Même classement que l'admin : une rangée par dizaine d'ordre d'affichage (0-9, 10-19…),
     # tri par numéro puis par titre (ordre alphabétique) ; « groupe » = numéro de la rangée
     def _cle_tri(f):
@@ -160,7 +166,7 @@ def page_tableau_de_bord(
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
         {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
-        for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
+        for f in session.query(Formation).options(undefer(Formation.image_url)).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
     formations_disponibles.sort(key=_cle_tri)

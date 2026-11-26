@@ -29,15 +29,21 @@ router = APIRouter(prefix="/api/eleve", dependencies=[Depends(eleve_connecte)])
 
 @router.get("/tableau-de-bord")
 def tableau_de_bord(eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session)):
+    from ..perf_eleve import charger_formations, ids_chapitres_valides, progression
+    acces_liste = session.query(AccesFormation).filter_by(eleve_id=eleve.id).all()
+    formations_par_id = charger_formations(session, [a.formation_id for a in acces_liste])
+    valides = ids_chapitres_valides(session, eleve.id)
     formations_acquises = []
-    for acces in eleve.acces_formations:
-        formation = acces.formation
+    for acces in acces_liste:
+        formation = formations_par_id.get(acces.formation_id)
+        if formation is None:
+            continue
         if not formation.actif and not eleve.compte_test:
             continue  # formation désactivée : invisible côté élève, même si l'accès existe toujours en base
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
-            "progression": progression_pourcentage(session, eleve.id, formation),
+            "progression": progression(formation, acces.niveau, valides),
         })
 
     formations_acquises.sort(key=lambda f: (0 if f["progression"] > 0 else 1, f["ordre_affichage"]))
@@ -84,18 +90,25 @@ def detail_formation(
         raise HTTPException(status_code=404, detail="Formation introuvable.")
     acces = _verifier_acces_formation(eleve, formation, session)
 
+    # PERFORMANCE (26/11/2026) : modules + chapitres + validations chargés en 3 requêtes,
+    # accessibilité calculée en mémoire (même règle que chapitre_est_accessible).
+    from ..perf_eleve import charger_formations, ids_chapitres_valides, etats_chapitres, progression
+    formation = charger_formations(session, [formation.id])[formation.id]
+    valides = ids_chapitres_valides(session, eleve.id)
+    etats = etats_chapitres(formation, acces.niveau, valides)
+
     modules_visibles = []
-    for module in formation.modules:
+    for module in sorted(formation.modules, key=lambda m: (m.ordre, m.id)):
         if formation.nb_niveaux > 1 and acces.niveau < module.niveau_requis:
             continue  # module hors niveau : totalement invisible
 
         chapitres_visibles = []
-        for chapitre in module.chapitres:
+        for chapitre in sorted(module.chapitres, key=lambda c: (c.ordre, c.id)):
             if not chapitre_dans_le_niveau(formation, acces.niveau, chapitre):
                 continue  # chapitre hors niveau : totalement invisible
 
-            ok, _ = chapitre_est_accessible(session, eleve.id, chapitre)
-            deja_valide = any(v.chapitre_id == chapitre.id for v in eleve.validations)
+            ok = etats.get(chapitre.id, False)
+            deja_valide = chapitre.id in valides
             chapitres_visibles.append({
                 "id": chapitre.id, "titre": chapitre.titre,
                 "accessible": ok, "valide": deja_valide,
@@ -113,7 +126,7 @@ def detail_formation(
     return {
         'id': formation.id, 'titre': formation.titre,
         'presentation_html': formation.presentation_html,
-        'progression': progression_pourcentage(session, eleve.id, formation),
+        'progression': progression(formation, acces.niveau, valides),
         'modules': modules_visibles,
         'accompagnement_cabinet': {
             'total': jours_cabinet_total,

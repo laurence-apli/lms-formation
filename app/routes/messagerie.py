@@ -444,6 +444,29 @@ def infos_onglets_eleve(session: Session, eleve: Eleve, formation_id: int) -> di
         return {"messagerie_visible": False, "nb_messages_non_lus": 0}
 
 
+def non_lus_par_formation(session: Session, eleve: Eleve) -> dict:
+    """{formation_id: nb non-lus} pour toutes les formations de l'élève, en 3 requêtes
+    (tableau de bord). Même règle que _non_lus_eleve. Ne lève jamais d'erreur."""
+    from sqlalchemy import func
+    try:
+        if not messagerie_visible_pour(session, eleve):
+            return {}
+        res = {}
+        for fid, nb in (session.query(Annonce.formation_id, func.count(AnnonceDestinataire.id))
+                        .join(AnnonceDestinataire, AnnonceDestinataire.annonce_id == Annonce.id)
+                        .filter(AnnonceDestinataire.eleve_id == eleve.id, AnnonceDestinataire.lu_le.is_(None))
+                        .group_by(Annonce.formation_id).all()):
+            res[fid] = res.get(fid, 0) + nb
+        for (fid,) in (session.query(Conversation.formation_id)
+                       .filter(Conversation.eleve_id == eleve.id, Conversation.non_lu_eleve.is_(True)).all()):
+            res[fid] = res.get(fid, 0) + 1
+        return res
+    except Exception as e:
+        session.rollback()
+        logger.error("Non-lus messagerie : %s", e)
+        return {}
+
+
 def _non_lus_eleve(session: Session, eleve_id: int, formation_id: int) -> int:
     n = (session.query(AnnonceDestinataire).join(Annonce)
          .filter(AnnonceDestinataire.eleve_id == eleve_id, Annonce.formation_id == formation_id,
