@@ -4,11 +4,11 @@ propositions de montée en niveau.
 
 À placer dans app/routes/boutique_public.py
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import text
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from ..database import obtenir_session
 from ..models import Formation, Eleve
@@ -17,25 +17,41 @@ from .auth import eleve_connecte
 
 router = APIRouter()
 
+
+def _tarifs():
+    from sqlalchemy.orm import configure_mappers
+    configure_mappers()  # crée Formation.tarifs (backref) avant de l'utiliser
+    return selectinload(Formation.tarifs)
+
 @router.get("/public/catalogue")
-def lire_catalogue(session: Session = Depends(obtenir_session)):
+def lire_catalogue(request: Request, session: Session = Depends(obtenir_session)):
     """Renvoie toutes les formations actives avec leurs tarifs, photo et
     description -- c'est cette route que le site vitrine et le catalogue
     élève appellent pour tout afficher, toujours à jour."""
     formations = (
         session.query(Formation)
+        .options(_tarifs())  # tarifs chargés en 1 requête
         .filter(Formation.actif == True, Formation.acces_auto == False)  # noqa: E712
         .order_by(Formation.ordre_affichage, Formation.id)
         .all()
     )
+    # PERFORMANCE (26/11/2026) : la photo n'est plus envoyée en base64 (~3 Mo chacune) mais
+    # sous forme de lien ABSOLU vers une version réduite.
+    from ..perf_eleve import urls_images_formations
+    from ..config import URL_PLATEFORME
+    base = URL_PLATEFORME.rstrip("/") if URL_PLATEFORME.startswith("https://") else str(request.base_url).rstrip("/")
+    urls = urls_images_formations(session, [f.id for f in formations])
     resultat = []
     for f in formations:
+        url_img = urls.get(f.id)
+        if url_img and url_img.startswith("/"):
+            url_img = base + url_img
         tarifs = [t for t in f.tarifs if t.actif]
         resultat.append({
             "id": f.id,
             "titre": f.titre,
             "description_courte": f.description_courte,
-            "image_url": f.image_url,
+            "image_url": url_img,
             "tarifs": [
                 {
                     "id": t.id,
@@ -85,6 +101,7 @@ def tarifs_site(session: Session = Depends(obtenir_session)):
     de toutes les formations. Permet au site statique d'afficher les prix à jour."""
     formations = (
         session.query(Formation)
+        .options(_tarifs())  # tarifs chargés en 1 requête
         .filter(Formation.actif == True, Formation.acces_auto == False)  # noqa: E712
         .all()
     )

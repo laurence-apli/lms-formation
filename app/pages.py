@@ -142,6 +142,20 @@ def image_formation(formation_id: int, v: str = "0", session: Session = Depends(
                     headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
+@router.get("/images/contenu/{nom}")
+def image_contenu(nom: str, request: Request):
+    """Image d'un chapitre / d'une présentation (stockée sur R2). Réservée aux personnes
+    connectées (élève ou admin) ; aucune lecture dans la base."""
+    from fastapi.responses import RedirectResponse
+    from .images_contenu import nom_valide, url_lecture
+    if not nom_valide(nom):
+        raise HTTPException(status_code=404, detail="Image introuvable.")
+    if not (request.session.get("eleve_id") or request.session.get("admin_id")):
+        raise HTTPException(status_code=401, detail="Connexion requise.")
+    return RedirectResponse(url_lecture(nom), status_code=307,
+                            headers={"Cache-Control": "private, max-age=3000"})
+
+
 @router.get("/eleve/tableau-de-bord", response_class=HTMLResponse)
 def page_tableau_de_bord(
     request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),

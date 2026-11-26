@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 from ..database import obtenir_session
 from ..models import Formation, Module, Chapitre
 from ..word_to_web import importer_word_depuis_bytes
+from ..images_contenu import extraire_images
+from starlette.concurrency import run_in_threadpool
 from .auth import admin_connecte
 
 router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
@@ -55,7 +57,7 @@ async def importer_word_formation(
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
 
-    html_resultat = await _lire_et_importer(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_et_importer(fichier))  # images -> R2
     formation.presentation_html = html_resultat
     formation.fichier_recu_nom = fichier.filename
     session.commit()
@@ -70,7 +72,7 @@ async def importer_word_module(
     if module is None:
         raise HTTPException(status_code=404, detail="Module introuvable.")
 
-    html_resultat = await _lire_et_importer(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_et_importer(fichier))  # images -> R2
     module.presentation_html = html_resultat
     module.fichier_recu_nom = fichier.filename
     session.commit()
@@ -85,7 +87,7 @@ async def importer_word_chapitre(
     if chapitre is None:
         raise HTTPException(status_code=404, detail="Chapitre introuvable.")
 
-    html_resultat = await _lire_et_importer(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_et_importer(fichier))  # images -> R2
     chapitre.contenu_html = html_resultat
     chapitre.fichier_recu_nom = fichier.filename
     session.commit()
@@ -109,7 +111,7 @@ async def importer_html_chapitre(
     chapitre = session.get(Chapitre, chapitre_id)
     if chapitre is None:
         raise HTTPException(status_code=404, detail="Chapitre introuvable.")
-    html_resultat = await _lire_html(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_html(fichier))  # images -> R2
     chapitre.contenu_html = html_resultat
     chapitre.fichier_recu_nom = fichier.filename
     session.commit()
@@ -123,7 +125,7 @@ async def importer_html_formation(
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
-    html_resultat = await _lire_html(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_html(fichier))  # images -> R2
     formation.presentation_html = html_resultat
     formation.fichier_recu_nom = fichier.filename
     session.commit()
@@ -137,7 +139,7 @@ async def importer_html_module(
     module = session.get(Module, module_id)
     if module is None:
         raise HTTPException(status_code=404, detail="Module introuvable.")
-    html_resultat = await _lire_html(fichier)
+    html_resultat = await run_in_threadpool(extraire_images, await _lire_html(fichier))  # images -> R2
     module.presentation_html = html_resultat
     module.fichier_recu_nom = fichier.filename
     session.commit()

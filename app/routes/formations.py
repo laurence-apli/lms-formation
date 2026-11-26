@@ -25,7 +25,10 @@ router = APIRouter(prefix="/admin", dependencies=[Depends(admin_connecte)])
 
 @router.get("/formations")
 def lister_formations(session: Session = Depends(obtenir_session)):
-    formations = session.query(Formation).order_by(Formation.ordre_affichage, Formation.id).all()
+    from sqlalchemy.orm import selectinload  # modules + chapitres en 2 requêtes (comptages)
+    formations = (session.query(Formation)
+                  .options(selectinload(Formation.modules).selectinload(Module.chapitres))
+                  .order_by(Formation.ordre_affichage, Formation.id).all())
     return [
         {
             "id": f.id, "titre": f.titre, "couleur": f.couleur, "actif": f.actif,
@@ -636,6 +639,74 @@ def verifier_stockage_r2():
         return {"actif": True, "ok": False, "message": str(e)}
     return {"actif": True, "ok": taille == 2, "bucket": stockage_r2.R2_BUCKET}
 
+
+
+# ---------- Images intégrées au contenu (base64 dans le HTML) -> R2 ----------
+
+@router.post("/images-contenu/migrer")
+def migrer_images_contenu(limite: int = 3, session: Session = Depends(obtenir_session)):
+    """Traite au plus `limite` éléments contenant des images base64 (chapitres, présentations
+    de modules et de formations, photos de carte lourdes). À rappeler jusqu'à restants = 0."""
+    from sqlalchemy import func, or_
+    from ..images_contenu import extraire_images, reduire_data_uri
+    if not stockage_r2.r2_actif():
+        raise HTTPException(status_code=400, detail="R2 non configuré.")
+    cibles = [
+        (Chapitre, Chapitre.contenu_html, "contenu_html", extraire_images),
+        (Module, Module.presentation_html, "presentation_html", extraire_images),
+        (Formation, Formation.presentation_html, "presentation_html", extraire_images),
+    ]
+    traites, restants = [], 0
+    for modele, colonne, attr, fonction in cibles:
+        ids = [i for (i,) in session.query(modele.id).filter(colonne.like("%src=_data:image/%")).order_by(modele.id).all()]
+        for oid in ids:
+            if len(traites) >= limite:
+                restants += 1
+                continue
+            obj = session.get(modele, oid)
+            avant = getattr(obj, attr) or ""
+            apres = fonction(avant)
+            if apres != avant:
+                # copie de sécurité de l'original (restaurable, purgeable comme les médias)
+                session.add(SauvegardeMediaBase64(nature="html_" + modele.__tablename__[:14], media_id=oid,
+                                                  ancienne_url=avant, nouvelle_url="html"))
+                setattr(obj, attr, apres)
+                session.commit()
+            traites.append({"type": modele.__tablename__, "id": oid, "avant_ko": len(avant) // 1000, "apres_ko": len(apres) // 1000})
+    # Photos de carte trop lourdes (> 400 Ko) : réduites mais gardées en base64
+    lourdes = [i for (i,) in session.query(Formation.id).filter(
+        func.length(Formation.image_url) > 400_000, ~Formation.image_url.like("data:image/webp%")).all()]
+    for fid in lourdes:
+        if len(traites) >= limite:
+            restants += 1
+            continue
+        f = session.get(Formation, fid)
+        avant = f.image_url
+        apres = reduire_data_uri(avant)
+        if len(apres) < len(avant):
+            session.add(SauvegardeMediaBase64(nature="photo_carte", media_id=fid, ancienne_url=avant, nouvelle_url="photo"))
+            f.image_url = apres
+            session.commit()
+        traites.append({"type": "photo_carte", "id": fid, "avant_ko": len(avant) // 1000, "apres_ko": len(apres) // 1000})
+    return {"traites": traites, "restants": restants}
+
+
+@router.post("/images-contenu/restaurer/{nature}/{objet_id}")
+def restaurer_images_contenu(nature: str, objet_id: int, session: Session = Depends(obtenir_session)):
+    """Remet le contenu d'avant transfert (nature : html_chapitres, html_modules, html_formations, photo_carte)."""
+    cibles = {"html_chapitres": (Chapitre, "contenu_html"), "html_modules": (Module, "presentation_html"),
+              "html_formations": (Formation, "presentation_html"), "photo_carte": (Formation, "image_url")}
+    if nature not in cibles:
+        raise HTTPException(status_code=400, detail="Nature inconnue.")
+    sauvegarde = (session.query(SauvegardeMediaBase64).filter_by(nature=nature, media_id=objet_id)
+                  .order_by(SauvegardeMediaBase64.id.desc()).first())
+    modele, attr = cibles[nature]
+    obj = session.get(modele, objet_id)
+    if sauvegarde is None or obj is None:
+        raise HTTPException(status_code=404, detail="Aucune sauvegarde.")
+    setattr(obj, attr, sauvegarde.ancienne_url)
+    session.commit()
+    return {"ok": True}
 
 
 # ---------- Transfert des médias base64 (Neon) vers R2 ----------

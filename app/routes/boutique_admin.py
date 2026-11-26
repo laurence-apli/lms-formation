@@ -29,8 +29,10 @@ def modifier_presentation_formation(
     formation = session.get(Formation, formation_id)
     if formation is None:
         raise HTTPException(status_code=404, detail="Formation introuvable.")
-    if requete.image_url is not None:
-        formation.image_url = requete.image_url
+    # vide (ou le lien de l'aperçu réduit) = on garde la photo actuelle
+    if requete.image_url and not requete.image_url.startswith("/images/formation/"):
+        from ..images_contenu import reduire_data_uri
+        formation.image_url = reduire_data_uri(requete.image_url)
     if requete.description_courte is not None:
         formation.description_courte = requete.description_courte
     session.commit()
@@ -207,11 +209,17 @@ def _tarif_admin_dict(t):
 
 @router.get("/catalogue-complet")
 def lire_catalogue_complet(session: Session = Depends(obtenir_session)):
-    formations = session.query(Formation).all()
+    # PERFORMANCE : tarifs en 1 requête, photo envoyée sous forme de lien (réduite) et non en base64
+    from sqlalchemy.orm import selectinload
+    from ..perf_eleve import urls_images_formations
+    from sqlalchemy.orm import configure_mappers
+    configure_mappers()  # crée Formation.tarifs (backref) avant de l'utiliser
+    formations = session.query(Formation).options(selectinload(Formation.tarifs)).all()
+    _urls = urls_images_formations(session, [f.id for f in formations])
     resultat = []
     for f in formations:
         tarifs_tries = sorted(f.tarifs, key=lambda t: t.ordre)
-        resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "ordre_affichage": f.ordre_affichage or 0, "acces_auto": bool(f.acces_auto), "image_url": f.image_url, "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
+        resultat.append({"formation_id": f.id, "titre": f.titre, "actif": f.actif, "ordre_affichage": f.ordre_affichage or 0, "acces_auto": bool(f.acces_auto), "image_url": _urls.get(f.id), "description_courte": f.description_courte, "tarifs": [_tarif_admin_dict(t) for t in tarifs_tries]})
     return resultat
 
 

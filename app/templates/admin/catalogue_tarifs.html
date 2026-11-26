@@ -68,7 +68,7 @@ function carteCatalogue(f) {
       </div>
       <label class="petit">Photo (URL ou base64)</label>
       <input type="file" accept="image/*" onchange="previsualiserPhotoFormation(event, ${f.formation_id})">
-      <input class="champ-inline" id="image-${f.formation_id}" value="${f.image_url || ''}" placeholder="Ou colle une image en base64 ou une URL">
+      <input class="champ-inline" id="image-${f.formation_id}" value="${(f.image_url && !f.image_url.startsWith('/images/')) ? f.image_url : ''}" placeholder="${f.image_url ? 'Photo actuelle conservée — choisis un fichier ou colle une URL pour la remplacer' : 'Ou colle une image en base64 ou une URL'}">
       <div style="font-size:11px;color:var(--grey);margin-top:2px">Choisis un fichier ci-dessus, ou colle une URL/base64 dans le champ.</div>
       <label class="petit">Texte de présentation</label>
       <textarea class="champ-inline" id="desc-${f.formation_id}" rows="3">${f.description_courte || ''}</textarea>
