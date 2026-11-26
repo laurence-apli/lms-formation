@@ -56,3 +56,71 @@ def etats_chapitres(formation: Formation, niveau: int, valides: set) -> dict:
         etats[c.id] = precedent is None or precedent.id in valides
         precedent = c
     return etats
+
+
+# ---------------------------------------------------------------------------
+# Photos des formations (cartes du tableau de bord)
+# ---------------------------------------------------------------------------
+# Les photos sont stockées en base64 dans formations.image_url (jusqu'à 3,5 Mo chacune).
+# Les intégrer directement dans la page faisait un tableau de bord de ~40 Mo.
+# On sert désormais une version réduite (WebP ~900 px) via /images/formation/{id},
+# mise en cache en mémoire et dans le navigateur (l'URL change si la photo change).
+
+def urls_images_formations(session: Session, ids) -> dict:
+    """{formation_id: url ou None} SANS lire les images (1 petite requête)."""
+    from sqlalchemy import case, func
+    ids = list(set(ids))
+    if not ids:
+        return {}
+    lignes = (session.query(
+        Formation.id,
+        func.length(Formation.image_url),
+        case((Formation.image_url.like("data:%"), None), else_=Formation.image_url),
+    ).filter(Formation.id.in_(ids)).all())
+    res = {}
+    for fid, longueur, url_directe in lignes:
+        if not longueur:
+            res[fid] = None
+        elif url_directe:
+            res[fid] = url_directe            # image déjà hébergée ailleurs (URL http)
+        else:
+            res[fid] = f"/images/formation/{fid}?v={longueur}"
+    return res
+
+
+_cache_images: dict = {}
+
+
+def image_formation_reduite(session: Session, formation_id: int, version: str):
+    """(octets, type MIME) de la photo réduite, ou None. Mise en cache par (id, version)."""
+    import base64
+    import io
+    cle = (formation_id, version)
+    if cle in _cache_images:
+        return _cache_images[cle]
+    ligne = session.query(Formation.image_url).filter(Formation.id == formation_id).first()
+    if not ligne or not ligne[0] or not ligne[0].startswith("data:"):
+        return None
+    entete, _, donnees = ligne[0].partition(",")
+    try:
+        brut = base64.b64decode(donnees)
+    except Exception:
+        return None
+    mime = entete[5:].split(";")[0] or "image/jpeg"
+    resultat = (brut, mime)
+    try:
+        from PIL import Image
+        img = Image.open(io.BytesIO(brut))
+        img.thumbnail((900, 900))
+        if img.mode not in ("RGB", "RGBA"):
+            img = img.convert("RGBA" if "A" in img.getbands() or img.mode == "P" else "RGB")
+        sortie = io.BytesIO()
+        img.save(sortie, format="WEBP", quality=82, method=4)
+        if sortie.tell() < len(brut):
+            resultat = (sortie.getvalue(), "image/webp")
+    except Exception:
+        pass  # Pillow absent ou image illisible : on sert l'original
+    if len(_cache_images) > 200:
+        _cache_images.clear()
+    _cache_images[cle] = resultat
+    return resultat

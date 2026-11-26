@@ -10,7 +10,7 @@ import base64
 from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session, undefer
+from sqlalchemy.orm import Session
 
 from .database import obtenir_session
 from .models import Eleve, Formation, Administrateur, TokenAuthEleve, TokenAuthAdmin, AccesFormation, progression_pourcentage
@@ -129,6 +129,19 @@ def page_accueil(
         },
     )
 
+@router.get("/images/formation/{formation_id}")
+def image_formation(formation_id: int, v: str = "0", session: Session = Depends(obtenir_session)):
+    """Photo de carte d'une formation, réduite (WebP). Publique comme dans le catalogue.
+    Cache navigateur long : l'URL contient ?v=<taille> qui change quand la photo change."""
+    from .perf_eleve import image_formation_reduite
+    res = image_formation_reduite(session, formation_id, v)
+    if res is None:
+        raise HTTPException(status_code=404, detail="Image introuvable.")
+    octets, mime = res
+    return Response(content=octets, media_type=mime,
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
 @router.get("/eleve/tableau-de-bord", response_class=HTMLResponse)
 def page_tableau_de_bord(
     request: Request, eleve: Eleve = Depends(eleve_connecte), session: Session = Depends(obtenir_session),
@@ -138,7 +151,7 @@ def page_tableau_de_bord(
     from .perf_eleve import charger_formations, ids_chapitres_valides, progression
     from .routes.messagerie import non_lus_par_formation
     acces_liste = session.query(AccesFormation).filter_by(eleve_id=eleve.id).all()
-    formations_par_id = charger_formations(session, [a.formation_id for a in acces_liste], avec_image=True)
+    formations_par_id = charger_formations(session, [a.formation_id for a in acces_liste])
     valides = ids_chapitres_valides(session, eleve.id)
     non_lus = non_lus_par_formation(session, eleve)
     formations_acquises = []
@@ -150,7 +163,7 @@ def page_tableau_de_bord(
             continue
         formations_acquises.append({
             "id": formation.id, "titre": formation.titre, "couleur": formation.couleur,
-            "image_url": formation.image_url,
+            "image_url": None,  # rempli plus bas par une URL d'image réduite
             "nb_niveaux": formation.nb_niveaux, "ordre_affichage": formation.ordre_affichage, "niveau": acces.niveau,
             "progression": progression(formation, acces.niveau, valides),
             "messages_non_lus": non_lus.get(formation.id, 0),
@@ -165,10 +178,15 @@ def page_tableau_de_bord(
     formations_acquises.sort(key=lambda f: ((f["ordre_affichage"] or 0) // 10, f["progression"], (f["titre"] or "").casefold()))
     ids_acquis = {f["id"] for f in formations_acquises}
     formations_disponibles = [
-        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": f.image_url, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
-        for f in session.query(Formation).options(undefer(Formation.image_url)).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
+        {"id": f.id, "titre": f.titre, "couleur": f.couleur, "image_url": None, "ordre_affichage": f.ordre_affichage, "description_courte": f.description_courte or ""}
+        for f in session.query(Formation).filter_by(actif=True).order_by(Formation.ordre_affichage, Formation.id).all()
         if f.id not in ids_acquis
     ]
+    # Photos : URL d'une version réduite (au lieu de ~3 Mo de base64 par photo dans la page)
+    from .perf_eleve import urls_images_formations
+    _urls = urls_images_formations(session, [f["id"] for f in formations_acquises + formations_disponibles])
+    for f in formations_acquises + formations_disponibles:
+        f["image_url"] = _urls.get(f["id"])
     formations_disponibles.sort(key=_cle_tri)
     for f in formations_acquises + formations_disponibles:
         f["groupe"] = (f["ordre_affichage"] or 0) // 10
